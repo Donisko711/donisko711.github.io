@@ -29,7 +29,8 @@ import {
   Gamepad2, 
   Flame, 
   SearchCheck, 
-  FileBadge 
+  FileBadge,
+  Code2 
 } from 'lucide-react';
 import { DASHBOARD_MODULE_CARDS } from '../data/initialData';
 import { ActiveView } from './Sidebar';
@@ -55,6 +56,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
     { label: 'AI INTELEGENCY', view: 'ai-intelegency' as ActiveView },
     { label: 'CEK STATUS NAWALA', view: 'nawala-checker' as ActiveView },
     { label: 'GENERATE ARTIKEL', view: 'generate-artikel' as ActiveView },
+    { label: 'PHISING CHECKER', view: 'phising-checker' as ActiveView },
     { label: 'BBFS & ANGKA TARUNG', view: 'bbfs-angka-tarung' as ActiveView },
     { label: 'KALKULATOR PARLAY', view: 'kalkulator-parlay' as ActiveView },
     { label: 'HITUNG TOP-UP', view: 'wd-auto-flop' as ActiveView },
@@ -104,6 +106,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
       case 'Flame': return <Flame {...props} className="w-5 h-5 text-rose-400" />;
       case 'SearchCheck': return <SearchCheck {...props} className="w-5 h-5 text-amber-400" />;
       case 'FileBadge': return <FileBadge {...props} className="w-5 h-5 text-cyan-400" />;
+      case 'Code2': return <Code2 {...props} className="w-5 h-5 text-emerald-400" />;
       default: return <Sparkles {...props} />;
     }
   };
@@ -122,14 +125,14 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Top Main Banner Card (Sleek Interface with Translucent Glass) */}
-      <div className="relative rounded-3xl bg-[#121212]/75 backdrop-blur-xl border border-white/10 p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden">
+    <div className="space-y-6 w-full pb-12">
+      {/* Top Main Banner Card (Sleek Interface with Translucent Glass - Full Width Responsive) */}
+      <div className="relative w-full rounded-3xl bg-[#121212]/75 backdrop-blur-xl border border-white/10 p-5 sm:p-7 shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden">
         {/* Subtle ambient background glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-[#00F3FF]/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-3">
+          <div className="space-y-3 flex-1 min-w-0">
             {/* Top tags */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1A1A1A]/80 border border-yellow-500/50 text-yellow-400 text-[10px] font-bold font-mono shadow-sm">
@@ -148,13 +151,13 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
               Workstation CS & Kasir Terpadu
             </h1>
-            <p className="text-xs sm:text-sm text-gray-300 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-gray-300 max-w-3xl leading-relaxed">
               Semua modul alur kerja Customer Service, Kasir, dan Modul SOP telah dikelompokkan secara terstruktur. Pilih modul di bawah atau gunakan filter pencarian cepat.
             </p>
           </div>
 
           {/* Search bar in Hero */}
-          <div className="w-full lg:w-96 space-y-2">
+          <div className="w-full lg:w-96 space-y-2 flex-shrink-0">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00F3FF]" />
               <input
@@ -162,7 +165,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Cari nama modul / fungsi..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-full bg-[#1A1A1A]/80 border border-white/10 focus:border-[#00F3FF] text-xs text-white placeholder-gray-400 outline-none transition-all backdrop-blur-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-full bg-[#1A1A1A]/80 border border-white/10 focus:border-[#00F3FF] text-xs text-white placeholder-gray-400 outline-none transition-all backdrop-blur-sm shadow-inner"
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-gray-400 px-2 font-mono">
@@ -215,8 +218,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
         ))}
       </div>
 
-      {/* Grid of Modular Cards (Translucent Glass Styling) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Grid of Modular Cards (Translucent Glass Styling - Responsive Full Width Grid) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4.5 sm:gap-5 w-full">
         {filteredCards.map(card => (
           <div
             key={card.id}

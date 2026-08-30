@@ -45,6 +45,83 @@ async function startServer() {
     res.json({ status: "ok", aiReady: Boolean(process.env.GEMINI_API_KEY) });
   });
 
+  // Phising / Domain Script Inspector Endpoint (similar to Google Rich Results / Page Source Inspector)
+  app.post("/api/check-domain", async (req, res) => {
+    const { url, userAgentMode } = req.body;
+
+    if (!url || typeof url !== "string") {
+      res.status(400).json({ error: "URL domain wajib diisi" });
+      return;
+    }
+
+    let targetUrl = url.trim();
+    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+      targetUrl = `https://${targetUrl}`;
+    }
+
+    // Determine User Agent
+    let selectedUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+    if (userAgentMode === "googlebot") {
+      selectedUA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+    } else if (userAgentMode === "mobile") {
+      selectedUA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+    }
+
+    const startTime = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: "GET",
+        headers: {
+          "User-Agent": selectedUA,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+          "Cache-Control": "no-cache",
+        },
+        redirect: "follow",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const responseTimeMs = Date.now() - startTime;
+      const html = await response.text();
+      const status = response.status;
+      const statusText = response.statusText;
+      const finalUrl = response.url || targetUrl;
+
+      // Extract basic header dictionary
+      const headersObj: Record<string, string> = {};
+      response.headers.forEach((val, key) => {
+        headersObj[key] = val;
+      });
+
+      res.json({
+        success: true,
+        targetUrl,
+        finalUrl,
+        status,
+        statusText,
+        responseTimeMs,
+        contentType: response.headers.get("content-type") || "text/html",
+        contentLength: html.length,
+        headers: headersObj,
+        html,
+        isHttps: finalUrl.startsWith("https://"),
+      });
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.error("Domain fetch error:", err);
+      const isTimeout = err.name === "AbortError";
+      res.status(500).json({
+        success: false,
+        targetUrl,
+        error: isTimeout ? "Request Timeout (server tujuan tidak merespons dalam 12 detik)" : (err.message || "Gagal menghubungi domain tujuan"),
+      });
+    }
+  });
+
   // Streaming Chat Completion Endpoint (SSE - Server Sent Events)
   app.post("/api/ai/chat", async (req, res) => {
     const { messages, systemPrompt, modelName } = req.body;

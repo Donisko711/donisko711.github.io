@@ -1,6 +1,6 @@
 export type ShiftType = 'PAGI' | 'SORE' | 'MALAM';
 
-export type UserRole = 'CS' | 'KASIR' | 'SUPERVISOR' | 'ADMIN' | 'CS_SENIOR';
+export type UserRole = 'CS' | 'KASIR' | 'SUPERVISOR' | 'ADMIN' | 'CS_SENIOR' | 'SECRETARY';
 
 export interface UserProfile {
   id?: string;

@@ -36,13 +36,18 @@ export const ParlayCalculator: React.FC = () => {
     },
     {
       id: 'p-3',
-      odds: 2.43,
-      status: 'WIN_HALF'
+      odds: 1.85,
+      status: 'WIN'
     },
     {
       id: 'p-4',
-      odds: 1.80,
-      status: 'LOSE_HALF'
+      odds: 1.90,
+      status: 'WIN'
+    },
+    {
+      id: 'p-5',
+      odds: 2.10,
+      status: 'WIN_HALF'
     }
   ]);
   const [copied, setCopied] = useState(false);
@@ -163,23 +168,18 @@ export const ParlayCalculator: React.FC = () => {
     setMatches(matches.map(m => (m.id === id ? { ...m, status: newStatus } : m)));
   };
 
-  const handleSetPreset = (presetType: 'contoh' | 'win_all' | '3_team' | '5_team') => {
+  const handleSetPreset = (presetType: 'contoh' | 'win_all' | '5_team' | '7_team') => {
     if (presetType === 'contoh') {
       setStake(50000);
       setMatches([
         { id: `p-1`, odds: 1.75, status: 'WIN' },
         { id: `p-2`, odds: 1.92, status: 'WIN' },
-        { id: `p-3`, odds: 2.43, status: 'WIN_HALF' },
-        { id: `p-4`, odds: 1.80, status: 'LOSE_HALF' }
+        { id: `p-3`, odds: 1.85, status: 'WIN' },
+        { id: `p-4`, odds: 1.90, status: 'WIN' },
+        { id: `p-5`, odds: 2.10, status: 'WIN_HALF' }
       ]);
     } else if (presetType === 'win_all') {
       setMatches(matches.map(m => ({ ...m, status: 'WIN' })));
-    } else if (presetType === '3_team') {
-      setMatches([
-        { id: `p-1`, odds: 1.85, status: 'WIN' },
-        { id: `p-2`, odds: 1.90, status: 'WIN' },
-        { id: `p-3`, odds: 2.05, status: 'WIN' }
-      ]);
     } else if (presetType === '5_team') {
       setMatches([
         { id: `p-1`, odds: 1.75, status: 'WIN' },
@@ -187,6 +187,16 @@ export const ParlayCalculator: React.FC = () => {
         { id: `p-3`, odds: 1.95, status: 'WIN' },
         { id: `p-4`, odds: 2.10, status: 'WIN_HALF' },
         { id: `p-5`, odds: 1.80, status: 'WIN' }
+      ]);
+    } else if (presetType === '7_team') {
+      setMatches([
+        { id: `p-1`, odds: 1.75, status: 'WIN' },
+        { id: `p-2`, odds: 1.88, status: 'WIN' },
+        { id: `p-3`, odds: 1.95, status: 'WIN' },
+        { id: `p-4`, odds: 1.82, status: 'WIN' },
+        { id: `p-5`, odds: 1.90, status: 'WIN' },
+        { id: `p-6`, odds: 2.05, status: 'WIN' },
+        { id: `p-7`, odds: 1.78, status: 'WIN' }
       ]);
     }
   };
@@ -222,10 +232,10 @@ export const ParlayCalculator: React.FC = () => {
           <button
             onClick={() => handleSetPreset('contoh')}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs shadow-sm transition-all cursor-pointer"
-            title="Load contoh 4 tim (2 Win, 1 Win Half, 1 Lose Half)"
+            title="Load contoh 5 tim (4 Win Full, 1 Win Half)"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Preset Contoh (4 Team)</span>
+            <span>Preset Contoh (5 Team)</span>
           </button>
           <button
             onClick={handleAddMatch}

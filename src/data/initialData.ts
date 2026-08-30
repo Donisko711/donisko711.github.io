@@ -527,6 +527,16 @@ export const DASHBOARD_MODULE_CARDS: DashboardModuleCard[] = [
     icon: 'Sparkles',
     actionMenuId: 'ai-intelegency'
   },
+  {
+    id: 'mod-phising',
+    title: 'PHISING CHECKER',
+    category: 'SISTEM',
+    categoryLabel: 'UTILITAS & SISTEM',
+    description: 'Periksa source script HTML/JS dari domain mencurigakan, inspeksi meta tags, link keluar, form action, dan deteksi phising.',
+    badge: 'BARU',
+    icon: 'Code2',
+    actionMenuId: 'phising-checker'
+  },
   // Kasir & Rekap Transaksi
   {
     id: 'mod-1',
@@ -662,17 +672,17 @@ export const DASHBOARD_MODULE_CARDS: DashboardModuleCard[] = [
   },
   {
     id: 'mod-14',
-    title: 'BAGI BONUS PARLAY & SLOT',
+    title: 'BONUS PARLAY',
     category: 'CS',
     categoryLabel: 'CUSTOMER SERVICE',
-    description: 'Hitung bonus scatter slot, rollingan turnover mingguan, dan tier cashback parlay cepat.',
+    description: 'Hitung bonus mix parlay win full & parlay lose 1 dengan validasi tiket otomatis.',
     badge: 'BARU',
     icon: 'Gift',
     actionMenuId: 'bagi-bonus-parlay'
   },
   {
     id: 'mod-15',
-    title: 'LAPORAN CS GANTI DATA',
+    title: 'LAPORAN GANTI DATA',
     category: 'CS',
     categoryLabel: 'CUSTOMER SERVICE',
     description: 'Pencatatan dan arsip pengajuan ganti nomor rekening, nama, atau no HP member secara transparan.',
@@ -682,7 +692,7 @@ export const DASHBOARD_MODULE_CARDS: DashboardModuleCard[] = [
   },
   {
     id: 'mod-16',
-    title: 'CS LOCKED / UNLOCKED',
+    title: 'LAPORAN LOCKED / UNLOCK',
     category: 'CS',
     categoryLabel: 'CUSTOMER SERVICE',
     description: 'Log manajemen pembukaan / penguncian akun bermasalah demi keamanan player dan website.',

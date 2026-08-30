@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, ActiveView } from './components/Sidebar';
 import { LoginModal } from './components/LoginModal';
@@ -12,8 +12,10 @@ import { HomeDashboard } from './components/HomeDashboard';
 import { JobdeskManager } from './components/tools/JobdeskManager';
 import { NawalaChecker } from './components/tools/NawalaChecker';
 import { ArticleGenerator } from './components/tools/ArticleGenerator';
+import { PhisingChecker } from './components/tools/PhisingChecker';
 import { ParlayCalculator } from './components/tools/ParlayCalculator';
 import { BonusCalculator } from './components/tools/BonusCalculator';
+import { BonusParlayCalculator } from './components/tools/BonusParlayCalculator';
 import { BbfsGenerator } from './components/tools/BbfsGenerator';
 import { EditPembayaran } from './components/tools/EditPembayaran';
 import { LaporanCS } from './components/tools/LaporanCS';
@@ -24,17 +26,19 @@ import { InfoWd } from './components/tools/InfoWd';
 import { InfoDataPL } from './components/tools/InfoDataPL';
 import { ModulBelajar } from './components/tools/ModulBelajar';
 import { AiIntelligence } from './components/tools/AiIntelligence';
+import { HadiahTogelOnline } from './components/tools/HadiahTogelOnline';
+import { JadwalPasaranTogel } from './components/tools/JadwalPasaranTogel';
 import { ShiftType, UserProfile, JobdeskTask } from './types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from './data/initialData';
 import { ChevronRight, Home } from 'lucide-react';
 import donIskoBg from './assets/images/don_isko_711_1788035559676.jpg';
 
 export default function App() {
-  // Session / User Profile
+  // Session / User Profile (Updated to SINTA MANIS - Secretary Don Isko)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>({
-    username: 'cs_dewi_utama',
-    name: 'Dewi Lestari',
-    role: 'CS_SENIOR',
+    username: 'sinta_manis',
+    name: 'SINTA MANIS',
+    role: 'Secretary Don Isko',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     shift: 'PAGI'
   });
@@ -53,8 +57,23 @@ export default function App() {
   const [isBgModalOpen, setIsBgModalOpen] = useState(false);
   const [bgImage, setBgImage] = useState<string>(donIskoBg); // Official Don Isko 711 Background default
 
-  // Responsive sidebar collapse
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Responsive sidebar collapse: automatically open when screen is wide, closed when resized to smaller screen
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Sync active shift with user
   const handleShiftChange = (shift: ShiftType) => {
@@ -90,14 +109,15 @@ export default function App() {
   const getViewBreadcrumb = () => {
     switch (activeView) {
       case 'home': return { category: 'BERANDA', title: 'Dashboard Ringkasan' };
-      case 'ai-intelegency': return { category: 'FITUR UTAMA', title: 'AI Intelegency Workstation' };
+      case 'ai-intelegency': return { category: 'MENU UTAMA', title: 'AI Intelegency Workstation' };
+      case 'nawala-checker': return { category: 'MENU UTAMA', title: 'Nawala & Link Checker' };
+      case 'generate-artikel': return { category: 'MENU UTAMA', title: 'Generate Artikel & Promo SEO' };
+      case 'phising-checker': return { category: 'MENU UTAMA', title: 'Phising & Script Page Checker' };
+      case 'bbfs-angka-tarung': return { category: 'MENU UTAMA', title: 'BBFS & Angka Tarung' };
+      case 'kalkulator-parlay': return { category: 'MENU UTAMA', title: 'Kalkulator Hitung Parlay' };
       case 'jobdesk-cs': return { category: 'TOOLS KERJA CS', title: `Jobdesk CS (${activeShift})` };
-      case 'nawala-checker': return { category: 'TOOLS KERJA CS', title: 'Nawala & Link Checker' };
-      case 'generate-artikel': return { category: 'TOOLS KERJA CS', title: 'Generate Artikel & Promo SEO' };
-      case 'kalkulator-parlay': return { category: 'TOOLS KERJA CS', title: 'Kalkulator Parlay' };
       case 'bagi-bonus-slot': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Slot & Harian' };
-      case 'bagi-bonus-parlay': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Mix Parlay' };
-      case 'bbfs-angka-tarung': return { category: 'TOOLS KERJA CS', title: 'BBFS & Angka Tarung' };
+      case 'bagi-bonus-parlay': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Mix Parlay Win Full' };
       case 'edit-pembayaran': return { category: 'TOOLS KERJA CS', title: 'Edit & Generator Pembayaran' };
       case 'laporan-cs-ganti-data': return { category: 'LAPORAN CS', title: 'Laporan Ganti Data' };
       case 'laporan-cs-locked': return { category: 'LAPORAN CS', title: 'Laporan Locked / Unlock' };
@@ -107,14 +127,14 @@ export default function App() {
       case 'wd-auto-flop': return { category: 'KASIR & FINANSIAL', title: 'WD Auto Flop Engine' };
       case 'info-wd': return { category: 'KASIR & FINANSIAL', title: 'Informasi Status WD & Bank' };
       case 'info-data-pl': return { category: 'ANALITIK & CRM', title: 'Info Data Member' };
-      case 'modul-sportbooks': return { category: 'INFO PRODUK & GAMES', title: 'Modul Sportbooks & Parlay' };
-      case 'modul-togel-cara': return { category: 'INFO PRODUK & GAMES', title: 'Cara Pasang Togel' };
-      case 'modul-togel-hadiah': return { category: 'INFO PRODUK & GAMES', title: 'Hadiah Togel Online' };
-      case 'modul-togel-jadwal': return { category: 'INFO PRODUK & GAMES', title: 'Jadwal Pasaran Togel' };
-      case 'modul-slot': return { category: 'INFO PRODUK & GAMES', title: 'Panduan Game Slot' };
-      case 'modul-casino': return { category: 'INFO PRODUK & GAMES', title: 'Panduan Livegame Casino' };
-      case 'modul-cari-selisih': return { category: 'TRAINING & SOP', title: 'Cara Cari Selisih Saldo' };
-      case 'modul-ganti-docs': return { category: 'TRAINING & SOP', title: 'Cara Ganti Dokumen' };
+      case 'modul-sportbooks': return { category: 'INFO PRODUK & GAMES', title: 'MODUL SPORTBOOKS & PARLAY' };
+      case 'modul-togel-cara': return { category: 'INFO PRODUK & GAMES', title: 'CARA BERMAIN TOGEL' };
+      case 'modul-togel-hadiah': return { category: 'INFO PRODUK & GAMES', title: 'HADIAH TOGEL ONLINE' };
+      case 'modul-togel-jadwal': return { category: 'INFO PRODUK & GAMES', title: 'JADWAL PASARAN TOGEL' };
+      case 'modul-slot': return { category: 'INFO PRODUK & GAMES', title: 'PANDUAN GAME SLOT' };
+      case 'modul-casino': return { category: 'INFO PRODUK & GAMES', title: 'PANDUAN LIVEGAME CASINO' };
+      case 'modul-cari-selisih': return { category: 'TRAINING & SOP', title: 'CARA CARI SELISIH SALDO' };
+      case 'modul-ganti-docs': return { category: 'TRAINING & SOP', title: 'CARA GANTI DOKUMEN' };
       default: return { category: 'TOOLS', title: 'Menu Utama' };
     }
   };
@@ -123,7 +143,7 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] font-sans relative selection:bg-[#00F3FF] selection:text-black"
+      className="min-h-screen bg-[#0A0A0A] text-[#E0E0E0] font-sans relative selection:bg-[#00F3FF] selection:text-black overflow-x-hidden"
       style={{
         backgroundImage: bgImage ? `url(${bgImage})` : undefined,
         backgroundSize: 'cover',
@@ -147,7 +167,7 @@ export default function App() {
           setSoundEnabled={setSoundEnabled}
         />
 
-        {/* Running Marquee Text Bar (Teks Berjalan Don Isko) */}
+        {/* Running Marquee Text Bar (Teks Berjalan Don Isko - Slogan Baru) */}
         <div className="w-full bg-[#121212]/70 backdrop-blur-md border-b border-white/10 py-2 px-4 overflow-hidden relative flex items-center shadow-inner z-20">
           <div className="flex items-center gap-2 pr-4 bg-[#121212]/80 z-10 border-r border-white/10 flex-shrink-0">
             <span className="flex h-2 w-2 relative">
@@ -166,26 +186,35 @@ export default function App() {
               </span>
               <span className="mx-4 text-gray-500 font-normal">|</span>
               <span className="mx-6 flex items-center gap-2 text-[#00F3FF]">
-                <span>⚡</span> WORK HARD, PLAY HARD | NO PAIN NO GAIN <span>⚡</span>
+                <span>⚡</span> WORK HARD | PLAY HARD | LET IT FLOW | NO PAIN NO GAIN <span>⚡</span>
               </span>
               <span className="mx-4 text-gray-500 font-normal">|</span>
               <span className="mx-6 flex items-center gap-2 text-white">
-                <span className="text-yellow-400">🔥</span> HS GROUP 711 | PANDUAN CS & KASIR | BY : DON ISKO <span className="text-yellow-400">🔥</span>
-              </span>
-              <span className="mx-4 text-gray-500 font-normal">|</span>
-              <span className="mx-6 flex items-center gap-2 text-[#00F3FF]">
-                <span>⚡</span> WORK HARD, PLAY HARD | NO PAIN NO GAIN <span>⚡</span>
+                <span className="text-yellow-400">🔥</span> SINTA MANIS (Secretary Don Isko) | HS GROUP 711 <span className="text-yellow-400">🔥</span>
               </span>
             </div>
           </div>
         </div>
 
-        {/* Main Body Layout (Sidebar + Content) */}
-        <div className="flex flex-col lg:flex-row min-h-[calc(100vh-65px)]">
-          {/* Left Sticky Sidebar */}
-          <div className="lg:w-72 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0e0e12]/60 backdrop-blur-md">
+        {/* Main Body Layout (Sidebar + Content - Responsif Geser Otomatis) */}
+        <div className="flex min-h-[calc(100vh-65px)] relative overflow-x-hidden">
+          {/* Mobile Backdrop Overlay when Sidebar is open */}
+          {isSidebarOpen && (
+            <div
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+            />
+          )}
+
+          {/* Left Sticky Sidebar Container */}
+          <div 
+            className={`transition-all duration-300 ease-in-out flex-shrink-0 z-50 lg:z-auto ${
+              isSidebarOpen ? 'w-0 lg:w-72' : 'w-0 lg:w-20'
+            }`}
+          >
             <Sidebar
               isOpen={isSidebarOpen}
+              onCloseMobile={() => setIsSidebarOpen(false)}
               activeView={activeView}
               setActiveView={handleSelectView}
               selectedShiftFilter={activeShift}
@@ -195,11 +224,11 @@ export default function App() {
             />
           </div>
 
-          {/* Right Main Content Area */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-black/15 backdrop-blur-[0.5px]">
+          {/* Right Main Content Area - Otomatis Menyesuaikan Ukuran & Bergeser */}
+          <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-black/15 backdrop-blur-[0.5px] transition-all duration-300">
             {/* Breadcrumb Navigation Bar */}
             <div className="flex items-center justify-between gap-2 mb-6 p-3.5 rounded-2xl bg-[#121216]/70 backdrop-blur-md border border-white/10 text-xs shadow-lg">
-              <div className="flex items-center gap-2 text-gray-300">
+              <div className="flex items-center gap-2 text-gray-300 flex-wrap">
                 <button
                   onClick={() => handleSelectView('home')}
                   className="flex items-center gap-1 hover:text-[#00F3FF] font-semibold transition-colors cursor-pointer"
@@ -253,6 +282,8 @@ export default function App() {
 
             {activeView === 'generate-artikel' && <ArticleGenerator />}
 
+            {activeView === 'phising-checker' && <PhisingChecker />}
+
             {activeView === 'kalkulator-parlay' && <ParlayCalculator />}
 
             {activeView === 'bagi-bonus-slot' && (
@@ -260,7 +291,7 @@ export default function App() {
             )}
 
             {activeView === 'bagi-bonus-parlay' && (
-              <ParlayCalculator />
+              <BonusParlayCalculator />
             )}
 
             {activeView === 'bbfs-angka-tarung' && <BbfsGenerator />}
@@ -294,11 +325,11 @@ export default function App() {
             )}
 
             {activeView === 'modul-togel-hadiah' && (
-              <ModulBelajar initialCategory="Togel" />
+              <HadiahTogelOnline />
             )}
 
             {activeView === 'modul-togel-jadwal' && (
-              <ModulBelajar initialCategory="Togel" />
+              <JadwalPasaranTogel />
             )}
 
             {activeView === 'modul-slot' && (

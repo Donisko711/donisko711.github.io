@@ -72,27 +72,35 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             <span>Akses Cepat Demo</span>
             <Sparkles className="w-3 h-3 text-amber-400" />
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('SECRETARY', 'PAGI', 'SINTA MANIS')}
+              className="px-2 py-1.5 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/25 border border-yellow-500/40 text-yellow-300 text-[10px] font-semibold text-center transition-all cursor-pointer truncate"
+              title="SINTA MANIS (Secretary Don Isko)"
+            >
+              ⭐ Secretary
+            </button>
             <button
               type="button"
               onClick={() => handleQuickLogin('CS', 'MALAM', 'CS Dewi (Shift Malam)')}
-              className="px-2.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-[11px] font-semibold text-center transition-all cursor-pointer"
+              className="px-2 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-[10px] font-semibold text-center transition-all cursor-pointer truncate"
             >
-              👩‍💼 Staff CS
+              👩‍💼 CS
             </button>
             <button
               type="button"
               onClick={() => handleQuickLogin('KASIR', 'PAGI', 'Kasir Rudi (Shift Pagi)')}
-              className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[11px] font-semibold text-center transition-all cursor-pointer"
+              className="px-2 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[10px] font-semibold text-center transition-all cursor-pointer truncate"
             >
-              💰 Staff Kasir
+              💰 Kasir
             </button>
             <button
               type="button"
               onClick={() => handleQuickLogin('SUPERVISOR', 'MALAM', 'Supervisor Hendra')}
-              className="px-2.5 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 text-[11px] font-semibold text-center transition-all cursor-pointer"
+              className="px-2 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 text-[10px] font-semibold text-center transition-all cursor-pointer truncate"
             >
-              👑 SPV Admin
+              👑 SPV
             </button>
           </div>
         </div>
@@ -126,6 +134,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 onChange={e => setRole(e.target.value as UserRole)}
                 className="w-full px-3 py-2.5 rounded-xl bg-zinc-900/90 border border-zinc-700 focus:border-cyan-400 text-sm text-cyan-300 font-bold outline-none cursor-pointer"
               >
+                <option value="SECRETARY">Secretary Don Isko</option>
                 <option value="CS">Customer Service (CS)</option>
                 <option value="KASIR">Kasir / Keuangan</option>
                 <option value="SUPERVISOR">Supervisor / Leader</option>
