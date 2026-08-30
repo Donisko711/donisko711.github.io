@@ -1,0 +1,6 @@
+{
+  "name": "Dashboard Bantuan Kerja CS & Kasir",
+  "description": "Dashboard Operasional CS & Kasir DON ISKO 711 HS GROUP dengan modul lengkap Sportbooks, Togel Online, Slot, Casino, dan Tools Kerja.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
