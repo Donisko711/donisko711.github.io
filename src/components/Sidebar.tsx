@@ -29,8 +29,9 @@ import {
   Globe,
   Code2
 } from 'lucide-react';
-import { ShiftType } from '../types';
-import donIskoLogo from '../assets/images/don_isko_711_1788035559676.jpg';
+import { ShiftType, UserProfile } from '../types';
+
+export const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
 
 export type ActiveView = 
   | 'home'
@@ -70,6 +71,9 @@ interface SidebarProps {
   setSelectedShiftFilter: (shift: ShiftType) => void;
   jobdeskCsCount: { done: number; total: number };
   jobdeskKasirCount: { done: number; total: number };
+  sidebarImage?: string;
+  currentUser?: UserProfile | null;
+  onOpenCustomizer?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -80,7 +84,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   selectedShiftFilter,
   setSelectedShiftFilter,
   jobdeskCsCount = { done: 0, total: 0 },
-  jobdeskKasirCount = { done: 0, total: 0 }
+  jobdeskKasirCount = { done: 0, total: 0 },
+  sidebarImage = OFFICIAL_DON_ISKO_IMG,
+  currentUser,
+  onOpenCustomizer
 }) => {
   // Single-open Category Accordion (Minimize Otomatis):
   // Ketika kategori lain diklik, kategori sebelumnya otomatis tertutup dan hanya kategori baru yang terbuka.
@@ -997,23 +1004,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Poster Cyberpunk 711 HS Group - Full Square Artwork to fill space perfectly */}
+        {/* Poster Cyberpunk 711 HS Group - Diperbesar Ukurannya Panjang ke Bawah untuk Melengkapi Ruang Kosong */}
         {isOpen && (
-          <div className="pt-2 px-1">
-            <div className="rounded-2xl p-1 bg-gradient-to-b from-[#1E1E28] to-[#101016] border-2 border-yellow-400/90 shadow-[0_0_20px_rgba(250,204,21,0.25)] relative overflow-hidden group">
-              <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-black flex items-center justify-center">
+          <div className="pt-2 px-1 flex-1 min-h-[300px] flex flex-col justify-end">
+            <div 
+              onClick={onOpenCustomizer}
+              title="Klik untuk Ganti Gambar Poster Sidebar"
+              className="rounded-2xl p-1 bg-gradient-to-b from-[#1E1E28] to-[#101016] border-2 border-yellow-400/90 shadow-[0_0_20px_rgba(250,204,21,0.25)] relative overflow-hidden group cursor-pointer w-full"
+            >
+              <div className="relative w-full aspect-[3/4] max-h-[380px] rounded-xl overflow-hidden bg-black flex items-center justify-center">
                 <img 
-                  src={donIskoLogo} 
+                  src={sidebarImage || OFFICIAL_DON_ISKO_IMG} 
                   alt="711 HS GROUP - By: Don Isko" 
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
-                  <span className="px-2 py-0.5 rounded bg-black/90 text-[#00F3FF] text-[9.5px] font-mono font-black border border-[#00F3FF]/60 shadow-md">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent pointer-events-none" />
+                <div className="absolute bottom-2.5 left-2 right-2 flex items-center justify-between pointer-events-none">
+                  <span className="px-2.5 py-1 rounded bg-black/90 text-[#00F3FF] text-[10px] font-mono font-black border border-[#00F3FF]/70 shadow-lg">
                     DON ISKO
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-black/90 text-yellow-400 text-[9.5px] font-mono font-black border border-yellow-400/60 shadow-md">
+                  <span className="px-2.5 py-1 rounded bg-black/90 text-yellow-400 text-[10px] font-mono font-black border border-yellow-400/70 shadow-lg">
                     711 HS GROUP
                   </span>
                 </div>
@@ -1023,13 +1034,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </nav>
 
-      {/* Sidebar Footer: DON ISKO - HS GROUP 711 (Diperbesar & Posisi Lebih ke Tengah Sesuai Tanda X Kuning) */}
-      <div className="p-3.5 border-t border-white/10 bg-[#0A0A0A]/95">
+      {/* Sidebar Footer: DON ISKO - 711 HS GROUP Beserta Foto Resmi Don Isko */}
+      <div 
+        onClick={onOpenCustomizer}
+        title="Klik untuk Mengatur Profil & Tampilan"
+        className="p-3.5 border-t border-white/10 bg-[#0A0A0A]/95 hover:bg-[#121212] transition-all cursor-pointer"
+      >
         <div className={`flex items-center ${isOpen ? 'justify-center gap-3.5 px-2' : 'justify-center'}`}>
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.3)] flex-shrink-0 bg-black">
+          <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)] flex-shrink-0 bg-black">
             <img 
-              src={donIskoLogo} 
-              alt="Don Isko" 
+              src={OFFICIAL_DON_ISKO_IMG} 
+              alt="DON ISKO - 711 HS GROUP" 
               className="w-full h-full object-cover object-center"
               referrerPolicy="no-referrer"
             />
@@ -1040,7 +1055,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 DON ISKO
               </span>
               <span className="text-[10px] text-yellow-400 font-mono tracking-wider font-extrabold">
-                HS GROUP 711
+                711 HS GROUP
               </span>
             </div>
           )}

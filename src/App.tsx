@@ -31,19 +31,32 @@ import { JadwalPasaranTogel } from './components/tools/JadwalPasaranTogel';
 import { ShiftType, UserProfile, JobdeskTask } from './types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from './data/initialData';
 import { ChevronRight, Home } from 'lucide-react';
-import donIskoBg from './assets/images/don_isko_711_1788035559676.jpg';
+
+export const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
 
 export default function App() {
-  // Session / User Profile (Updated to SINTA MANIS - Secretary Don Isko)
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>({
-    username: 'sinta_manis',
-    name: 'SINTA MANIS',
-    role: 'Secretary Don Isko',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    shift: 'PAGI'
+  // Session / User Profile with LocalStorage persistence
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      const savedUser = localStorage.getItem('don_isko_current_user');
+      if (savedUser) {
+        try {
+          return JSON.parse(savedUser);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return {
+      username: 'sinta_manis',
+      name: 'SINTA MANIS',
+      role: 'Secretary Don Isko',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      shift: 'PAGI'
+    };
   });
 
-  const [activeShift, setActiveShift] = useState<ShiftType>('PAGI');
+  const [activeShift, setActiveShift] = useState<ShiftType>(() => currentUser?.shift || 'PAGI');
   const [activeView, setActiveView] = useState<ActiveView>('home');
   const [soundEnabled, setSoundEnabled] = useState(true);
   
@@ -52,10 +65,44 @@ export default function App() {
     return [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
   });
 
-  // Modals
+  // Modals & Dynamic Image Customization with LocalStorage persistence
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isBgModalOpen, setIsBgModalOpen] = useState(false);
-  const [bgImage, setBgImage] = useState<string>(donIskoBg); // Official Don Isko 711 Background default
+  const [bgImage, setBgImage] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('don_isko_dashboard_bg') || OFFICIAL_DON_ISKO_IMG;
+    }
+    return OFFICIAL_DON_ISKO_IMG;
+  });
+
+  const [sidebarImage, setSidebarImage] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('don_isko_sidebar_img') || OFFICIAL_DON_ISKO_IMG;
+    }
+    return OFFICIAL_DON_ISKO_IMG;
+  });
+
+  const handleUpdateBgImage = (url: string) => {
+    setBgImage(url);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('don_isko_dashboard_bg', url);
+    }
+  };
+
+  const handleUpdateSidebarImage = (url: string) => {
+    setSidebarImage(url);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('don_isko_sidebar_img', url);
+    }
+  };
+
+  const handleUpdateUserProfile = (updated: UserProfile) => {
+    setCurrentUser(updated);
+    setActiveShift(updated.shift);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('don_isko_current_user', JSON.stringify(updated));
+    }
+  };
 
   // Responsive sidebar collapse: automatically open when screen is wide, closed when resized to smaller screen
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
@@ -221,6 +268,9 @@ export default function App() {
               setSelectedShiftFilter={handleShiftChange}
               jobdeskCsCount={{ done: csDoneCount, total: csShiftTasks.length }}
               jobdeskKasirCount={{ done: kasirDoneCount, total: kasirShiftTasks.length }}
+              sidebarImage={sidebarImage}
+              currentUser={currentUser}
+              onOpenCustomizer={() => setIsBgModalOpen(true)}
             />
           </div>
 
@@ -361,7 +411,11 @@ export default function App() {
           isOpen={isBgModalOpen}
           onClose={() => setIsBgModalOpen(false)}
           currentBgUrl={bgImage}
-          onSelectBgUrl={setBgImage}
+          onSelectBgUrl={handleUpdateBgImage}
+          currentSidebarImgUrl={sidebarImage}
+          onSelectSidebarImgUrl={handleUpdateSidebarImage}
+          currentUserProfile={currentUser}
+          onUpdateUserProfile={handleUpdateUserProfile}
         />
       </div>
     </div>

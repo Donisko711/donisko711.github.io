@@ -1120,7 +1120,7 @@ export const PRESET_BACKGROUNDS = [
   {
     id: 'bg-don-isko-711',
     name: 'Don Isko 711 HS Group (Official Background)',
-    url: '/don-isko-711.jpg',
+    url: 'https://ik.imagekit.io/donisko711/donisko711.jpg',
     description: 'Artwork eksklusif 711 HS Group by Don Isko Cyber Hacker Matrix.'
   },
   {

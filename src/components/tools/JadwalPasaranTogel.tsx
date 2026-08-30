@@ -178,26 +178,41 @@ export const JadwalPasaranTogel: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in">
       {/* Toast Notification */}
       {successToast && (
-        <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold font-mono text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.6)] animate-in slide-in-from-top-2">
+        <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-gradient-to-r from-[#00F3FF] to-[#00FF66] text-black font-bold font-mono text-xs flex items-center gap-2 shadow-[0_0_25px_rgba(0,243,255,0.6)] animate-in slide-in-from-top-2">
           <CheckCircle2 className="w-5 h-5 text-black" />
           <span>{successToast}</span>
         </div>
       )}
 
-      {/* Header Bar: Dominasi Hitam, Kuning Gold, & Putih */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-[#121214]/95 border border-zinc-800 border-b-4 border-b-yellow-400 shadow-2xl space-y-4 backdrop-blur-md">
+      {/* Top Banner Neon Box Header */}
+      <div className="text-center py-2.5 px-4 rounded-2xl bg-[#06080D] border-2 border-[#00F3FF]/60 shadow-[0_0_20px_rgba(0,243,255,0.25)] relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#00F3FF]/10 via-[#00FF66]/10 to-[#00F3FF]/10 pointer-events-none" />
+        <h4 className="text-[#00F3FF] font-mono font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 relative z-10">
+          <Zap className="w-4 h-4 text-[#00FF66] animate-pulse" />
+          <span className="drop-shadow-[0_0_8px_rgba(0,243,255,0.8)]">
+            LIVE JADWAL RESMI POOLS PASARAN TOGEL ONLINE
+          </span>
+          <Zap className="w-4 h-4 text-[#00FF66] animate-pulse" />
+        </h4>
+      </div>
+
+      {/* Main Header Bar: Dominasi Biru Neon Box, Hitam, Putih, Hijau */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-[#0A0D14]/95 border-2 border-[#00F3FF]/70 border-b-4 border-b-[#00FF66] shadow-[0_0_30px_rgba(0,243,255,0.2)] space-y-4 backdrop-blur-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="px-3 py-0.5 rounded-full bg-yellow-400/15 text-yellow-400 text-[10px] font-bold font-mono border border-yellow-400/40 shadow-sm">
+              <span className="px-3 py-0.5 rounded-full bg-[#00F3FF]/15 text-[#00F3FF] text-[10px] font-bold font-mono border border-[#00F3FF]/60 shadow-[0_0_10px_rgba(0,243,255,0.3)]">
                 LIVE JADWAL RESMI POOLS
               </span>
-              <span className="text-xs text-zinc-400 font-mono">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#00FF66]/15 text-[#00FF66] text-[10px] font-bold font-mono border border-[#00FF66]/50 shadow-[0_0_8px_rgba(0,255,102,0.2)]">
+                WIB (GMT+7)
+              </span>
+              <span className="text-xs text-zinc-300 font-mono">
                 Total {pasaranList.length} Pasaran Togel
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wider uppercase font-sans">
-              JAM & JADWAL BUKAAN TOGEL
+              JAM & JADWAL BUKAAN TOGEL RESMI
             </h1>
           </div>
 
@@ -208,104 +223,120 @@ export const JadwalPasaranTogel: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Cari pasar..."
-                className="w-full pl-5 pr-10 py-2.5 rounded-full bg-[#0A0A0C] text-white font-semibold text-sm outline-none border border-zinc-700 focus:border-yellow-400 placeholder:italic placeholder:text-zinc-500 shadow-inner focus:shadow-[0_0_15px_rgba(250,204,21,0.25)] transition-all"
+                placeholder="Cari nama pasar..."
+                className="w-full pl-5 pr-10 py-2.5 rounded-full bg-[#05070A] text-white font-semibold text-sm outline-none border-2 border-[#00F3FF]/50 focus:border-[#00FF66] placeholder:italic placeholder:text-zinc-500 shadow-inner focus:shadow-[0_0_15px_rgba(0,255,102,0.4)] transition-all"
               />
-              <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-400" />
+              <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00F3FF]" />
             </div>
 
             <button
               onClick={() => setIsAddModalOpen(true)}
               id="btn-tambah-pasaran"
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs tracking-wider uppercase transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] cursor-pointer whitespace-nowrap active:scale-95"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#00E676] via-[#00FF88] to-[#00C853] hover:from-[#00FF88] hover:to-[#00E676] text-black font-black text-xs tracking-wider uppercase transition-all shadow-[0_0_15px_rgba(0,255,102,0.4)] cursor-pointer whitespace-nowrap active:scale-95"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-black" />
               <span>Tambah</span>
             </button>
           </div>
         </div>
 
         {/* Quick Filter Status & Reset Action */}
-        <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80 text-xs font-mono text-zinc-400">
+        <div className="flex items-center justify-between pt-2 border-t border-[#00F3FF]/20 text-xs font-mono text-zinc-300">
           <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-yellow-400 font-bold">Waktu Acuan: WIB (GMT+7)</span>
+            <span className="text-[#00FF66] font-bold">Waktu Acuan: WIB (GMT+7)</span>
             <span>•</span>
             <span>Menampilkan: {filteredPasaran.length} dari {pasaranList.length} pasaran</span>
           </div>
           <button
             onClick={handleResetDefault}
-            className="text-xs text-zinc-400 hover:text-yellow-400 underline transition-colors cursor-pointer flex items-center gap-1"
+            className="text-xs text-zinc-300 hover:text-[#00F3FF] underline transition-colors cursor-pointer flex items-center gap-1"
           >
-            <RotateCcw className="w-3 h-3 text-yellow-400" />
-            <span>Reset Default</span>
+            <RotateCcw className="w-3 h-3 text-[#00F3FF]" />
+            <span>Reset Default (63 Pasaran)</span>
           </button>
         </div>
       </div>
 
-      {/* Grid Kartu Jadwal Pasaran Dominasi Hitam, Kuning Gold, & Putih */}
+      {/* Grid Kartu Jadwal Pasaran: Dominasi Biru Neon Box, Hitam, Putih, Hijau */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-3">
         {filteredPasaran.map((item, index) => {
           const isHoliday = item.hari.includes('LIBUR');
           return (
             <div
               key={item.id}
-              className="relative rounded-2xl bg-[#121215] p-5 text-white border border-zinc-800 hover:border-yellow-400/80 shadow-xl hover:shadow-[0_8px_25px_rgba(250,204,21,0.15)] transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between group"
+              className="relative rounded-2xl bg-[#090D16] p-5 text-white border-2 border-[#00F3FF]/40 hover:border-[#00FF66] shadow-[0_4px_20px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(0,255,102,0.25)] transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between group"
             >
-              {/* Badge Nomor Urut di Atas Tengah */}
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-[#09090B] border border-yellow-400 text-yellow-400 font-black text-xs font-mono shadow-[0_0_10px_rgba(250,204,21,0.3)] z-10 flex items-center gap-1">
-                <span>{index + 1}</span>
-              </div>
+              {/* Neon Corner Glow */}
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#00F3FF]/15 to-transparent pointer-events-none rounded-tr-2xl" />
 
-              {/* Action Delete Button jika pasaran custom/ingin dihapus */}
-              <button
-                onClick={() => handleDeletePasaran(item.id, item.name)}
-                title="Hapus pasaran dari jadwal"
-                className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-white/5 hover:bg-rose-600 hover:text-white text-zinc-500 transition-all cursor-pointer z-10"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              <div>
+                {/* Header Kartu: Nomor Urut Jelas & Status / Tombol Hapus */}
+                <div className="flex items-center justify-between gap-2 pb-2.5 mb-2 border-b border-[#00F3FF]/20">
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-0.5 rounded-lg bg-[#04060A] border-2 border-[#00F3FF] text-[#00F3FF] font-black text-xs font-mono shadow-[0_0_12px_rgba(0,243,255,0.4)] flex items-center gap-1.5">
+                      <span className="text-[10px] text-zinc-400 font-bold">NO.</span>
+                      <span className="text-white text-sm drop-shadow-[0_0_6px_rgba(0,243,255,0.8)]">{index + 1}</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-[#00FF66] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-[#00FF66]/10 border border-[#00FF66]/30">
+                      LIVE POOLS
+                    </span>
+                  </div>
 
-              <div className="pt-2">
+                  {item.isCustom ? (
+                    <button
+                      onClick={() => handleDeletePasaran(item.id, item.name)}
+                      title="Hapus pasaran dari jadwal"
+                      className="p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <span className="text-[9.5px] font-mono text-zinc-400">
+                      GMT+7
+                    </span>
+                  )}
+                </div>
+
                 {/* Nama Pasaran */}
-                <h3 className="text-center font-black text-sm tracking-wider text-white group-hover:text-yellow-400 uppercase pb-2 transition-colors">
+                <h3 className="text-center font-black text-base tracking-wider text-white group-hover:text-[#00F3FF] uppercase py-1 transition-colors drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]">
                   {item.name}
                 </h3>
 
                 {/* Garis Putus-Putus */}
-                <div className="border-b border-dashed border-zinc-800 group-hover:border-yellow-400/40 my-1 w-full transition-colors"></div>
+                <div className="border-b-2 border-dashed border-[#00F3FF]/25 group-hover:border-[#00FF66]/50 my-1 w-full transition-colors"></div>
 
                 {/* Baris Informasi Hari, Tutup, Buka */}
                 <div className="space-y-2.5 py-3 px-1 text-xs font-bold font-sans">
                   {/* Hari */}
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#09090B] border border-zinc-800/80">
-                    <div className="flex items-center gap-1.5 text-zinc-400">
-                      <Calendar className="w-3.5 h-3.5 text-yellow-400" />
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#04060A] border border-[#00F3FF]/30">
+                    <div className="flex items-center gap-1.5 text-[#00F3FF]">
+                      <Calendar className="w-3.5 h-3.5 text-[#00F3FF]" />
                       <span>Hari</span>
                     </div>
-                    <span className={`text-right font-black ${isHoliday ? 'text-rose-400 underline' : 'text-zinc-200'}`}>
+                    <span className={`text-right font-black ${isHoliday ? 'text-rose-400 underline' : 'text-white'}`}>
                       {item.hari}
                     </span>
                   </div>
 
                   {/* Tutup */}
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#09090B] border border-zinc-800/80">
-                    <div className="flex items-center gap-1.5 text-zinc-400">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#04060A] border border-rose-500/40">
+                    <div className="flex items-center gap-1.5 text-zinc-300">
                       <Clock className="w-3.5 h-3.5 text-rose-400" />
                       <span>Tutup</span>
                     </div>
                     <span className="text-rose-400 font-black text-sm font-mono">
-                      {item.tutup} <span className="text-[10px] font-normal text-zinc-500">(WIB)</span>
+                      {item.tutup} <span className="text-[10px] font-normal text-zinc-400">(WIB)</span>
                     </span>
                   </div>
 
-                  {/* Buka */}
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#09090B] border border-zinc-800/80">
-                    <div className="flex items-center gap-1.5 text-zinc-400">
-                      <Clock className="w-3.5 h-3.5 text-yellow-400" />
+                  {/* Buka (Hijau Neon) */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#04060A] border border-[#00FF66]/40 shadow-[0_0_10px_rgba(0,255,102,0.1)]">
+                    <div className="flex items-center gap-1.5 text-zinc-300">
+                      <Clock className="w-3.5 h-3.5 text-[#00FF66]" />
                       <span>Buka</span>
                     </div>
-                    <span className="text-yellow-400 font-black text-sm font-mono drop-shadow-[0_0_6px_rgba(250,204,21,0.4)]">
-                      {item.buka} <span className="text-[10px] font-normal text-zinc-500">(WIB)</span>
+                    <span className="text-[#00FF66] font-black text-sm font-mono drop-shadow-[0_0_8px_rgba(0,255,102,0.5)]">
+                      {item.buka} <span className="text-[10px] font-normal text-zinc-400">(WIB)</span>
                     </span>
                   </div>
                 </div>
@@ -317,10 +348,10 @@ export const JadwalPasaranTogel: React.FC = () => {
                   href={item.link.startsWith('http') ? item.link : `https://${item.link}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#1C1C20] hover:bg-[#27272E] text-zinc-200 hover:text-white font-bold text-xs tracking-wider uppercase border border-zinc-700 hover:border-yellow-400 shadow-sm active:translate-y-0.5 transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#080C14] hover:bg-[#0E1524] text-white font-bold text-xs tracking-wider uppercase border-2 border-[#00F3FF]/60 hover:border-[#00FF66] shadow-[0_0_12px_rgba(0,243,255,0.2)] active:translate-y-0.5 transition-all cursor-pointer group-hover:shadow-[0_0_15px_rgba(0,255,102,0.3)]"
                 >
                   <span>KUNJUNGI WEBSITE</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-yellow-400" />
+                  <ExternalLink className="w-3.5 h-3.5 text-[#00FF66]" />
                 </a>
               </div>
             </div>
@@ -329,15 +360,15 @@ export const JadwalPasaranTogel: React.FC = () => {
       </div>
 
       {filteredPasaran.length === 0 && (
-        <div className="p-12 text-center rounded-3xl bg-[#121215] border border-zinc-800 space-y-3">
-          <AlertCircle className="w-10 h-10 text-yellow-400 mx-auto" />
+        <div className="p-12 text-center rounded-3xl bg-[#090D16] border-2 border-[#00F3FF]/40 space-y-3">
+          <AlertCircle className="w-10 h-10 text-[#00F3FF] mx-auto" />
           <h3 className="text-lg font-bold text-white">Pasaran Togel Tidak Ditemukan</h3>
           <p className="text-xs text-zinc-400">
             Tidak ada pasaran yang cocok dengan kata kunci "{searchQuery}".
           </p>
           <button
             onClick={() => setSearchQuery('')}
-            className="px-5 py-2 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-bold text-xs shadow-md cursor-pointer"
+            className="px-5 py-2 rounded-full bg-gradient-to-r from-[#00F3FF] to-[#00FF66] text-black font-bold text-xs shadow-md cursor-pointer"
           >
             Hapus Pencarian
           </button>
@@ -347,10 +378,10 @@ export const JadwalPasaranTogel: React.FC = () => {
       {/* Modal Tambah Pasaran Baru */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-md rounded-3xl bg-[#121215] border border-zinc-700 p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+          <div className="w-full max-w-md rounded-3xl bg-[#0A0D14] border-2 border-[#00F3FF] p-6 shadow-[0_0_50px_rgba(0,243,255,0.4)] space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#00F3FF]/30">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-yellow-400" />
+                <Sparkles className="w-5 h-5 text-[#00FF66]" />
                 <h3 className="text-base font-black text-white uppercase tracking-wider">
                   Tambah Pasaran Togel Baru
                 </h3>
@@ -372,7 +403,7 @@ export const JadwalPasaranTogel: React.FC = () => {
                   placeholder="Contoh: TOTO MACAU 00:00 / SINGAPORE"
                   value={newPasaran.name}
                   onChange={e => setNewPasaran({ ...newPasaran, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090B] border border-zinc-700 text-white focus:border-yellow-400 outline-none uppercase font-bold"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#05070A] border-2 border-[#00F3FF]/40 text-white focus:border-[#00FF66] outline-none uppercase font-bold"
                 />
               </div>
 
@@ -385,7 +416,7 @@ export const JadwalPasaranTogel: React.FC = () => {
                     placeholder="Contoh: 17:30"
                     value={newPasaran.tutup}
                     onChange={e => setNewPasaran({ ...newPasaran, tutup: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090B] border border-zinc-700 text-rose-400 font-bold focus:border-yellow-400 outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#05070A] border-2 border-[#00F3FF]/40 text-rose-400 font-bold focus:border-[#00FF66] outline-none"
                   />
                 </div>
 
@@ -397,7 +428,7 @@ export const JadwalPasaranTogel: React.FC = () => {
                     placeholder="Contoh: 17:40"
                     value={newPasaran.buka}
                     onChange={e => setNewPasaran({ ...newPasaran, buka: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090B] border border-zinc-700 text-yellow-400 font-bold focus:border-yellow-400 outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#05070A] border-2 border-[#00F3FF]/40 text-[#00FF66] font-bold focus:border-[#00FF66] outline-none"
                   />
                 </div>
               </div>
@@ -409,7 +440,7 @@ export const JadwalPasaranTogel: React.FC = () => {
                   placeholder="Contoh: SETIAP HARI / SELASA & JUMAT LIBUR"
                   value={newPasaran.hari}
                   onChange={e => setNewPasaran({ ...newPasaran, hari: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090B] border border-zinc-700 text-white focus:border-yellow-400 outline-none uppercase font-bold"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#05070A] border-2 border-[#00F3FF]/40 text-white focus:border-[#00FF66] outline-none uppercase font-bold"
                 />
               </div>
 
@@ -420,7 +451,7 @@ export const JadwalPasaranTogel: React.FC = () => {
                   placeholder="Contoh: https://www.singaporepools.com.sg"
                   value={newPasaran.link}
                   onChange={e => setNewPasaran({ ...newPasaran, link: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090B] border border-zinc-700 text-yellow-400 focus:border-yellow-400 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#05070A] border-2 border-[#00F3FF]/40 text-[#00F3FF] focus:border-[#00FF66] outline-none"
                 />
               </div>
 
@@ -428,13 +459,13 @@ export const JadwalPasaranTogel: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-zinc-800 text-zinc-300 font-bold hover:bg-zinc-700 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#080C14] text-zinc-300 font-bold hover:bg-[#121622] cursor-pointer border border-zinc-700"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-extrabold uppercase shadow-[0_0_15px_rgba(250,204,21,0.3)] cursor-pointer"
+                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-[#00E676] via-[#00FF88] to-[#00C853] text-black font-black uppercase shadow-[0_0_15px_rgba(0,255,102,0.4)] cursor-pointer"
                 >
                   Simpan Pasaran
                 </button>

@@ -14,7 +14,8 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { ShiftType, UserProfile } from '../types';
-import donIskoLogo from '../assets/images/don_isko_711_1788035559676.jpg';
+
+export const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
 
 interface HeaderProps {
   sidebarOpen?: boolean;
@@ -31,6 +32,7 @@ interface HeaderProps {
   soundEnabled?: boolean;
   setSoundEnabled?: (enabled: boolean | ((prev: boolean) => boolean)) => void;
   activeMenuTitle?: string;
+  customLogoImg?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -46,7 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBgModal,
   soundEnabled = true,
   setSoundEnabled,
-  activeMenuTitle
+  activeMenuTitle,
+  customLogoImg
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
   const [shiftDropdownOpen, setShiftDropdownOpen] = useState(false);
@@ -146,10 +149,14 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Center: Brand Logo DON ISKO (Centered Perfectly) */}
-      <div className="flex sm:absolute sm:left-1/2 sm:-translate-x-1/2 items-center gap-2.5 sm:gap-3 z-10">
-        <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400/90 shadow-[0_0_20px_rgba(234,179,8,0.5)] flex-shrink-0 bg-black">
+      <div 
+        onClick={onOpenBgModal}
+        title="Klik untuk Pengaturan Tampilan & Profil"
+        className="flex sm:absolute sm:left-1/2 sm:-translate-x-1/2 items-center gap-2.5 sm:gap-3 z-10 cursor-pointer group"
+      >
+        <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400/90 shadow-[0_0_20px_rgba(234,179,8,0.5)] flex-shrink-0 bg-black group-hover:scale-105 transition-transform duration-200">
           <img 
-            src={donIskoLogo} 
+            src={customLogoImg || OFFICIAL_DON_ISKO_IMG} 
             alt="DON ISKO - HS GROUP 711"
             className="w-full h-full object-cover object-center"
             referrerPolicy="no-referrer"
@@ -168,15 +175,15 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Background Customizer, Sound FX, Shift Selector & Profile */}
       <div className="flex items-center gap-2 sm:gap-3 z-10">
-        {/* Background Selector Button */}
+        {/* Background / Customizer Selector Button */}
         <button
           onClick={onOpenBgModal}
           id="btn-open-bg-modal"
-          title="Tempel / Ganti Wallpaper Background"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-[#00F3FF] text-xs font-medium border border-white/10 hover:border-[#00F3FF]/40 shadow-[0_0_10px_rgba(0,243,255,0.1)] transition-all cursor-pointer backdrop-blur-sm"
+          title="Pengaturan Wallpaper, Gambar Sidebar & Profil"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-yellow-400 text-xs font-bold border border-yellow-400/30 hover:border-yellow-400/80 shadow-[0_0_10px_rgba(250,204,21,0.15)] transition-all cursor-pointer backdrop-blur-sm"
         >
-          <ImageIcon className="w-3.5 h-3.5 text-[#00F3FF]" />
-          <span className="hidden sm:inline text-gray-200 hover:text-white">Wallpaper</span>
+          <ImageIcon className="w-3.5 h-3.5 text-yellow-400" />
+          <span className="hidden sm:inline text-gray-200 hover:text-white">Tampilan & Profil</span>
         </button>
 
         {/* Sound Toggle */}
@@ -240,15 +247,25 @@ export const Header: React.FC<HeaderProps> = ({
         {/* User Profile & Sleek Yellow Logout */}
         {effectiveUser ? (
           <div className="flex items-center gap-3 pl-2 border-l border-[#1F1F1F]">
-            <div className="hidden lg:flex items-center gap-2.5 bg-[#1A1A1A] px-3 py-1.5 rounded-full border border-[#1F1F1F]">
-              <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-[10px]">
-                {effectiveUser.name.charAt(0)}
-              </div>
+            <div 
+              onClick={onOpenBgModal}
+              title="Klik untuk Edit Profil & Tampilan"
+              className="hidden lg:flex items-center gap-2.5 bg-[#1A1A1A] hover:bg-[#222222] px-3 py-1.5 rounded-full border border-[#1F1F1F] hover:border-yellow-400/40 transition-all cursor-pointer"
+            >
+              {effectiveUser.avatar ? (
+                <div className="w-6 h-6 rounded-full overflow-hidden border border-yellow-400 flex-shrink-0 bg-black">
+                  <img src={effectiveUser.avatar} alt={effectiveUser.name} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-[10px]">
+                  {effectiveUser.name.charAt(0)}
+                </div>
+              )}
               <div className="flex flex-col text-left">
-                <span className="text-xs font-bold text-white leading-tight">
+                <span className="text-xs font-bold text-white leading-tight truncate max-w-[100px]">
                   {effectiveUser.name}
                 </span>
-                <span className="text-[9px] text-gray-400 font-mono">
+                <span className="text-[9px] text-gray-400 font-mono truncate max-w-[100px]">
                   {effectiveUser.role}
                 </span>
               </div>
