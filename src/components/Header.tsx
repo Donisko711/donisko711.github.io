@@ -150,9 +150,9 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Center: Brand Logo DON ISKO (Centered Perfectly) */}
       <div 
-        onClick={onOpenBgModal}
-        title="Klik untuk Pengaturan Tampilan & Profil"
-        className="flex sm:absolute sm:left-1/2 sm:-translate-x-1/2 items-center gap-2.5 sm:gap-3 z-10 cursor-pointer group"
+        onClick={effectiveUser?.username?.toLowerCase() === 'donisko' ? onOpenBgModal : undefined}
+        title={effectiveUser?.username?.toLowerCase() === 'donisko' ? "Klik untuk Pengaturan Tampilan & Profil" : "HS GROUP 711"}
+        className={`flex sm:absolute sm:left-1/2 sm:-translate-x-1/2 items-center gap-2.5 sm:gap-3 z-10 ${effectiveUser?.username?.toLowerCase() === 'donisko' ? 'cursor-pointer group' : ''}`}
       >
         <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400/90 shadow-[0_0_20px_rgba(234,179,8,0.5)] flex-shrink-0 bg-black group-hover:scale-105 transition-transform duration-200">
           <img 
@@ -175,16 +175,18 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Background Customizer, Sound FX, Shift Selector & Profile */}
       <div className="flex items-center gap-2 sm:gap-3 z-10">
-        {/* Background / Customizer Selector Button */}
-        <button
-          onClick={onOpenBgModal}
-          id="btn-open-bg-modal"
-          title="Pengaturan Wallpaper, Gambar Sidebar & Profil"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-yellow-400 text-xs font-bold border border-yellow-400/30 hover:border-yellow-400/80 shadow-[0_0_10px_rgba(250,204,21,0.15)] transition-all cursor-pointer backdrop-blur-sm"
-        >
-          <ImageIcon className="w-3.5 h-3.5 text-yellow-400" />
-          <span className="hidden sm:inline text-gray-200 hover:text-white">Tampilan & Profil</span>
-        </button>
+        {/* Background / Customizer Selector Button - ONLY for Master 'donisko' */}
+        {effectiveUser?.username?.toLowerCase() === 'donisko' && (
+          <button
+            onClick={onOpenBgModal}
+            id="btn-open-bg-modal"
+            title="Pengaturan Wallpaper, Gambar Sidebar & Profil"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-yellow-400 text-xs font-bold border border-yellow-400/30 hover:border-yellow-400/80 shadow-[0_0_10px_rgba(250,204,21,0.15)] transition-all cursor-pointer backdrop-blur-sm"
+          >
+            <ImageIcon className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="hidden sm:inline text-gray-200 hover:text-white">Tampilan & Profil</span>
+          </button>
+        )}
 
         {/* Sound Toggle */}
         <button
@@ -248,9 +250,9 @@ export const Header: React.FC<HeaderProps> = ({
         {effectiveUser ? (
           <div className="flex items-center gap-3 pl-2 border-l border-[#1F1F1F]">
             <div 
-              onClick={onOpenBgModal}
-              title="Klik untuk Edit Profil & Tampilan"
-              className="hidden lg:flex items-center gap-2.5 bg-[#1A1A1A] hover:bg-[#222222] px-3 py-1.5 rounded-full border border-[#1F1F1F] hover:border-yellow-400/40 transition-all cursor-pointer"
+              onClick={effectiveUser?.username?.toLowerCase() === 'donisko' ? onOpenBgModal : undefined}
+              title={effectiveUser?.username?.toLowerCase() === 'donisko' ? "Klik untuk Edit Profil & Tampilan" : effectiveUser.name}
+              className={`hidden lg:flex items-center gap-2.5 bg-[#1A1A1A] px-3 py-1.5 rounded-full border border-[#1F1F1F] ${effectiveUser?.username?.toLowerCase() === 'donisko' ? 'hover:bg-[#222222] hover:border-yellow-400/40 cursor-pointer' : 'cursor-default'}`}
             >
               {effectiveUser.avatar ? (
                 <div className="w-6 h-6 rounded-full overflow-hidden border border-yellow-400 flex-shrink-0 bg-black">

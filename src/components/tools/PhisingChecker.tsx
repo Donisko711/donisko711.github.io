@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   ShieldAlert, 
   ShieldCheck, 
@@ -21,7 +21,17 @@ import {
   Filter,
   CheckCircle2,
   XCircle,
-  FileCheck
+  FileCheck,
+  Zap,
+  Tag,
+  Plus,
+  X,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
+  Flame,
+  Info
 } from 'lucide-react';
 
 interface DomainCheckResponse {
@@ -39,27 +49,58 @@ interface DomainCheckResponse {
   error?: string;
 }
 
+// 28 Automatic Phishing Monitored Keywords requested by user
+export const DEFAULT_MONITORED_KEYWORDS = [
+  'Haes4d', 'siritogel', 'tema4d', 'hantogel', 'ayutogel', 'bigo4d', 
+  'tayo4d', 'djarum4d', 'jepe711', 'hoki711', 'slot711', 'zeus711', 
+  'ceri711', 'qris711', 'horas711', 'agung711', 'sempoa4d', 'djarum365', 
+  'xiutoto', 'trana4d', 'heng4d', 'ronde4d', 'ragnaroktogel', 'lumos4d', 
+  'senna4d', 'nium889', 'redana88', 'blacktogel'
+];
+
 export const PhisingChecker: React.FC = () => {
-  const [urlInput, setUrlInput] = useState<string>('https://google.com');
+  const [urlInput, setUrlInput] = useState<string>('https://www.circuit-mornay.fr/mornay-festival/');
+  const [manualKeyword, setManualKeyword] = useState<string>('');
+  const [activeKeywords, setActiveKeywords] = useState<string[]>(DEFAULT_MONITORED_KEYWORDS);
+  const [newCustomTag, setNewCustomTag] = useState<string>('');
   const [userAgentMode, setUserAgentMode] = useState<'desktop' | 'googlebot' | 'mobile'>('desktop');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [result, setResult] = useState<DomainCheckResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Active sub-tab
-  const [activeTab, setActiveTab] = useState<'script' | 'rich-results' | 'phising' | 'meta' | 'headers'>('script');
+  const [activeTab, setActiveTab] = useState<'script' | 'phising' | 'rich-results' | 'meta' | 'headers'>('script');
 
-  // Search in script
+  // Search inside script viewer
   const [scriptSearch, setScriptSearch] = useState<string>('');
+  const [selectedHighlightLine, setSelectedHighlightLine] = useState<number | null>(null);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedSummary, setCopiedSummary] = useState<boolean>(false);
 
+  const codeContainerRef = useRef<HTMLDivElement>(null);
+
   // Quick preset domains
   const PRESET_DOMAINS = [
-    { name: 'Google.com', url: 'https://google.com' },
-    { name: 'Cloudflare.com', url: 'https://cloudflare.com' },
-    { name: 'Example.org', url: 'https://example.org' },
-    { name: 'Wikipedia.org', url: 'https://wikipedia.org' }
+    { 
+      name: '🔥 circuit-mornay.fr (Target: Zeus711)', 
+      url: 'https://www.circuit-mornay.fr/mornay-festival/', 
+      hint: 'Contoh Phising Nyata' 
+    },
+    { 
+      name: 'Google.com', 
+      url: 'https://google.com', 
+      hint: 'Contoh Bersih' 
+    },
+    { 
+      name: 'Cloudflare.com', 
+      url: 'https://cloudflare.com', 
+      hint: 'Contoh Bersih' 
+    },
+    { 
+      name: 'Wikipedia.org', 
+      url: 'https://wikipedia.org', 
+      hint: 'Contoh Bersih' 
+    }
   ];
 
   const handleInspect = async (overrideUrl?: string) => {
@@ -68,6 +109,7 @@ export const PhisingChecker: React.FC = () => {
 
     setIsLoading(true);
     setErrorMsg(null);
+    setSelectedHighlightLine(null);
 
     try {
       const res = await fetch('/api/check-domain', {
@@ -87,28 +129,98 @@ export const PhisingChecker: React.FC = () => {
       setResult(data);
     } catch (err: any) {
       console.error('Error inspecting domain:', err);
-      setErrorMsg(err.message || 'Gagal menghubungi server untuk inspeksi domain');
+      setErrorMsg(err.message || 'Gagal menghubungi server untuk inspeksi domain. Pastikan domain aktif dan dapat diakses.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Run on mount with default
-  React.useEffect(() => {
-    handleInspect('https://example.org');
+  // Run initial check on mount with the user's example domain
+  useEffect(() => {
+    handleInspect('https://www.circuit-mornay.fr/mornay-festival/');
   }, []);
 
-  // Parse HTML elements for Rich Results, Meta, Scripts, Phishing indicators
+  // Add a new custom keyword to the monitored list
+  const handleAddKeyword = () => {
+    const trimmed = newCustomTag.trim();
+    if (!trimmed) return;
+    if (!activeKeywords.some(k => k.toLowerCase() === trimmed.toLowerCase())) {
+      setActiveKeywords(prev => [...prev, trimmed]);
+    }
+    setNewCustomTag('');
+  };
+
+  // Remove a keyword from list
+  const handleRemoveKeyword = (kwToRemove: string) => {
+    setActiveKeywords(prev => prev.filter(k => k.toLowerCase() !== kwToRemove.toLowerCase()));
+  };
+
+  // Reset to default 28 keywords
+  const handleResetKeywords = () => {
+    setActiveKeywords(DEFAULT_MONITORED_KEYWORDS);
+    setManualKeyword('');
+  };
+
+  // Comprehensive Parsing of HTML: Phishing detection, keywords scanner, JSON-LD, Meta, Forms
   const parsedData = useMemo(() => {
     if (!result?.html) return null;
 
     const html = result.html;
-    
-    // Extract Title
+    const htmlLower = html.toLowerCase();
+    const lines = html.split('\n');
+
+    // 1. Scan for Monitored & Manual Keywords
+    const allKeywordsToScan = [...activeKeywords];
+    if (manualKeyword.trim() && !allKeywordsToScan.some(k => k.toLowerCase() === manualKeyword.trim().toLowerCase())) {
+      allKeywordsToScan.unshift(manualKeyword.trim());
+    }
+
+    const detectedKeywords: { 
+      keyword: string; 
+      count: number; 
+      lines: number[]; 
+      snippets: { lineNum: number; text: string }[];
+      isManual: boolean;
+    }[] = [];
+
+    allKeywordsToScan.forEach(kw => {
+      const kwLower = kw.toLowerCase();
+      if (htmlLower.includes(kwLower)) {
+        let count = 0;
+        const matchingLines: number[] = [];
+        const snippets: { lineNum: number; text: string }[] = [];
+
+        lines.forEach((line, idx) => {
+          if (line.toLowerCase().includes(kwLower)) {
+            count++;
+            const lineNum = idx + 1;
+            matchingLines.push(lineNum);
+            if (snippets.length < 8) {
+              snippets.push({ lineNum, text: line.trim() });
+            }
+          }
+        });
+
+        detectedKeywords.push({
+          keyword: kw,
+          count,
+          lines: matchingLines,
+          snippets,
+          isManual: manualKeyword.trim().toLowerCase() === kwLower
+        });
+      }
+    });
+
+    // Check if any manual keyword has match
+    const manualKeywordMatch = manualKeyword.trim() 
+      ? detectedKeywords.find(d => d.keyword.toLowerCase() === manualKeyword.trim().toLowerCase()) 
+      : null;
+
+    // 2. Extract Title
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     const pageTitle = titleMatch ? titleMatch[1].trim() : '(Tanpa Title)';
 
-    // Extract Meta tags
+    // 3. Extract Meta tags
     const metaList: { name: string; content: string; property?: string }[] = [];
     const metaRegex = /<meta\s+([^>]*?)>/gi;
     let match;
@@ -124,7 +236,7 @@ export const PhisingChecker: React.FC = () => {
       }
     }
 
-    // Extract JSON-LD (Rich Results)
+    // 4. Extract JSON-LD (Rich Results)
     const jsonLdBlocks: any[] = [];
     const jsonLdRegex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
     let jsonLdMatch;
@@ -137,11 +249,11 @@ export const PhisingChecker: React.FC = () => {
       }
     }
 
-    // Extract OpenGraph tags
+    // 5. Extract OpenGraph & Twitter tags
     const ogTags = metaList.filter(m => m.name.startsWith('og:'));
     const twitterTags = metaList.filter(m => m.name.startsWith('twitter:'));
 
-    // Extract Scripts
+    // 6. Extract Scripts
     const scriptTags: { src?: string; inline?: string; length: number }[] = [];
     const scriptRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
     let scriptMatch;
@@ -156,7 +268,7 @@ export const PhisingChecker: React.FC = () => {
       });
     }
 
-    // Extract Forms (Phishing Vector detection)
+    // 7. Extract Forms (Phishing Vector detection)
     const forms: { action?: string; method?: string; inputs: string[] }[] = [];
     const formRegex = /<form\b([^>]*)>([\s\S]*?)<\/form>/gi;
     let formMatch;
@@ -180,19 +292,30 @@ export const PhisingChecker: React.FC = () => {
       });
     }
 
-    // Phishing / Malicious Script Indicators
-    const phishingIndicators: { severity: 'HIGH' | 'MEDIUM' | 'INFO'; title: string; desc: string }[] = [];
-    
-    // 1. Obfuscated JS patterns
+    // 8. General Security & Anomaly Indicators
+    const phishingIndicators: { severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'INFO'; title: string; desc: string }[] = [];
+
+    // Prioritized Brand Phishing Alert
+    if (detectedKeywords.length > 0) {
+      const brandNames = detectedKeywords.map(k => k.keyword.toUpperCase()).join(', ');
+      const totalMatches = detectedKeywords.reduce((acc, curr) => acc + curr.count, 0);
+      phishingIndicators.push({
+        severity: 'CRITICAL',
+        title: `🚨 TERDETEKSI PHISING BRAND: ${brandNames}`,
+        desc: `Domain ini menyisipkan ${totalMatches}x kata kunci brand terlarang (${brandNames}) di dalam script HTML. Ini adalah indikasi kuat pembajakan / web phising terhadap situs ${brandNames}.`
+      });
+    }
+
+    // Obfuscated JS patterns
     if (html.includes('eval(') || html.includes('unescape(') || html.includes('fromCharCode')) {
       phishingIndicators.push({
         severity: 'HIGH',
         title: 'Terdeteksi Obfuscated / Executable JS (eval/unescape)',
-        desc: 'Script mengandung pemanggilan eval/unescape yang lazim dipakai untuk menyembunyikan payload phishing.'
+        desc: 'Script mengandung pemanggilan eval() atau unescape() yang lazim dipakai untuk menyembunyikan payload injeksi phishing.'
       });
     }
 
-    // 2. Hidden iframes
+    // Hidden iframes
     if (/<iframe[^>]*(display\s*:\s*none|visibility\s*:\s*hidden|width=["']0["'])/i.test(html)) {
       phishingIndicators.push({
         severity: 'HIGH',
@@ -201,7 +324,7 @@ export const PhisingChecker: React.FC = () => {
       });
     }
 
-    // 3. Forced redirects (location.replace / meta refresh)
+    // Forced redirects
     if (html.includes('window.location.replace') || html.includes('document.location.href') || /http-equiv=["']refresh["']/i.test(html)) {
       phishingIndicators.push({
         severity: 'MEDIUM',
@@ -210,32 +333,41 @@ export const PhisingChecker: React.FC = () => {
       });
     }
 
-    // 4. External Form Target
-    const externalForms = forms.filter(f => f.action && f.action.startsWith('http') && !f.action.includes(new URL(result.finalUrl || 'https://example.com').hostname));
-    if (externalForms.length > 0) {
-      phishingIndicators.push({
-        severity: 'HIGH',
-        title: 'Form Submission Mengarah ke Domain Eksternal',
-        desc: `Terdapat form yang mengirim data ke domain lain: ${externalForms.map(f => f.action).join(', ')}`
-      });
+    // External Form Target
+    try {
+      const currentHost = new URL(result.finalUrl || 'https://example.com').hostname;
+      const externalForms = forms.filter(f => f.action && f.action.startsWith('http') && !f.action.includes(currentHost));
+      if (externalForms.length > 0) {
+        phishingIndicators.push({
+          severity: 'HIGH',
+          title: 'Form Submission Mengarah ke Domain Eksternal',
+          desc: `Terdapat form yang mengirim data ke domain lain: ${externalForms.map(f => f.action).join(', ')}`
+        });
+      }
+    } catch {
+      // ignore
     }
 
-    // 5. Password inputs without HTTPS
-    if (html.includes('type="password"') && !result.isHttps) {
-      phishingIndicators.push({
-        severity: 'HIGH',
-        title: 'Input Password pada Koneksi Non-HTTPS',
-        desc: 'Halaman meminta password namun tidak berjalan di atas protokol terenkripsi SSL/HTTPS.'
-      });
-    }
-
+    // Clean status fallback
     if (phishingIndicators.length === 0) {
       phishingIndicators.push({
         severity: 'INFO',
-        title: 'Tidak Ditemukan Indikator Anomali Kritis',
-        desc: 'Struktur kode HTML dan form script tampak wajar tanpa injeksi obfuscation yang mencolok.'
+        title: 'Script Bersih & Tidak Ditemukan Indikasi Phising',
+        desc: 'Struktur kode HTML wajar, tidak mengandung kata kunci target brand ataupun injeksi tersembunyi.'
       });
     }
+
+    // Create line lookup map for highlights in the viewer
+    const lineHighlightMap = new Map<number, { keywords: string[]; isCritical: boolean }>();
+    detectedKeywords.forEach(dk => {
+      dk.lines.forEach(ln => {
+        const existing = lineHighlightMap.get(ln) || { keywords: [], isCritical: true };
+        if (!existing.keywords.includes(dk.keyword)) {
+          existing.keywords.push(dk.keyword);
+        }
+        lineHighlightMap.set(ln, existing);
+      });
+    });
 
     return {
       pageTitle,
@@ -246,16 +378,26 @@ export const PhisingChecker: React.FC = () => {
       scriptTags,
       forms,
       phishingIndicators,
-      totalLines: html.split('\n').length
+      detectedKeywords,
+      manualKeywordMatch,
+      lineHighlightMap,
+      totalLines: lines.length,
+      lines
     };
-  }, [result]);
+  }, [result, activeKeywords, manualKeyword]);
 
-  // Filtered HTML lines for Search
-  const filteredHtmlLines = useMemo(() => {
-    if (!result?.html) return [];
-    const lines = result.html.split('\n');
-    return lines;
-  }, [result?.html]);
+  // Jump to specific line in script viewer
+  const scrollToLine = (lineNum: number) => {
+    setActiveTab('script');
+    setSelectedHighlightLine(lineNum);
+    
+    setTimeout(() => {
+      const lineElem = document.getElementById(`code-line-${lineNum}`);
+      if (lineElem) {
+        lineElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  };
 
   const handleCopyScript = () => {
     if (!result?.html) return;
@@ -266,18 +408,25 @@ export const PhisingChecker: React.FC = () => {
 
   const handleCopySummary = () => {
     if (!result || !parsedData) return;
-    const summary = `=== HS GROUP 711 - DOMAIN & SCRIPT INSPECTION REPORT ===
-Target URL: ${result.targetUrl}
-Final URL: ${result.finalUrl}
-HTTP Status: ${result.status} ${result.statusText}
-Response Time: ${result.responseTimeMs}ms
-SSL / HTTPS: ${result.isHttps ? 'SECURE (HTTPS)' : 'UNSECURE (HTTP)'}
-Page Title: ${parsedData.pageTitle}
-Total Baris HTML: ${parsedData.totalLines} baris (${(result.contentLength / 1024).toFixed(2)} KB)
-Jumlah Script Terdeteksi: ${parsedData.scriptTags.length} script
-Jumlah Form Terdeteksi: ${parsedData.forms.length} form
-Rich Results (JSON-LD): ${parsedData.jsonLdBlocks.length} entitas
-Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title}`).join(' | ')}`;
+    const isPhishing = parsedData.detectedKeywords.length > 0;
+    const summary = `=== HS GROUP 711 - LAPORAN INSPEKSI SCRIPT & AUDIT PHISING ===
+Target Domain  : ${result.targetUrl}
+Final URL      : ${result.finalUrl}
+HTTP Status    : ${result.status} ${result.statusText}
+Response Time  : ${result.responseTimeMs} ms
+Keamanan SSL   : ${result.isHttps ? 'SECURE (HTTPS)' : 'UNSECURE (HTTP)'}
+Judul Halaman  : ${parsedData.pageTitle}
+Total Baris    : ${parsedData.totalLines} baris (${(result.contentLength / 1024).toFixed(2)} KB)
+
+STATUS AUDIT PHISING:
+${isPhishing 
+  ? `🚨 BAHAYA: TERDETEKSI PHISING TERHADAP BRAND [${parsedData.detectedKeywords.map(k => k.keyword.toUpperCase()).join(', ')}]!
+Ditemukan di baris: ${parsedData.detectedKeywords.map(k => `${k.keyword.toUpperCase()} (${k.count}x di baris ${k.lines.slice(0, 10).join(', ')})`).join(' | ')}` 
+  : '✅ BERSIH: Tidak ditemukan kata kunci phising brand.'}
+
+Indikator Keamanan Lain:
+${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}`).join('\n')}`;
+
     navigator.clipboard.writeText(summary);
     setCopiedSummary(true);
     setTimeout(() => setCopiedSummary(false), 2000);
@@ -285,135 +434,286 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
 
   const handleDownloadHtml = () => {
     if (!result?.html) return;
+    let safeHost = 'page-source';
+    try {
+      safeHost = new URL(result.finalUrl).hostname.replace(/[^a-zA-Z0-9]/g, '_');
+    } catch {
+      // ignore
+    }
     const blob = new Blob([result.html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `script-page-${new URL(result.finalUrl).hostname.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+    link.download = `script-page-${safeHost}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
+  const hasPhishingAlert = parsedData && parsedData.detectedKeywords.length > 0;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-10">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-[#121218]/90 via-[#181824]/90 to-[#121218]/90 border border-[#00F3FF]/30 backdrop-blur-xl shadow-[0_0_25px_rgba(0,243,255,0.1)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-[#121218]/95 via-[#181824]/95 to-[#121218]/95 border border-[#00F3FF]/30 backdrop-blur-xl shadow-[0_0_30px_rgba(0,243,255,0.15)]">
         <div className="flex items-center gap-3.5">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#00F3FF]/20 to-purple-500/20 text-[#00F3FF] border border-[#00F3FF]/40 shadow-inner">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-[#00F3FF]/20 to-purple-500/20 text-[#00F3FF] border border-[#00F3FF]/40 shadow-inner">
             <Code2 className="w-6 h-6 text-[#00F3FF]" />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-extrabold tracking-wide text-white flex items-center gap-2 font-sans">
+            <h1 className="text-xl sm:text-2xl font-black tracking-wide text-white flex items-center gap-2 font-['Rajdhani'] uppercase">
               <span>PHISING CHECKER & PAGE SCRIPT INSPECTOR</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40">
-                PRO ENGINE
+              <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40 font-bold">
+                RICH RESULTS ENGINE
               </span>
             </h1>
             <p className="text-xs text-gray-300 font-mono mt-0.5">
-              Membaca & menganalisis script page domain secara instan seperti Google Rich Results Test
+              Membaca & menganalisis script page domain secara instan layaknya Google Rich Results Test & mendeteksi injeksi phising brand secara otomatis.
             </p>
           </div>
         </div>
 
         {/* Quick actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleCopySummary}
             disabled={!result}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-200 border border-white/10 text-xs font-mono transition-all disabled:opacity-40 cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#1F1F28] hover:bg-[#2A2A38] text-gray-200 border border-white/10 text-xs font-mono font-bold transition-all disabled:opacity-40 cursor-pointer shadow-sm"
           >
-            {copiedSummary ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <FileCheck className="w-3.5 h-3.5 text-[#00F3FF]" />}
-            <span>{copiedSummary ? 'Laporan Disalin!' : 'Salin Ringkasan'}</span>
+            {copiedSummary ? <Check className="w-4 h-4 text-emerald-400" /> : <FileCheck className="w-4 h-4 text-[#00F3FF]" />}
+            <span>{copiedSummary ? 'Laporan Disalin!' : 'Salin Laporan Audit'}</span>
           </button>
         </div>
       </div>
 
-      {/* Input URL Bar & Presets */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#141416]/80 border border-white/10 backdrop-blur-md shadow-lg space-y-3">
+      {/* Main Dual Input Card: URL Domain & Keyword Search */}
+      <div className="p-5 rounded-2xl bg-[#141418]/90 border border-white/10 backdrop-blur-md shadow-xl space-y-4">
+        {/* Row 1: URL Domain Bar */}
         <form 
           onSubmit={(e) => {
             e.preventDefault();
             handleInspect();
           }}
-          className="flex flex-col md:flex-row items-stretch gap-2.5"
+          className="space-y-3"
         >
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-              <Globe className="w-4 h-4 text-[#00F3FF]" />
+          <div className="flex flex-col lg:flex-row items-stretch gap-2.5">
+            {/* Domain input */}
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                <Globe className="w-4 h-4 text-[#00F3FF]" />
+              </div>
+              <input
+                type="text"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="Tempel URL atau domain yang mau dicek (contoh: https://www.circuit-mornay.fr/mornay-festival/)..."
+                className="w-full pl-10 pr-10 py-3 bg-[#0A0A0C] border border-white/15 rounded-xl text-white placeholder-gray-500 font-mono text-xs sm:text-sm focus:outline-none focus:border-[#00F3FF] focus:ring-1 focus:ring-[#00F3FF] transition-all"
+              />
+              {urlInput && (
+                <button
+                  type="button"
+                  onClick={() => setUrlInput('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="Tempel URL atau nama domain (contoh: https://google.com atau website-target.com)..."
-              className="w-full pl-10 pr-4 py-3 bg-[#0A0A0C] border border-white/15 rounded-xl text-white placeholder-gray-500 font-mono text-sm focus:outline-none focus:border-[#00F3FF] focus:ring-1 focus:ring-[#00F3FF] transition-all"
-            />
-          </div>
 
-          {/* User Agent Selector */}
-          <div className="flex items-center gap-1.5 bg-[#0A0A0C] p-1 rounded-xl border border-white/15">
+            {/* User Agent Selector */}
+            <div className="flex items-center gap-1 bg-[#0A0A0C] p-1 rounded-xl border border-white/15">
+              <button
+                type="button"
+                onClick={() => setUserAgentMode('desktop')}
+                className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  userAgentMode === 'desktop'
+                    ? 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="Browser Desktop Chrome Standar"
+              >
+                Desktop
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserAgentMode('googlebot')}
+                className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  userAgentMode === 'googlebot'
+                    ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="User-Agent Googlebot (Mendeteksi Cloaking Khusus Bot)"
+              >
+                Googlebot
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserAgentMode('mobile')}
+                className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  userAgentMode === 'mobile'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="User-Agent Mobile iPhone / Safari"
+              >
+                Mobile
+              </button>
+            </div>
+
+            {/* Submit Inspect Button */}
             <button
-              type="button"
-              onClick={() => setUserAgentMode('desktop')}
-              className={`px-3 py-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                userAgentMode === 'desktop'
-                  ? 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40'
-                  : 'text-gray-400 hover:text-white'
-              }`}
+              type="submit"
+              disabled={isLoading}
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#00F3FF] via-[#00c8e6] to-[#0096c7] hover:from-[#38f8ff] hover:to-[#00b4d8] text-black font-extrabold text-xs tracking-wider uppercase font-mono flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all cursor-pointer disabled:opacity-50"
             >
-              Desktop
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserAgentMode('googlebot')}
-              className={`px-3 py-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                userAgentMode === 'googlebot'
-                  ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Googlebot
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserAgentMode('mobile')}
-              className={`px-3 py-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-                userAgentMode === 'mobile'
-                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Mobile
+              {isLoading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                  <span>MEMBACA SCRIPT...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4 text-black" />
+                  <span>INSPEKSI SCRIPT DOMAIN</span>
+                </>
+              )}
             </button>
           </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#00F3FF] to-[#00b4d8] hover:from-[#38f8ff] hover:to-[#0096c7] text-black font-extrabold text-xs tracking-wider uppercase font-mono flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,243,255,0.4)] transition-all cursor-pointer disabled:opacity-50"
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                <span>MEMBACA SCRIPT...</span>
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4 text-black" />
-                <span>INSPEKSI DOMAIN</span>
-              </>
-            )}
-          </button>
         </form>
 
-        {/* Quick presets */}
+        {/* Row 2: Dedicated Manual Keyword Search & Live Filter */}
+        <div className="p-3.5 rounded-xl bg-[#0D0D10] border border-white/10 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-mono font-bold text-yellow-400">
+              <Search className="w-3.5 h-3.5" />
+              <span>CARI KATA KUNCI MANUAL DALAM SCRIPT:</span>
+            </div>
+            <div className="text-[11px] text-gray-400 font-mono">
+              {parsedData && manualKeyword.trim() && (
+                <span className={parsedData.manualKeywordMatch ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                  {parsedData.manualKeywordMatch 
+                    ? `⚠️ Ditemukan ${parsedData.manualKeywordMatch.count}x kemunculan untuk "${manualKeyword}"` 
+                    : `✓ Kata kunci "${manualKeyword}" tidak ditemukan dalam script`}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <div className="relative flex-1 w-full">
+              <input
+                type="text"
+                value={manualKeyword}
+                onChange={(e) => setManualKeyword(e.target.value)}
+                placeholder="Ketik kata kunci manual yang ingin dicari (contoh: zeus711, slot, deposit, whatsapp, login)..."
+                className="w-full pl-3.5 pr-10 py-2 bg-[#050508] border border-yellow-500/30 rounded-lg text-yellow-200 placeholder-gray-500 font-mono text-xs focus:outline-none focus:border-yellow-400 transition-all font-bold"
+              />
+              {manualKeyword && (
+                <button
+                  type="button"
+                  onClick={() => setManualKeyword('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Quick add to monitored tag */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-48">
+                <input
+                  type="text"
+                  value={newCustomTag}
+                  onChange={(e) => setNewCustomTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddKeyword();
+                    }
+                  }}
+                  placeholder="+ Brand Baru..."
+                  className="w-full px-3 py-2 bg-[#050508] border border-white/10 rounded-lg text-white placeholder-gray-600 font-mono text-xs focus:outline-none focus:border-purple-400"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleAddKeyword}
+                disabled={!newCustomTag.trim()}
+                className="px-3 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-mono font-bold transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1 flex-shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Tambah</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Collapsible Monitored Keyword Cloud */}
+          <div className="pt-2 border-t border-white/5">
+            <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 mb-2">
+              <span className="flex items-center gap-1.5 text-[#00F3FF] font-bold">
+                <Tag className="w-3 h-3" />
+                <span>28 KEYWORD OTOMATIS MONITORING PHISING ({activeKeywords.length} Brand Aktif):</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleResetKeywords}
+                className="text-gray-400 hover:text-yellow-400 cursor-pointer underline"
+                title="Reset daftar kata kunci ke 28 default brand"
+              >
+                Reset Default
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+              {activeKeywords.map((kw) => {
+                const isMatched = parsedData?.detectedKeywords.some(d => d.keyword.toLowerCase() === kw.toLowerCase());
+                const matchObj = parsedData?.detectedKeywords.find(d => d.keyword.toLowerCase() === kw.toLowerCase());
+                
+                return (
+                  <span
+                    key={kw}
+                    onClick={() => {
+                      setManualKeyword(kw);
+                      if (matchObj && matchObj.lines.length > 0) {
+                        scrollToLine(matchObj.lines[0]);
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold cursor-pointer transition-all ${
+                      isMatched 
+                        ? 'bg-rose-500/30 text-rose-300 border border-rose-500/80 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse' 
+                        : 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10'
+                    }`}
+                  >
+                    <span>{kw}</span>
+                    {isMatched && (
+                      <span className="px-1 py-0.2 rounded bg-rose-500 text-white font-black text-[9px]">
+                        {matchObj?.count}x
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveKeyword(kw);
+                      }}
+                      className="ml-0.5 text-gray-500 hover:text-rose-400"
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Presets Bar */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-[11px] font-mono text-gray-400 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-yellow-400" />
-            Contoh Cepat:
+          <span className="text-[11px] font-mono text-gray-400 flex items-center gap-1 font-bold">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+            Contoh Uji Cepat:
           </span>
           {PRESET_DOMAINS.map(p => (
             <button
@@ -422,9 +722,14 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
                 setUrlInput(p.url);
                 handleInspect(p.url);
               }}
-              className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[#1D1D22] hover:bg-[#252530] text-gray-300 hover:text-[#00F3FF] border border-white/10 transition-all cursor-pointer"
+              className={`text-[11px] font-mono px-3 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                p.url.includes('circuit-mornay') 
+                  ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40 font-bold shadow-[0_0_12px_rgba(244,63,94,0.25)]' 
+                  : 'bg-[#1D1D24] hover:bg-[#252532] text-gray-300 hover:text-[#00F3FF] border-white/10'
+              }`}
             >
-              {p.name}
+              <span>{p.name}</span>
+              <span className="text-[9px] opacity-70">({p.hint})</span>
             </button>
           ))}
         </div>
@@ -432,22 +737,109 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
 
       {/* Error Banner if any */}
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 flex items-center gap-3 text-rose-300 text-xs font-mono">
-          <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+        <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 flex items-center gap-3 text-rose-300 text-xs font-mono shadow-lg animate-in fade-in">
+          <AlertTriangle className="w-6 h-6 text-rose-400 flex-shrink-0" />
           <div>
-            <span className="font-bold block">Pemeriksaan Gagal:</span>
-            <span>{errorMsg}</span>
+            <span className="font-bold block text-sm">Gagal Menginspeksi Domain:</span>
+            <span className="text-xs text-rose-200/90">{errorMsg}</span>
           </div>
         </div>
       )}
 
-      {/* Result Container */}
+      {/* PRIMARY PHISHING DANGER / SAFETY BANNER ALERT (Triggered by user's exact specification) */}
       {result && parsedData && (
         <div className="space-y-4">
-          {/* Status Metric Overview Card */}
+          {hasPhishingAlert ? (
+            /* 🚨 PHISHING DETECTED CRITICAL ALERT BANNER */
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-950/80 via-rose-900/60 to-rose-950/80 border-2 border-rose-500/90 shadow-[0_0_35px_rgba(244,63,94,0.35)] animate-in fade-in space-y-3">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-rose-500/30 border border-rose-400 text-rose-300 flex-shrink-0">
+                    <ShieldAlert className="w-7 h-7 text-rose-400 animate-bounce" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500 text-white font-black uppercase tracking-wider">
+                        PERINGATAN PHISING TERDETEKSI!
+                      </span>
+                      <span className="text-xs text-rose-300 font-mono">
+                        Domain Terindikasi Melakukan Pembajakan Brand
+                      </span>
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-black text-white font-['Rajdhani'] uppercase tracking-wider mt-0.5">
+                      DOMAIN <span className="text-yellow-300 underline">{result.finalUrl}</span> MELAKUKAN PHISING KEPADA SITUS{' '}
+                      <span className="text-rose-300 underline font-black">
+                        {parsedData.detectedKeywords.map(k => k.keyword.toUpperCase()).join(', ')}
+                      </span>
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (parsedData.detectedKeywords[0]?.lines[0]) {
+                        scrollToLine(parsedData.detectedKeywords[0].lines[0]);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-mono text-xs font-black shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Lihat Injeksi Script</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Keyword match breakdown badges */}
+              <div className="p-3 rounded-xl bg-black/50 border border-rose-500/30 space-y-2">
+                <div className="text-xs text-rose-200 font-mono font-bold flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Rincian Kata Kunci yang Ditemukan di dalam Script HTML Domain:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {parsedData.detectedKeywords.map((dk) => (
+                    <div 
+                      key={dk.keyword}
+                      className="px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/50 text-xs font-mono flex items-center gap-2 text-rose-200"
+                    >
+                      <span className="font-extrabold text-white">{dk.keyword.toUpperCase()}</span>
+                      <span className="px-1.5 py-0.2 rounded bg-rose-500/40 text-rose-300 font-black text-[10px]">
+                        {dk.count}x kemunculan
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => scrollToLine(dk.lines[0])}
+                        className="text-[10px] text-yellow-300 hover:text-white underline cursor-pointer"
+                        title="Langsung lompat ke baris kemunculan di script"
+                      >
+                        (Baris #{dk.lines.slice(0, 3).join(', ')}{dk.lines.length > 3 ? '...' : ''})
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* 🛡️ CLEAN SAFETY BANNER */
+            <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 shadow-md flex items-center gap-3 text-emerald-300 font-mono text-xs">
+              <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <div className="font-bold text-sm text-emerald-200">
+                  SCRIPT BERSIH: Tidak Ditemukan Indikasi Phising Brand HS GROUP
+                </div>
+                <p className="text-[11px] text-emerald-300/80 mt-0.5">
+                  Tidak terdapat kata kunci dari {activeKeywords.length} brand yang dimonitor pada kode sumber domain ini.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Metric Overview Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-[#141418]/90 border border-white/10 backdrop-blur-md">
             <div className="p-3 rounded-xl bg-[#0D0D10] border border-white/5">
-              <span className="text-[10px] font-mono text-gray-400 block uppercase">HTTP Response</span>
+              <span className="text-[10px] font-mono text-gray-400 block uppercase">HTTP Response Status</span>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className={`w-2 h-2 rounded-full ${result.status < 400 ? 'bg-emerald-400' : 'bg-rose-400'} animate-pulse`}></span>
                 <span className={`text-sm font-bold font-mono ${result.status < 400 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -461,20 +853,20 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
               <div className="flex items-center gap-1.5 mt-1 text-sm font-bold font-mono">
                 {result.isHttps ? (
                   <span className="text-[#00F3FF] flex items-center gap-1">
-                    <Lock className="w-3.5 h-3.5" /> HTTPS (SSL)
+                    <Lock className="w-3.5 h-3.5" /> HTTPS (SSL Terenkripsi)
                   </span>
                 ) : (
                   <span className="text-rose-400 flex items-center gap-1">
-                    <Unlock className="w-3.5 h-3.5" /> HTTP (Beresiko)
+                    <Unlock className="w-3.5 h-3.5" /> HTTP (Non-SSL / Berisiko)
                   </span>
                 )}
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-[#0D0D10] border border-white/5">
-              <span className="text-[10px] font-mono text-gray-400 block uppercase">Ukuran Script</span>
+              <span className="text-[10px] font-mono text-gray-400 block uppercase">Ukuran Script HTML</span>
               <div className="text-sm font-bold font-mono text-yellow-400 mt-1">
-                {(result.contentLength / 1024).toFixed(1)} KB ({parsedData.totalLines} baris)
+                {(result.contentLength / 1024).toFixed(1)} KB ({parsedData.totalLines} Baris)
               </div>
             </div>
 
@@ -486,47 +878,49 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
             </div>
           </div>
 
-          {/* Tab Navigation */}
+          {/* Tab Navigation (Google Rich Results Style) */}
           <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-2">
             <button
               onClick={() => setActiveTab('script')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
                 activeTab === 'script'
-                  ? 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40 shadow-[0_0_10px_rgba(0,243,255,0.2)]'
+                  ? 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40 shadow-[0_0_12px_rgba(0,243,255,0.25)]'
                   : 'bg-[#141418] text-gray-400 hover:text-white border border-white/5'
               }`}
             >
               <Code2 className="w-4 h-4" />
-              <span>Script Page HTML ({parsedData.totalLines})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('rich-results')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
-                activeTab === 'rich-results'
-                  ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 shadow-[0_0_10px_rgba(250,204,21,0.2)]'
-                  : 'bg-[#141418] text-gray-400 hover:text-white border border-white/5'
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Rich Results & JSON-LD ({parsedData.jsonLdBlocks.length})</span>
+              <span>Script Page HTML ({parsedData.totalLines} baris)</span>
             </button>
 
             <button
               onClick={() => setActiveTab('phising')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
                 activeTab === 'phising'
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)]'
+                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.25)]'
                   : 'bg-[#141418] text-gray-400 hover:text-white border border-white/5'
               }`}
             >
               <ShieldAlert className="w-4 h-4" />
-              <span>Analisis Phising ({parsedData.phishingIndicators.length})</span>
+              <span>
+                Audit Phising & Injeksi {hasPhishingAlert && `(${parsedData.detectedKeywords.length} Temuan)`}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('rich-results')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                activeTab === 'rich-results'
+                  ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 shadow-[0_0_12px_rgba(250,204,21,0.25)]'
+                  : 'bg-[#141418] text-gray-400 hover:text-white border border-white/5'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Rich Results & Schema.org ({parsedData.jsonLdBlocks.length})</span>
             </button>
 
             <button
               onClick={() => setActiveTab('meta')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
                 activeTab === 'meta'
                   ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
                   : 'bg-[#141418] text-gray-400 hover:text-white border border-white/5'
@@ -538,7 +932,7 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
 
             <button
               onClick={() => setActiveTab('headers')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
                 activeTab === 'headers'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                   : 'bg-[#141418] text-gray-400 hover:text-white border border-white/5'
@@ -549,36 +943,56 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
             </button>
           </div>
 
-          {/* TAB 1: SCRIPT PAGE (RAW SOURCE CODE LIKE GOOGLE RICH RESULTS) */}
+          {/* ========================================================================= */}
+          {/* TAB 1: SCRIPT PAGE VIEWER (GOOGLE RICH RESULTS TEST STYLE) */}
+          {/* ========================================================================= */}
           {activeTab === 'script' && (
-            <div className="rounded-2xl bg-[#0D0D10] border border-white/15 overflow-hidden shadow-2xl">
+            <div className="rounded-2xl bg-[#0A0A0E] border border-white/15 overflow-hidden shadow-2xl space-y-0">
               {/* Code Bar Controls */}
-              <div className="p-3 bg-[#16161C] border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <div className="p-3.5 bg-[#14141A] border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={scriptSearch}
                       onChange={(e) => setScriptSearch(e.target.value)}
-                      placeholder="Cari di dalam script (kata kunci, function, tag)..."
-                      className="pl-8 pr-3 py-1.5 rounded-lg bg-[#0A0A0C] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#00F3FF] w-64"
+                      placeholder="Cari kode di viewer script (tag, kata, class, script)..."
+                      className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-[#08080C] border border-white/15 text-white font-mono text-xs focus:outline-none focus:border-[#00F3FF]"
                     />
+                    {scriptSearch && (
+                      <button 
+                        onClick={() => setScriptSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
-                  {scriptSearch && (
-                    <button 
-                      onClick={() => setScriptSearch('')}
-                      className="text-[10px] text-gray-400 hover:text-white font-mono"
-                    >
-                      Clear
-                    </button>
+
+                  {/* Jump directly to detected keywords */}
+                  {parsedData.detectedKeywords.length > 0 && (
+                    <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+                      <span className="text-[10px] text-rose-300 font-mono font-bold flex-shrink-0">
+                        Lompat ke Temuan:
+                      </span>
+                      {parsedData.detectedKeywords.map(dk => (
+                        <button
+                          key={dk.keyword}
+                          onClick={() => scrollToLine(dk.lines[0])}
+                          className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] font-mono font-bold cursor-pointer whitespace-nowrap"
+                        >
+                          {dk.keyword} (#{dk.lines[0]})
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={handleCopyScript}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#22222A] hover:bg-[#2E2E38] text-gray-200 text-xs font-mono transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1F1F28] hover:bg-[#282836] text-gray-200 text-xs font-mono font-bold transition-all cursor-pointer border border-white/10"
                   >
                     {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#00F3FF]" />}
                     <span>{copiedCode ? 'Tersalin!' : 'Salin Script'}</span>
@@ -586,7 +1000,7 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
 
                   <button
                     onClick={handleDownloadHtml}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#22222A] hover:bg-[#2E2E38] text-gray-200 text-xs font-mono transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1F1F28] hover:bg-[#282836] text-gray-200 text-xs font-mono font-bold transition-all cursor-pointer border border-white/10"
                   >
                     <Download className="w-3.5 h-3.5 text-yellow-400" />
                     <span>Download .HTML</span>
@@ -594,34 +1008,179 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
                 </div>
               </div>
 
-              {/* Code Viewer */}
-              <div className="max-h-[600px] overflow-y-auto p-4 font-mono text-xs bg-[#08080A] text-gray-300 selection:bg-[#00F3FF] selection:text-black">
-                <pre className="overflow-x-auto leading-relaxed">
-                  {filteredHtmlLines.map((line, idx) => {
+              {/* Script Source Code Display with Exact Line Numbers */}
+              <div 
+                ref={codeContainerRef}
+                className="max-h-[650px] overflow-y-auto p-4 font-mono text-xs bg-[#060609] text-gray-300 selection:bg-[#00F3FF] selection:text-black"
+              >
+                <div className="font-mono text-xs leading-relaxed space-y-0.5">
+                  {parsedData.lines.map((line, idx) => {
                     const lineNum = idx + 1;
-                    const isMatch = scriptSearch && line.toLowerCase().includes(scriptSearch.toLowerCase());
+                    const highlightInfo = parsedData.lineHighlightMap.get(lineNum);
+                    const isSearchMatch = scriptSearch.trim() && line.toLowerCase().includes(scriptSearch.trim().toLowerCase());
+                    const isSelected = selectedHighlightLine === lineNum;
+
                     return (
                       <div 
-                        key={idx} 
-                        className={`flex hover:bg-white/5 py-0.5 px-1 rounded ${
-                          isMatch ? 'bg-yellow-400/20 text-yellow-200 font-bold border-l-2 border-yellow-400' : ''
+                        key={idx}
+                        id={`code-line-${lineNum}`}
+                        className={`flex items-start py-0.5 px-1 rounded transition-colors ${
+                          isSelected
+                            ? 'bg-purple-500/30 border-l-4 border-purple-400 text-white font-bold'
+                            : highlightInfo
+                              ? 'bg-rose-950/50 border-l-4 border-rose-500 text-rose-200 font-semibold'
+                              : isSearchMatch
+                                ? 'bg-yellow-400/20 border-l-4 border-yellow-400 text-yellow-200 font-bold'
+                                : 'hover:bg-white/5'
                         }`}
                       >
-                        <span className="w-12 text-right pr-4 select-none text-gray-600 text-[10px]">
+                        {/* Line number */}
+                        <span className="w-14 text-right pr-4 select-none text-gray-600 text-[10px] flex-shrink-0 pt-0.5">
                           {lineNum}
                         </span>
-                        <code className="flex-1 whitespace-pre-wrap break-all">
-                          {line}
-                        </code>
+
+                        {/* Code line content */}
+                        <div className="flex-1 whitespace-pre-wrap break-all overflow-x-auto">
+                          {highlightInfo && (
+                            <span className="mr-2 inline-block px-1.5 py-0.2 rounded bg-rose-500 text-white font-black text-[9px] uppercase tracking-wider">
+                              ⚠️ PHISING [{highlightInfo.keywords.join(', ').toUpperCase()}]
+                            </span>
+                          )}
+                          <code>{line}</code>
+                        </div>
                       </div>
                     );
                   })}
-                </pre>
+                </div>
               </div>
             </div>
           )}
 
-          {/* TAB 2: RICH RESULTS & STRUCTURED DATA */}
+          {/* ========================================================================= */}
+          {/* TAB 2: AUDIT PHISING & INJEKSI SCRIPT */}
+          {/* ========================================================================= */}
+          {activeTab === 'phising' && (
+            <div className="space-y-4">
+              {/* Detailed Keyword Injections Table */}
+              <div className="p-4 rounded-2xl bg-[#141418] border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-rose-400 font-mono flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-rose-400" />
+                    <span>Hasil Audit Kata Kunci Phising Brand Target</span>
+                  </h3>
+                  <span className="text-xs text-gray-400 font-mono">
+                    {parsedData.detectedKeywords.length} dari {activeKeywords.length} Brand Terdeteksi
+                  </span>
+                </div>
+
+                {parsedData.detectedKeywords.length > 0 ? (
+                  <div className="space-y-3">
+                    {parsedData.detectedKeywords.map((dk) => (
+                      <div 
+                        key={dk.keyword}
+                        className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/40 font-mono text-xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-rose-200 border-b border-rose-500/20 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-black text-white font-['Rajdhani']">
+                              BRAND: {dk.keyword.toUpperCase()}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-rose-500 text-white font-bold text-[10px]">
+                              {dk.count}x Kemunculan
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => scrollToLine(dk.lines[0])}
+                            className="text-xs text-yellow-300 hover:text-white underline font-bold cursor-pointer"
+                          >
+                            Lompat ke Baris #{dk.lines[0]} &gt;&gt;
+                          </button>
+                        </div>
+
+                        {/* Snippets of the offending lines */}
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[10px] text-gray-400 uppercase font-bold block">
+                            Cuplikan Baris Kode yang Terinjeksi:
+                          </span>
+                          {dk.snippets.map((snip, sIdx) => (
+                            <div 
+                              key={sIdx} 
+                              onClick={() => scrollToLine(snip.lineNum)}
+                              className="p-2 rounded-lg bg-black/60 border border-white/5 hover:border-rose-400 cursor-pointer transition-all"
+                            >
+                              <div className="text-[10px] text-yellow-400 font-bold mb-0.5">
+                                Baris #{snip.lineNum}:
+                              </div>
+                              <code className="text-rose-200 break-all text-[11px] block">
+                                {snip.text}
+                              </code>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-xl bg-[#0D0D10] text-center font-mono text-xs text-gray-400 space-y-1">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                    <p className="text-emerald-300 font-bold">Tidak ada kata kunci brand yang terdeteksi di dalam script.</p>
+                    <p className="text-gray-500 text-[11px]">Domain ini tidak mengandung 28 keyword monitoring HS GROUP.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* General Security & Anomaly Indicators */}
+              <div className="p-4 rounded-2xl bg-[#141418] border border-white/10 space-y-3">
+                <h3 className="text-sm font-bold text-yellow-400 font-mono flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-yellow-400" />
+                  <span>Analisis Anomali & Vektor Script</span>
+                </h3>
+
+                <div className="space-y-2.5">
+                  {parsedData.phishingIndicators.map((item, idx) => {
+                    const isCrit = item.severity === 'CRITICAL';
+                    const isHigh = item.severity === 'HIGH';
+                    const isMed = item.severity === 'MEDIUM';
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`p-3.5 rounded-xl border font-mono text-xs flex items-start gap-3 ${
+                          isCrit 
+                            ? 'bg-rose-950/40 border-rose-500/80 text-rose-200' 
+                            : isHigh 
+                              ? 'bg-rose-500/15 border-rose-500/40 text-rose-300' 
+                              : isMed 
+                                ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300'
+                                : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                        }`}
+                      >
+                        {isCrit || isHigh ? (
+                          <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                        ) : isMed ? (
+                          <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <div className="font-bold flex items-center gap-2">
+                            <span>{item.title}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/40 border border-current">
+                              {item.severity}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-gray-300 leading-relaxed">{item.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 3: RICH RESULTS & STRUCTURED DATA */}
+          {/* ========================================================================= */}
           {activeTab === 'rich-results' && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-[#141418] border border-white/10">
@@ -644,113 +1203,17 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 rounded-xl bg-[#0A0A0C] text-gray-400 text-xs font-mono text-center">
+                  <div className="p-6 rounded-xl bg-[#0A0A0C] text-gray-400 text-xs font-mono text-center">
                     Tidak ditemukan tag &lt;script type="application/ld+json"&gt; pada halaman ini.
                   </div>
                 )}
               </div>
-
-              {/* Open Graph & Twitter Card Meta */}
-              <div className="p-4 rounded-2xl bg-[#141418] border border-white/10">
-                <h3 className="text-sm font-bold text-[#00F3FF] font-mono mb-3 flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-[#00F3FF]" />
-                  Open Graph & Social Share Preview
-                </h3>
-                {parsedData.ogTags.length > 0 || parsedData.twitterTags.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
-                    {[...parsedData.ogTags, ...parsedData.twitterTags].map((og, idx) => (
-                      <div key={idx} className="p-2.5 rounded-xl bg-[#0A0A0C] border border-white/5">
-                        <span className="text-[#00F3FF] block text-[10px] font-bold">{og.name}</span>
-                        <span className="text-gray-200 break-all">{og.content}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-[#0A0A0C] text-gray-400 text-xs font-mono text-center">
-                    Tidak ada tag OpenGraph / Twitter card yang terdefinisi.
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
-          {/* TAB 3: PHISHING & SCRIPT ANALYSIS */}
-          {activeTab === 'phising' && (
-            <div className="space-y-4">
-              {/* Phishing Warning Items */}
-              <div className="p-4 rounded-2xl bg-[#141418] border border-white/10 space-y-3">
-                <h3 className="text-sm font-bold text-rose-400 font-mono flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-rose-400" />
-                  Pemeriksaan Keamanan Script & Indikator Anomali
-                </h3>
-
-                <div className="space-y-2.5">
-                  {parsedData.phishingIndicators.map((item, idx) => {
-                    const isHigh = item.severity === 'HIGH';
-                    const isMed = item.severity === 'MEDIUM';
-                    return (
-                      <div 
-                        key={idx} 
-                        className={`p-3.5 rounded-xl border font-mono text-xs flex items-start gap-3 ${
-                          isHigh 
-                            ? 'bg-rose-500/15 border-rose-500/40 text-rose-300' 
-                            : isMed 
-                              ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300'
-                              : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                        }`}
-                      >
-                        {isHigh ? (
-                          <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-                        ) : isMed ? (
-                          <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                        )}
-                        <div>
-                          <div className="font-bold flex items-center gap-2">
-                            <span>{item.title}</span>
-                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/40 border border-current">
-                              {item.severity}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-gray-300 leading-relaxed">{item.desc}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Form Actions Audit */}
-              <div className="p-4 rounded-2xl bg-[#141418] border border-white/10 space-y-3">
-                <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-[#00F3FF]" />
-                  Audit Form & Input Pengguna ({parsedData.forms.length} Form)
-                </h3>
-                {parsedData.forms.length > 0 ? (
-                  <div className="space-y-2">
-                    {parsedData.forms.map((form, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-[#0A0A0C] border border-white/10 font-mono text-xs">
-                        <div className="flex items-center justify-between text-gray-300 mb-1">
-                          <span className="text-[#00F3FF] font-bold">Form #{idx + 1} ({form.method})</span>
-                          <span className="text-[10px] text-gray-400">Action: {form.action}</span>
-                        </div>
-                        <div className="text-[11px] text-gray-400 mt-1">
-                          Input Fields Terdeteksi: {form.inputs.length > 0 ? form.inputs.join(', ') : '(tanpa input text khusus)'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-[#0A0A0C] text-gray-400 text-xs font-mono text-center">
-                    Tidak ada tag form (&lt;form&gt;) yang ditemukan pada halaman ini.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
+          {/* ========================================================================= */}
           {/* TAB 4: META & SEO */}
+          {/* ========================================================================= */}
           {activeTab === 'meta' && (
             <div className="p-4 rounded-2xl bg-[#141418] border border-white/10 space-y-3 font-mono text-xs">
               <h3 className="text-sm font-bold text-purple-400 mb-2 flex items-center gap-2">
@@ -772,7 +1235,9 @@ Status Phising: ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.ti
             </div>
           )}
 
+          {/* ========================================================================= */}
           {/* TAB 5: HTTP HEADERS */}
+          {/* ========================================================================= */}
           {activeTab === 'headers' && (
             <div className="p-4 rounded-2xl bg-[#141418] border border-white/10 space-y-3 font-mono text-xs">
               <h3 className="text-sm font-bold text-emerald-400 mb-2 flex items-center gap-2">

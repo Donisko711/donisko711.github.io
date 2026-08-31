@@ -18,6 +18,7 @@ import { BonusCalculator } from './components/tools/BonusCalculator';
 import { BonusParlayCalculator } from './components/tools/BonusParlayCalculator';
 import { BbfsGenerator } from './components/tools/BbfsGenerator';
 import { EditPembayaran } from './components/tools/EditPembayaran';
+import { IsiRekapan } from './components/tools/IsiRekapan';
 import { LaporanCS } from './components/tools/LaporanCS';
 import { ScriptChatMemo } from './components/tools/ScriptChatMemo';
 import { ScriptChatLC } from './components/tools/ScriptChatLC';
@@ -28,6 +29,7 @@ import { ModulBelajar } from './components/tools/ModulBelajar';
 import { AiIntelligence } from './components/tools/AiIntelligence';
 import { HadiahTogelOnline } from './components/tools/HadiahTogelOnline';
 import { JadwalPasaranTogel } from './components/tools/JadwalPasaranTogel';
+import { ModulPromoSitus } from './components/tools/ModulPromoSitus';
 import { ShiftType, UserProfile, JobdeskTask } from './types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from './data/initialData';
 import { ChevronRight, Home } from 'lucide-react';
@@ -131,6 +133,28 @@ export default function App() {
   };
 
   const handleSelectView = (viewId: ActiveView) => {
+    // Role Leo (CEO) Access Restriction
+    if (currentUser?.role === 'CEO' || currentUser?.username?.toLowerCase() === 'leo') {
+      const allowedViews: ActiveView[] = [
+        'home',
+        'wd-auto-flop', 
+        'jobdesk-kasir',
+        'info-wd', 
+        'info-data-pl',
+        'modul-sportbooks',
+        'modul-togel-cara',
+        'modul-togel-hadiah',
+        'modul-togel-jadwal',
+        'modul-slot',
+        'modul-casino',
+        'modul-cari-selisih',
+        'modul-ganti-docs'
+      ];
+      if (!allowedViews.includes(viewId)) {
+        setActiveView('wd-auto-flop');
+        return;
+      }
+    }
     setActiveView(viewId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -138,6 +162,9 @@ export default function App() {
   const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
     setActiveShift(user.shift);
+    if (user.role === 'CEO') {
+      setActiveView('wd-auto-flop');
+    }
   };
 
   const handleLogout = () => {
@@ -166,13 +193,14 @@ export default function App() {
       case 'bagi-bonus-slot': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Slot & Harian' };
       case 'bagi-bonus-parlay': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Mix Parlay Win Full' };
       case 'edit-pembayaran': return { category: 'TOOLS KERJA CS', title: 'Edit & Generator Pembayaran' };
+      case 'isi-rekapan': return { category: 'TOOLS KERJA CS', title: 'Isi Rekapan & Validasi PL CS' };
       case 'laporan-cs-ganti-data': return { category: 'LAPORAN CS', title: 'Laporan Ganti Data' };
       case 'laporan-cs-locked': return { category: 'LAPORAN CS', title: 'Laporan Locked / Unlock' };
       case 'sc-memo': return { category: 'SCRIPT CHAT', title: 'Script Chat MEMO' };
       case 'sc-lc': return { category: 'SCRIPT CHAT', title: 'Script Chat LiveChat' };
       case 'jobdesk-kasir': return { category: 'KASIR & REKAPAN', title: `Jobdesk Kasir (${activeShift})` };
       case 'wd-auto-flop': return { category: 'KASIR & FINANSIAL', title: 'WD Auto Flop Engine' };
-      case 'info-wd': return { category: 'KASIR & FINANSIAL', title: 'Informasi Status WD & Bank' };
+      case 'info-wd': return { category: 'KASIR & FINANSIAL', title: 'INFO DP / WD & Bank' };
       case 'info-data-pl': return { category: 'ANALITIK & CRM', title: 'Info Data Member' };
       case 'modul-sportbooks': return { category: 'INFO PRODUK & GAMES', title: 'MODUL SPORTBOOKS & PARLAY' };
       case 'modul-togel-cara': return { category: 'INFO PRODUK & GAMES', title: 'CARA BERMAIN TOGEL' };
@@ -214,7 +242,7 @@ export default function App() {
           setSoundEnabled={setSoundEnabled}
         />
 
-        {/* Running Marquee Text Bar (Teks Berjalan Don Isko - Slogan Baru) */}
+        {/* Running Marquee Text Bar (Teks Berjalan Don Isko - Slogan Dinamis Sesuai User) */}
         <div className="w-full bg-[#121212]/70 backdrop-blur-md border-b border-white/10 py-2 px-4 overflow-hidden relative flex items-center shadow-inner z-20">
           <div className="flex items-center gap-2 pr-4 bg-[#121212]/80 z-10 border-r border-white/10 flex-shrink-0">
             <span className="flex h-2 w-2 relative">
@@ -229,15 +257,15 @@ export default function App() {
           <div className="overflow-hidden whitespace-nowrap flex-1 relative flex items-center">
             <div className="animate-marquee font-mono text-xs font-bold tracking-wider text-yellow-400">
               <span className="mx-6 flex items-center gap-2 text-white">
-                <span className="text-yellow-400">🔥</span> HS GROUP 711 | PANDUAN CS & KASIR | BY : DON ISKO <span className="text-yellow-400">🔥</span>
+                <span className="text-yellow-400">🔥</span> {currentUser ? `${currentUser.name.toUpperCase()} (${currentUser.role.toUpperCase()}) | HS GROUP 711` : 'DON ISKO (MASTER) | HS GROUP 711'} <span className="text-yellow-400">🔥</span>
               </span>
               <span className="mx-4 text-gray-500 font-normal">|</span>
               <span className="mx-6 flex items-center gap-2 text-[#00F3FF]">
-                <span>⚡</span> WORK HARD | PLAY HARD | LET IT FLOW | NO PAIN NO GAIN <span>⚡</span>
+                <span>⚡</span> HS GROUP 711 | WORK HARD | PLAY HARD | LET IT FLOW | NO PAIN NO GAIN <span>⚡</span>
               </span>
               <span className="mx-4 text-gray-500 font-normal">|</span>
-              <span className="mx-6 flex items-center gap-2 text-white">
-                <span className="text-yellow-400">🔥</span> SINTA MANIS (Secretary Don Isko) | HS GROUP 711 <span className="text-yellow-400">🔥</span>
+              <span className="mx-6 flex items-center gap-2 text-yellow-300">
+                <span className="text-yellow-400">🌟</span> SISTEM CS & KASIR TERINTEGRASI 711 - BY : DON ISKO <span className="text-yellow-400">🌟</span>
               </span>
             </div>
           </div>
@@ -348,12 +376,14 @@ export default function App() {
 
             {activeView === 'edit-pembayaran' && <EditPembayaran />}
 
+            {activeView === 'isi-rekapan' && <IsiRekapan />}
+
             {activeView === 'laporan-cs-ganti-data' && (
-              <LaporanCS initialTab="GANTI_DATA" />
+              <LaporanCS initialTab="GANTI_DATA" currentUser={currentUser} />
             )}
 
             {activeView === 'laporan-cs-locked' && (
-              <LaporanCS initialTab="LOCKED" />
+              <LaporanCS initialTab="LOCKED" currentUser={currentUser} />
             )}
 
             {activeView === 'sc-memo' && <ScriptChatMemo />}
@@ -362,9 +392,13 @@ export default function App() {
 
             {activeView === 'wd-auto-flop' && <WdAutoFlop />}
 
-            {activeView === 'info-wd' && <InfoWd />}
+            {activeView === 'info-wd' && <InfoWd currentUser={currentUser} />}
 
-            {activeView === 'info-data-pl' && <InfoDataPL />}
+            {activeView === 'info-data-pl' && <InfoDataPL currentUser={currentUser} />}
+
+            {activeView === 'modul-promo-situs' && (
+              <ModulPromoSitus />
+            )}
 
             {activeView === 'modul-sportbooks' && (
               <ModulBelajar initialModuleId="sop-games-1" />

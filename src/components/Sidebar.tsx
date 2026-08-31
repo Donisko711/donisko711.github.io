@@ -27,7 +27,8 @@ import {
   WalletCards,
   Zap,
   Globe,
-  Code2
+  Code2,
+  Table
 } from 'lucide-react';
 import { ShiftType, UserProfile } from '../types';
 
@@ -45,6 +46,7 @@ export type ActiveView =
   | 'bagi-bonus-slot'
   | 'bagi-bonus-parlay'
   | 'edit-pembayaran'
+  | 'isi-rekapan'
   | 'laporan-cs-ganti-data'
   | 'laporan-cs-locked'
   | 'sc-memo'
@@ -60,7 +62,8 @@ export type ActiveView =
   | 'modul-slot'
   | 'modul-casino'
   | 'modul-cari-selisih'
-  | 'modul-ganti-docs';
+  | 'modul-ganti-docs'
+  | 'modul-promo-situs';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -189,462 +192,494 @@ export const Sidebar: React.FC<SidebarProps> = ({
         
         {/* ========================================================= */}
         {/* CATEGORY: MENU UTAMA (Collapsible Accordion)               */}
+        {/* Disembunyikan khusus untuk akun staf LEO                   */}
         {/* ========================================================= */}
-        <div className="rounded-2xl bg-[#141414]/75 backdrop-blur-md border border-white/10 p-1.5 overflow-hidden transition-all shadow-md">
-          {isOpen ? (
-            <button
-              onClick={() => toggleCategory('menu-utama')}
-              type="button"
-              id="btn-toggle-menu-utama"
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-gradient-to-r from-[#1E1E24]/90 to-[#18181F]/90 hover:bg-[#25252F]/90 border border-yellow-400/30 text-left transition-all cursor-pointer group mb-1.5 shadow-sm"
-            >
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-lg bg-yellow-400/15 text-yellow-400 border border-yellow-400/30">
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+        {currentUser?.username?.toLowerCase() !== 'leo' && (
+          <div className="rounded-2xl bg-[#141414]/75 backdrop-blur-md border border-white/10 p-1.5 overflow-hidden transition-all shadow-md">
+            {isOpen ? (
+              <button
+                onClick={() => toggleCategory('menu-utama')}
+                type="button"
+                id="btn-toggle-menu-utama"
+                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-gradient-to-r from-[#1E1E24]/90 to-[#18181F]/90 hover:bg-[#25252F]/90 border border-yellow-400/30 text-left transition-all cursor-pointer group mb-1.5 shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-yellow-400/15 text-yellow-400 border border-yellow-400/30">
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-white font-sans group-hover:text-yellow-400 transition-colors">
+                      MENU UTAMA
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-mono">
+                      6 Fitur Utama
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-white font-sans group-hover:text-yellow-400 transition-colors">
-                    MENU UTAMA
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-yellow-400/15 text-yellow-300 border border-yellow-400/30 font-bold">
+                    6 UTAMA
                   </span>
-                  <span className="text-[9px] text-gray-400 font-mono">
-                    6 Fitur Utama
-                  </span>
+                  {openCategory === 'menu-utama' ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-yellow-400" />
+                  ) : (
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-white" />
+                  )}
                 </div>
+              </button>
+            ) : (
+              <div 
+                onClick={() => toggleCategory('menu-utama')} 
+                className="w-full text-center text-[10px] font-mono text-yellow-400 py-1 cursor-pointer font-bold"
+                title="Menu Utama"
+              >
+                UTAMA
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-yellow-400/15 text-yellow-300 border border-yellow-400/30 font-bold">
-                  6 UTAMA
-                </span>
-                {openCategory === 'menu-utama' ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-yellow-400" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-white" />
-                )}
-              </div>
-            </button>
-          ) : (
-            <div 
-              onClick={() => toggleCategory('menu-utama')} 
-              className="w-full text-center text-[10px] font-mono text-yellow-400 py-1 cursor-pointer font-bold"
-              title="Menu Utama"
-            >
-              UTAMA
-            </div>
-          )}
+            )}
 
-          {/* Collapsible Children of MENU UTAMA */}
-          {openCategory === 'menu-utama' && (
-            <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
-              {/* 1. AI INTELEGENCY */}
-              <button
-                onClick={() => handleSelectView('ai-intelegency', undefined, 'menu-utama')}
-                id="menu-ai-intelegency"
-                className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                  activeView === 'ai-intelegency'
-                    ? 'bg-gradient-to-r from-[#00F3FF]/25 to-yellow-400/20 border border-[#00F3FF] text-white shadow-[0_0_15px_rgba(0,243,255,0.3)] font-bold'
-                    : 'bg-[#1A1A1A]/80 hover:bg-[#252525]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/40'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1 rounded-lg bg-gradient-to-br from-[#00F3FF]/20 to-yellow-400/20 text-[#00F3FF] border border-[#00F3FF]/40 group-hover:scale-105 transition-transform">
-                    <Bot className="w-4 h-4 text-[#00F3FF]" />
-                  </div>
-                  {isOpen && (
-                    <div className="text-left">
-                      <span className="block text-xs font-bold tracking-wide flex items-center gap-1.5">
-                        <span className="text-white">AI INTELEGENCY</span>
-                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-yellow-400 text-black font-extrabold font-mono animate-pulse">
-                          NEW
-                        </span>
-                      </span>
-                      <span className="text-[9px] text-gray-400 font-mono">Asisten CS & Kasir 711</span>
-                    </div>
-                  )}
-                </div>
-                {isOpen && <Sparkles className="w-3.5 h-3.5 text-yellow-400" />}
-              </button>
-
-              {/* 2. CEK STATUS NAWALA */}
-              <button
-                onClick={() => handleSelectView('nawala-checker', undefined, 'menu-utama')}
-                id="menu-nawala-checker"
-                className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                  activeView === 'nawala-checker'
-                    ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
-                    : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1 rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                    <ShieldAlert className="w-4 h-4 text-rose-400" />
-                  </div>
-                  {isOpen && (
-                    <div className="text-left">
-                      <span className="block text-xs font-semibold">CEK STATUS NAWALA</span>
-                      <span className="text-[9px] text-gray-400 font-mono">Link & Domain Checker</span>
-                    </div>
-                  )}
-                </div>
-                {isOpen && (
-                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-400">DNS</span>
-                )}
-              </button>
-
-              {/* 3. GENERATE ARTIKEL */}
-              <button
-                onClick={() => handleSelectView('generate-artikel', undefined, 'menu-utama')}
-                id="menu-generate-artikel"
-                className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                  activeView === 'generate-artikel'
-                    ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
-                    : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1 rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-                    <FileText className="w-4 h-4 text-indigo-400" />
-                  </div>
-                  {isOpen && (
-                    <div className="text-left">
-                      <span className="block text-xs font-semibold">GENERATE ARTIKEL</span>
-                      <span className="text-[9px] text-gray-400 font-mono">SEO & Promo Builder</span>
-                    </div>
-                  )}
-                </div>
-              </button>
-
-              {/* 4. PHISING CHECKER (NEW!) */}
-              <button
-                onClick={() => handleSelectView('phising-checker', undefined, 'menu-utama')}
-                id="menu-phising-checker"
-                className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                  activeView === 'phising-checker'
-                    ? 'bg-gradient-to-r from-emerald-500/25 to-cyan-500/20 border border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] font-bold'
-                    : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-emerald-400/30'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    <Code2 className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  {isOpen && (
-                    <div className="text-left">
-                      <span className="block text-xs font-bold tracking-wide flex items-center gap-1.5">
-                        <span className="text-white">PHISING CHECKER</span>
-                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-400 text-black font-extrabold font-mono">
-                          NEW
-                        </span>
-                      </span>
-                      <span className="text-[9px] text-gray-400 font-mono">Baca Script Page Domain</span>
-                    </div>
-                  )}
-                </div>
-                {isOpen && (
-                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">HTML</span>
-                )}
-              </button>
-
-              {/* 5. BBFS & ANGKA TARUNG */}
-              <button
-                onClick={() => handleSelectView('bbfs-angka-tarung', undefined, 'menu-utama')}
-                id="menu-bbfs-tarung"
-                className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                  activeView === 'bbfs-angka-tarung'
-                    ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
-                    : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1 rounded-lg bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                    <Dices className="w-4 h-4 text-purple-400" />
-                  </div>
-                  {isOpen && (
-                    <div className="text-left">
-                      <span className="block text-xs font-semibold">BBFS & ANGKA TARUNG</span>
-                      <span className="text-[9px] text-gray-400 font-mono">Generator 2D/3D/4D</span>
-                    </div>
-                  )}
-                </div>
-              </button>
-
-              {/* 6. KALKULATOR PARLAY */}
-              <button
-                onClick={() => handleSelectView('kalkulator-parlay', undefined, 'menu-utama')}
-                id="menu-kalkulator-parlay"
-                className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                  activeView === 'kalkulator-parlay'
-                    ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
-                    : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    <Calculator className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  {isOpen && (
-                    <div className="text-left">
-                      <span className="block text-xs font-semibold">KALKULATOR PARLAY</span>
-                      <span className="text-[9px] text-gray-400 font-mono">Hitung Odds & Payout</span>
-                    </div>
-                  )}
-                </div>
-                {isOpen && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-mono">HOT</span>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ========================================================= */}
-        {/* CATEGORY 1: TOOLS KERJA CS (Collapsible Single Accordion) */}
-        {/* ========================================================= */}
-        <div className="rounded-2xl bg-[#141414]/70 backdrop-blur-md border border-white/10 p-1.5 overflow-hidden transition-all shadow-md">
-          {isOpen ? (
-            <button
-              onClick={() => toggleCategory('tools-cs')}
-              type="button"
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1C1C1C]/80 hover:bg-[#252525]/90 border border-white/10 text-left transition-all cursor-pointer group mb-1.5"
-            >
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-lg bg-[#00F3FF]/15 text-[#00F3FF] border border-[#00F3FF]/30">
-                  <Laptop className="w-3.5 h-3.5" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-white font-sans group-hover:text-[#00F3FF] transition-colors">
-                    TOOLS KERJA CS
-                  </span>
-                  <span className="text-[9px] text-gray-400 font-mono">
-                    6 Modul Operasional
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#121212]/80 text-[#00F3FF] border border-[#00F3FF]/30">
-                  CS
-                </span>
-                {openCategory === 'tools-cs' ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-white" />
-                )}
-              </div>
-            </button>
-          ) : (
-            <div 
-              onClick={() => toggleCategory('tools-cs')} 
-              className="w-full text-center text-[10px] font-mono text-[#00F3FF] py-1 cursor-pointer font-bold"
-              title="Tools CS"
-            >
-              CS
-            </div>
-          )}
-
-          {openCategory === 'tools-cs' && (
-            <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
-              {/* 1. JOBDESK CS (Auto Minimalis: klik membuka sub-menu dan menutup accordion lain) */}
-              <div>
+            {/* Collapsible Children of MENU UTAMA */}
+            {openCategory === 'menu-utama' && (
+              <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
+                {/* 1. AI INTELEGENCY */}
                 <button
-                  onClick={() => {
-                    toggleAccordion('jobdesk-cs');
-                    handleSelectView('jobdesk-cs', 'jobdesk-cs', 'tools-cs');
-                  }}
-                  id="menu-jobdesk-cs"
-                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all duration-200 cursor-pointer flex items-center justify-between ${
-                    activeView === 'jobdesk-cs' || openAccordion === 'jobdesk-cs'
-                      ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                  onClick={() => handleSelectView('ai-intelegency', undefined, 'menu-utama')}
+                  id="menu-ai-intelegency"
+                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                    activeView === 'ai-intelegency'
+                      ? 'bg-gradient-to-r from-[#00F3FF]/25 to-yellow-400/20 border border-[#00F3FF] text-white shadow-[0_0_15px_rgba(0,243,255,0.3)] font-bold'
+                      : 'bg-[#1A1A1A]/80 hover:bg-[#252525]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/40'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <CheckSquare className="w-4 h-4" />
+                    <div className="p-1 rounded-lg bg-gradient-to-br from-[#00F3FF]/20 to-yellow-400/20 text-[#00F3FF] border border-[#00F3FF]/40 group-hover:scale-105 transition-transform">
+                      <Bot className="w-4 h-4 text-[#00F3FF]" />
+                    </div>
                     {isOpen && (
                       <div className="text-left">
-                        <span className="block text-xs font-semibold">JOBDESK CS</span>
+                        <span className="block text-xs font-bold tracking-wide flex items-center gap-1.5">
+                          <span className="text-white">AI INTELEGENCY</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-yellow-400 text-black font-extrabold font-mono animate-pulse">
+                            NEW
+                          </span>
+                        </span>
+                        <span className="text-[9px] text-gray-400 font-mono">Asisten CS & Kasir 711</span>
+                      </div>
+                    )}
+                  </div>
+                  {isOpen && <Sparkles className="w-3.5 h-3.5 text-yellow-400" />}
+                </button>
+
+                {/* 2. CEK STATUS NAWALA */}
+                <button
+                  onClick={() => handleSelectView('nawala-checker', undefined, 'menu-utama')}
+                  id="menu-nawala-checker"
+                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                    activeView === 'nawala-checker'
+                      ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
+                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1 rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                      <ShieldAlert className="w-4 h-4 text-rose-400" />
+                    </div>
+                    {isOpen && (
+                      <div className="text-left">
+                        <span className="block text-xs font-semibold">CEK STATUS NAWALA</span>
+                        <span className="text-[9px] text-gray-400 font-mono">Link & Domain Checker</span>
                       </div>
                     )}
                   </div>
                   {isOpen && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-gray-400 font-mono">
-                        {jobdeskCsCount.done}/{jobdeskCsCount.total}
-                      </span>
-                      {openAccordion === 'jobdesk-cs' ? (
-                        <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" />
-                      ) : (
-                        <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
-                      )}
-                    </div>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-400">DNS</span>
                   )}
                 </button>
 
-                {/* Sub Menu Jobdesk CS */}
-                {isOpen && openAccordion === 'jobdesk-cs' && (
-                  <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
-                    {(['PAGI', 'SORE', 'MALAM'] as ShiftType[]).map(shift => (
+                {/* 3. GENERATE ARTIKEL */}
+                <button
+                  onClick={() => handleSelectView('generate-artikel', undefined, 'menu-utama')}
+                  id="menu-generate-artikel"
+                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                    activeView === 'generate-artikel'
+                      ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
+                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1 rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
+                      <FileText className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    {isOpen && (
+                      <div className="text-left">
+                        <span className="block text-xs font-semibold">GENERATE ARTIKEL</span>
+                        <span className="text-[9px] text-gray-400 font-mono">SEO & Promo Builder</span>
+                      </div>
+                    )}
+                  </div>
+                </button>
+
+                {/* 4. PHISING CHECKER (NEW!) */}
+                <button
+                  onClick={() => handleSelectView('phising-checker', undefined, 'menu-utama')}
+                  id="menu-phising-checker"
+                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                    activeView === 'phising-checker'
+                      ? 'bg-gradient-to-r from-emerald-500/25 to-cyan-500/20 border border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] font-bold'
+                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-emerald-400/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <Code2 className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    {isOpen && (
+                      <div className="text-left">
+                        <span className="block text-xs font-bold tracking-wide flex items-center gap-1.5">
+                          <span className="text-white">PHISING CHECKER</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-400 text-black font-extrabold font-mono">
+                            NEW
+                          </span>
+                        </span>
+                        <span className="text-[9px] text-gray-400 font-mono">Baca Script Page Domain</span>
+                      </div>
+                    )}
+                  </div>
+                  {isOpen && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">HTML</span>
+                  )}
+                </button>
+
+                {/* 5. BBFS & ANGKA TARUNG */}
+                <button
+                  onClick={() => handleSelectView('bbfs-angka-tarung', undefined, 'menu-utama')}
+                  id="menu-bbfs-tarung"
+                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                    activeView === 'bbfs-angka-tarung'
+                      ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
+                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1 rounded-lg bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                      <Dices className="w-4 h-4 text-purple-400" />
+                    </div>
+                    {isOpen && (
+                      <div className="text-left">
+                        <span className="block text-xs font-semibold">BBFS & ANGKA TARUNG</span>
+                        <span className="text-[9px] text-gray-400 font-mono">Generator 2D/3D/4D</span>
+                      </div>
+                    )}
+                  </div>
+                </button>
+
+                {/* 6. KALKULATOR PARLAY */}
+                <button
+                  onClick={() => handleSelectView('kalkulator-parlay', undefined, 'menu-utama')}
+                  id="menu-kalkulator-parlay"
+                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                    activeView === 'kalkulator-parlay'
+                      ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
+                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <Calculator className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    {isOpen && (
+                      <div className="text-left">
+                        <span className="block text-xs font-semibold">KALKULATOR PARLAY</span>
+                        <span className="text-[9px] text-gray-400 font-mono">Hitung Odds & Payout</span>
+                      </div>
+                    )}
+                  </div>
+                  {isOpen && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-mono">HOT</span>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* CATEGORY 1: TOOLS KERJA CS (Collapsible Single Accordion) */}
+        {/* Disembunyikan khusus untuk akun staf LEO                   */}
+        {/* ========================================================= */}
+        {currentUser?.username?.toLowerCase() !== 'leo' && (
+          <div className="rounded-2xl bg-[#141414]/70 backdrop-blur-md border border-white/10 p-1.5 overflow-hidden transition-all shadow-md">
+            {isOpen ? (
+              <button
+                onClick={() => toggleCategory('tools-cs')}
+                type="button"
+                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1C1C1C]/80 hover:bg-[#252525]/90 border border-white/10 text-left transition-all cursor-pointer group mb-1.5"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-[#00F3FF]/15 text-[#00F3FF] border border-[#00F3FF]/30">
+                    <Laptop className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-white font-sans group-hover:text-[#00F3FF] transition-colors">
+                      TOOLS KERJA CS
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-mono">
+                      6 Modul Operasional
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#121212]/80 text-[#00F3FF] border border-[#00F3FF]/30">
+                    CS
+                  </span>
+                  {openCategory === 'tools-cs' ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" />
+                  ) : (
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-white" />
+                  )}
+                </div>
+              </button>
+            ) : (
+              <div 
+                onClick={() => toggleCategory('tools-cs')} 
+                className="w-full text-center text-[10px] font-mono text-[#00F3FF] py-1 cursor-pointer font-bold"
+                title="Tools CS"
+              >
+                CS
+              </div>
+            )}
+
+            {openCategory === 'tools-cs' && (
+              <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
+                {/* 1. JOBDESK CS */}
+                <div>
+                  <button
+                    onClick={() => {
+                      toggleAccordion('jobdesk-cs');
+                      handleSelectView('jobdesk-cs', 'jobdesk-cs', 'tools-cs');
+                    }}
+                    id="menu-jobdesk-cs"
+                    className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all duration-200 cursor-pointer flex items-center justify-between ${
+                      activeView === 'jobdesk-cs' || openAccordion === 'jobdesk-cs'
+                        ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
+                        : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <CheckSquare className="w-4 h-4" />
+                      {isOpen && (
+                        <div className="text-left">
+                          <span className="block text-xs font-semibold">JOBDESK CS</span>
+                        </div>
+                      )}
+                    </div>
+                    {isOpen && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          {jobdeskCsCount.done}/{jobdeskCsCount.total}
+                        </span>
+                        {openAccordion === 'jobdesk-cs' ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                        )}
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Sub Menu Jobdesk CS */}
+                  {isOpen && openAccordion === 'jobdesk-cs' && (
+                    <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
+                      {(['PAGI', 'SORE', 'MALAM'] as ShiftType[]).map(shift => (
+                        <button
+                          key={`cs-shift-${shift}`}
+                          onClick={() => {
+                            setSelectedShiftFilter(shift);
+                            handleSelectView('jobdesk-cs', 'jobdesk-cs', 'tools-cs');
+                          }}
+                          className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
+                            activeView === 'jobdesk-cs' && selectedShiftFilter === shift
+                              ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
+                              : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          SHIFT {shift === 'PAGI' ? 'PAGI' : shift === 'SORE' ? 'SORE' : 'MALAM'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. BAGI BONUS */}
+                <div>
+                  <button
+                    onClick={() => toggleAccordion('bagi-bonus')}
+                    id="menu-bagi-bonus"
+                    className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                      isViewInGroup(['bagi-bonus-slot', 'bagi-bonus-parlay']) || openAccordion === 'bagi-bonus'
+                        ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
+                        : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Gift className="w-4 h-4 text-gray-400" />
+                      {isOpen && <span className="font-semibold text-xs">BAGI BONUS</span>}
+                    </div>
+                    {isOpen && (
+                      openAccordion === 'bagi-bonus' ? <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                    )}
+                  </button>
+
+                  {isOpen && openAccordion === 'bagi-bonus' && (
+                    <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
                       <button
-                        key={`cs-shift-${shift}`}
-                        onClick={() => {
-                          setSelectedShiftFilter(shift);
-                          handleSelectView('jobdesk-cs', 'jobdesk-cs', 'tools-cs');
-                        }}
+                        onClick={() => handleSelectView('bagi-bonus-slot', 'bagi-bonus', 'tools-cs')}
                         className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                          activeView === 'jobdesk-cs' && selectedShiftFilter === shift
+                          activeView === 'bagi-bonus-slot'
                             ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
                             : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
                         }`}
                       >
-                        SHIFT {shift === 'PAGI' ? 'PAGI' : shift === 'SORE' ? 'SORE' : 'MALAM'}
+                        SCATTER & HARIAN SLOT
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      <button
+                        onClick={() => handleSelectView('bagi-bonus-parlay', 'bagi-bonus', 'tools-cs')}
+                        className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
+                          activeView === 'bagi-bonus-parlay'
+                            ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
+                            : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        BONUS PARLAY
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-              {/* 2. BAGI BONUS */}
-              <div>
+                {/* 3. EDIT PEMBAYARAN */}
                 <button
-                  onClick={() => toggleAccordion('bagi-bonus')}
-                  id="menu-bagi-bonus"
+                  onClick={() => handleSelectView('edit-pembayaran', undefined, 'tools-cs')}
+                  id="menu-edit-pembayaran"
                   className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                    isViewInGroup(['bagi-bonus-slot', 'bagi-bonus-parlay']) || openAccordion === 'bagi-bonus'
+                    activeView === 'edit-pembayaran'
                       ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
                       : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Gift className="w-4 h-4 text-gray-400" />
-                    {isOpen && <span className="font-semibold text-xs">BAGI BONUS</span>}
+                    <CreditCard className="w-4 h-4 text-gray-400" />
+                    {isOpen && <span className="font-semibold text-xs">EDIT PEMBAYARAN</span>}
                   </div>
-                  {isOpen && (
-                    openAccordion === 'bagi-bonus' ? <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
-                  )}
                 </button>
 
-                {isOpen && openAccordion === 'bagi-bonus' && (
-                  <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
-                    <button
-                      onClick={() => handleSelectView('bagi-bonus-slot', 'bagi-bonus', 'tools-cs')}
-                      className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                        activeView === 'bagi-bonus-slot'
-                          ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                          : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      SCATTER & HARIAN SLOT
-                    </button>
-                    <button
-                      onClick={() => handleSelectView('bagi-bonus-parlay', 'bagi-bonus', 'tools-cs')}
-                      className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                        activeView === 'bagi-bonus-parlay'
-                          ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                          : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      BONUS PARLAY
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 3. EDIT PEMBAYARAN */}
-              <button
-                onClick={() => handleSelectView('edit-pembayaran', undefined, 'tools-cs')}
-                id="menu-edit-pembayaran"
-                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                  activeView === 'edit-pembayaran'
-                    ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <CreditCard className="w-4 h-4 text-gray-400" />
-                  {isOpen && <span className="font-semibold text-xs">EDIT PEMBAYARAN</span>}
-                </div>
-              </button>
-
-              {/* 4. LAPORAN CS */}
-              <div>
+                {/* 4. ISI REKAPAN */}
                 <button
-                  onClick={() => toggleAccordion('laporan-cs')}
-                  id="menu-laporan-cs"
+                  onClick={() => handleSelectView('isi-rekapan', undefined, 'tools-cs')}
+                  id="menu-isi-rekapan"
                   className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                    isViewInGroup(['laporan-cs-ganti-data', 'laporan-cs-locked']) || openAccordion === 'laporan-cs'
+                    activeView === 'isi-rekapan'
                       ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
                       : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <FileSpreadsheet className="w-4 h-4 text-gray-400" />
-                    {isOpen && <span className="font-semibold text-xs">LAPORAN CS</span>}
+                    <Table className="w-4 h-4 text-[#00F3FF]" />
+                    {isOpen && (
+                      <div className="text-left">
+                        <span className="block font-semibold text-xs text-white">ISI REKAPAN</span>
+                        <span className="text-[9px] text-[#00F3FF]/80 font-mono">Validasi PL &amp; Koin</span>
+                      </div>
+                    )}
                   </div>
                   {isOpen && (
-                    openAccordion === 'laporan-cs' ? <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-[#00F3FF] font-mono font-bold border border-cyan-500/30">
+                      NEW
+                    </span>
                   )}
                 </button>
 
-                {isOpen && openAccordion === 'laporan-cs' && (
-                  <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
-                    <button
-                      onClick={() => handleSelectView('laporan-cs-ganti-data', 'laporan-cs', 'tools-cs')}
-                      className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                        activeView === 'laporan-cs-ganti-data'
-                          ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                          : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      LAPORAN GANTI DATA
-                    </button>
-                    <button
-                      onClick={() => handleSelectView('laporan-cs-locked', 'laporan-cs', 'tools-cs')}
-                      className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                        activeView === 'laporan-cs-locked'
-                          ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                          : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      LAPORAN LOCKED / UNLOCK
-                    </button>
+                {/* 5. LAPORAN CS */}
+                <div>
+                  <button
+                    onClick={() => toggleAccordion('laporan-cs')}
+                    id="menu-laporan-cs"
+                    className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                      isViewInGroup(['laporan-cs-ganti-data', 'laporan-cs-locked']) || openAccordion === 'laporan-cs'
+                        ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
+                        : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <FileSpreadsheet className="w-4 h-4 text-gray-400" />
+                      {isOpen && <span className="font-semibold text-xs">LAPORAN CS</span>}
+                    </div>
+                    {isOpen && (
+                      openAccordion === 'laporan-cs' ? <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                    )}
+                  </button>
+
+                  {isOpen && openAccordion === 'laporan-cs' && (
+                    <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
+                      <button
+                        onClick={() => handleSelectView('laporan-cs-ganti-data', 'laporan-cs', 'tools-cs')}
+                        className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
+                          activeView === 'laporan-cs-ganti-data'
+                            ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
+                            : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        LAPORAN GANTI DATA
+                      </button>
+                      <button
+                        onClick={() => handleSelectView('laporan-cs-locked', 'laporan-cs', 'tools-cs')}
+                        className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
+                          activeView === 'laporan-cs-locked'
+                            ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
+                            : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        LAPORAN LOCKED / UNLOCK
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. SC MEMO */}
+                <button
+                  onClick={() => handleSelectView('sc-memo', undefined, 'tools-cs')}
+                  id="menu-sc-memo"
+                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                    activeView === 'sc-memo'
+                      ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
+                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <MessageSquare className="w-4 h-4 text-gray-400" />
+                    {isOpen && <span className="font-semibold text-xs">SC MEMO</span>}
                   </div>
-                )}
+                  {isOpen && <span className="text-[10px] text-[#00F3FF] font-mono">+ Add</span>}
+                </button>
+
+                {/* 6. SC LC */}
+                <button
+                  onClick={() => handleSelectView('sc-lc', undefined, 'tools-cs')}
+                  id="menu-sc-lc"
+                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                    activeView === 'sc-lc'
+                      ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
+                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Headphones className="w-4 h-4 text-gray-400" />
+                    {isOpen && <span className="font-semibold text-xs">SC LC (LIVECHAT)</span>}
+                  </div>
+                  {isOpen && <span className="text-[10px] text-[#00F3FF] font-mono">+ Add</span>}
+                </button>
               </div>
-
-              {/* 5. SC MEMO */}
-              <button
-                onClick={() => handleSelectView('sc-memo', undefined, 'tools-cs')}
-                id="menu-sc-memo"
-                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                  activeView === 'sc-memo'
-                    ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <MessageSquare className="w-4 h-4 text-gray-400" />
-                  {isOpen && <span className="font-semibold text-xs">SC MEMO</span>}
-                </div>
-                {isOpen && <span className="text-[10px] text-[#00F3FF] font-mono">+ Add</span>}
-              </button>
-
-              {/* 6. SC LC */}
-              <button
-                onClick={() => handleSelectView('sc-lc', undefined, 'tools-cs')}
-                id="menu-sc-lc"
-                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                  activeView === 'sc-lc'
-                    ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Headphones className="w-4 h-4 text-gray-400" />
-                  {isOpen && <span className="font-semibold text-xs">SC LC (LIVECHAT)</span>}
-                </div>
-                {isOpen && <span className="text-[10px] text-[#00F3FF] font-mono">+ Add</span>}
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* ========================================================= */}
         {/* WD AUTO FLOP (BERADA DI ANTARA TOOLS CS & TOOLS KASIR)     */}
@@ -783,7 +818,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </div>
 
-              {/* 2. INFO WD */}
+              {/* 2. INFO DP / WD */}
               <button
                 onClick={() => handleSelectView('info-wd', undefined, 'kasir')}
                 id="menu-info-wd"
@@ -795,7 +830,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <div className="flex items-center gap-2.5">
                   <WalletCards className="w-4 h-4 text-yellow-400" />
-                  {isOpen && <span className="font-semibold text-xs">INFO WD</span>}
+                  {isOpen && <span className="font-semibold text-xs">INFO DP / WD</span>}
                 </div>
                 {isOpen && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">LIVE</span>}
               </button>
@@ -865,6 +900,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {openCategory === 'modul-sop' && (
             <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
+              {/* PROMO SITUS */}
+              <button
+                onClick={() => handleSelectView('modul-promo-situs', undefined, 'modul-sop')}
+                id="menu-modul-promo-situs"
+                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                  activeView === 'modul-promo-situs'
+                    ? 'bg-[#1F1F1F] border border-amber-400 text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)] font-semibold'
+                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Gift className="w-4 h-4 text-yellow-400" />
+                  {isOpen && <span className="font-semibold text-xs text-yellow-400">PROMO SITUS</span>}
+                </div>
+                {isOpen && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-400/20 text-yellow-300 font-bold border border-yellow-400/30">
+                    HOT
+                  </span>
+                )}
+              </button>
+
               {/* MODUL SPORTBOOKS */}
               <button
                 onClick={() => handleSelectView('modul-sportbooks', undefined, 'modul-sop')}
@@ -1008,9 +1064,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {isOpen && (
           <div className="pt-2 px-1 flex-1 min-h-[300px] flex flex-col justify-end">
             <div 
-              onClick={onOpenCustomizer}
-              title="Klik untuk Ganti Gambar Poster Sidebar"
-              className="rounded-2xl p-1 bg-gradient-to-b from-[#1E1E28] to-[#101016] border-2 border-yellow-400/90 shadow-[0_0_20px_rgba(250,204,21,0.25)] relative overflow-hidden group cursor-pointer w-full"
+              onClick={currentUser?.username?.toLowerCase() === 'donisko' ? onOpenCustomizer : undefined}
+              title={currentUser?.username?.toLowerCase() === 'donisko' ? "Klik untuk Ganti Gambar Poster Sidebar" : "HS GROUP 711"}
+              className={`rounded-2xl p-1 bg-gradient-to-b from-[#1E1E28] to-[#101016] border-2 border-yellow-400/90 shadow-[0_0_20px_rgba(250,204,21,0.25)] relative overflow-hidden group w-full ${currentUser?.username?.toLowerCase() === 'donisko' ? 'cursor-pointer' : ''}`}
             >
               <div className="relative w-full aspect-[3/4] max-h-[380px] rounded-xl overflow-hidden bg-black flex items-center justify-center">
                 <img 
@@ -1036,9 +1092,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Footer: DON ISKO - 711 HS GROUP Beserta Foto Resmi Don Isko */}
       <div 
-        onClick={onOpenCustomizer}
-        title="Klik untuk Mengatur Profil & Tampilan"
-        className="p-3.5 border-t border-white/10 bg-[#0A0A0A]/95 hover:bg-[#121212] transition-all cursor-pointer"
+        onClick={currentUser?.username?.toLowerCase() === 'donisko' ? onOpenCustomizer : undefined}
+        title={currentUser?.username?.toLowerCase() === 'donisko' ? "Klik untuk Mengatur Profil & Tampilan" : "DON ISKO • 711 HS GROUP"}
+        className={`p-3.5 border-t border-white/10 bg-[#0A0A0A]/95 transition-all ${currentUser?.username?.toLowerCase() === 'donisko' ? 'hover:bg-[#121212] cursor-pointer' : 'cursor-default'}`}
       >
         <div className={`flex items-center ${isOpen ? 'justify-center gap-3.5 px-2' : 'justify-center'}`}>
           <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)] flex-shrink-0 bg-black">

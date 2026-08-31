@@ -68,28 +68,58 @@ async function startServer() {
     }
 
     const startTime = Date.now();
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    // Helper fetch with timeout
+    const fetchWithTimeout = async (fetchUrl: string, timeoutMs = 15000) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(fetchUrl, {
+          method: "GET",
+          headers: {
+            "User-Agent": selectedUA,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+          },
+          redirect: "follow",
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+      }
+    };
 
     try {
-      const response = await fetch(targetUrl, {
-        method: "GET",
-        headers: {
-          "User-Agent": selectedUA,
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-          "Cache-Control": "no-cache",
-        },
-        redirect: "follow",
-        signal: controller.signal,
-      });
+      let response: Response;
+      let finalUsedUrl = targetUrl;
 
-      clearTimeout(timeoutId);
+      try {
+        response = await fetchWithTimeout(targetUrl, 15000);
+      } catch (firstErr: any) {
+        // If HTTPS fails due to SSL cert or connection, try HTTP as fallback
+        if (targetUrl.startsWith("https://")) {
+          const httpFallback = targetUrl.replace("https://", "http://");
+          try {
+            response = await fetchWithTimeout(httpFallback, 15000);
+            finalUsedUrl = httpFallback;
+          } catch {
+            throw firstErr;
+          }
+        } else {
+          throw firstErr;
+        }
+      }
+
       const responseTimeMs = Date.now() - startTime;
       const html = await response.text();
       const status = response.status;
       const statusText = response.statusText;
-      const finalUrl = response.url || targetUrl;
+      const finalUrl = response.url || finalUsedUrl;
 
       // Extract basic header dictionary
       const headersObj: Record<string, string> = {};
@@ -111,13 +141,14 @@ async function startServer() {
         isHttps: finalUrl.startsWith("https://"),
       });
     } catch (err: any) {
-      clearTimeout(timeoutId);
       console.error("Domain fetch error:", err);
       const isTimeout = err.name === "AbortError";
       res.status(500).json({
         success: false,
         targetUrl,
-        error: isTimeout ? "Request Timeout (server tujuan tidak merespons dalam 12 detik)" : (err.message || "Gagal menghubungi domain tujuan"),
+        error: isTimeout 
+          ? "Request Timeout (server tujuan tidak merespons dalam 15 detik)" 
+          : (err.message || "Gagal menghubungi domain tujuan. Pastikan nama domain aktif dan dapat diakses."),
       });
     }
   });

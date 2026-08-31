@@ -13,7 +13,11 @@ import {
   ShieldCheck,
   Gamepad2,
   Flame,
-  Info
+  Info,
+  Pencil,
+  RotateCcw,
+  SlidersHorizontal,
+  Calculator
 } from 'lucide-react';
 
 interface ParsedStatement {
@@ -520,6 +524,267 @@ Credit
 IDR 1,200
 Balance : IDR 32,791`;
 
+const SAMPLE_MULTI_TICKET_REJECTED = `Mahjong Ways
+PGSoft
+2094504793124044292-2094504175818937859-106-0
+Ext. ID : CR2094504793124044292-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:17:11
+Credit
+IDR 2,400
+Balance : IDR 667,858
+Mahjong Ways
+PGSoft
+2094504689839293954-2094504175818937859-106-0
+Ext. ID : CR2094504689839293954-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:46
+Credit
+IDR 102,000
+Balance : IDR 665,458
+Mahjong Ways
+PGSoft
+2094504677122138626-2094504175818937859-106-0
+Ext. ID : CR2094504677122138626-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:43
+Credit
+IDR 49,600
+Balance : IDR 563,458
+Mahjong Ways
+PGSoft
+2094504660307250688-2094504175818937859-106-0
+Ext. ID : CR2094504660307250688-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:39
+Credit
+IDR 1,200
+Balance : IDR 513,858
+Mahjong Ways
+PGSoft
+2094504624101945344-2094504175818937859-106-0
+Ext. ID : CR2094504624101945344-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:31
+Credit
+IDR 4,000
+Balance : IDR 512,658
+Mahjong Ways
+PGSoft
+2094504611737138177-2094504175818937859-106-0
+Ext. ID : CR2094504611737138177-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:28
+Credit
+IDR 3,600
+Balance : IDR 508,658
+Mahjong Ways
+PGSoft
+2094504599301047299-2094504175818937859-106-0
+Ext. ID : CR2094504599301047299-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:25
+Credit
+IDR 800
+Balance : IDR 505,058
+Mahjong Ways
+PGSoft
+2094504581773048832-2094504175818937859-106-0
+Ext. ID : CR2094504581773048832-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:21
+Credit
+IDR 4,000
+Balance : IDR 504,258
+Mahjong Ways
+PGSoft
+2094504558821848066-2094504175818937859-106-0
+Ext. ID : CR2094504558821848066-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:15
+Credit
+IDR 4,800
+Balance : IDR 500,258
+Mahjong Ways
+PGSoft
+2094504542086538753-2094504175818937859-106-0
+Ext. ID : CR2094504542086538753-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:11
+Credit
+IDR 2,000
+Balance : IDR 495,458
+Mahjong Ways
+PGSoft
+2094504515184320002-2094504175818937859-106-0
+Ext. ID : CR2094504515184320002-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:05
+Credit
+IDR 28,000
+Balance : IDR 493,458
+Mahjong Ways
+PGSoft
+2094504502479721986-2094504175818937859-106-0
+Ext. ID : CR2094504502479721986-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:16:02
+Credit
+IDR 1,200
+Balance : IDR 465,458
+Mahjong Ways
+PGSoft
+2094504490790226432-2094504175818937859-106-0
+Ext. ID : CR2094504490790226432-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:59
+Credit
+IDR 4,800
+Balance : IDR 464,258
+Mahjong Ways
+PGSoft
+2094504473807518208-2094504175818937859-106-0
+Ext. ID : CR2094504473807518208-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:55
+Credit
+IDR 400
+Balance : IDR 459,458
+Mahjong Ways
+PGSoft
+2094504445042946562-2094504175818937859-106-0
+Ext. ID : CR2094504445042946562-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:48
+Credit
+IDR 2,000
+Balance : IDR 459,058
+Mahjong Ways
+PGSoft
+2094504378961702400-2094504175818937859-106-0
+Ext. ID : CR2094504378961702400-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:32
+Credit
+IDR 18,000
+Balance : IDR 457,058
+Mahjong Ways
+PGSoft
+2094504366190002177-2094504175818937859-106-0
+Ext. ID : CR2094504366190002177-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:29
+Credit
+IDR 8,000
+Balance : IDR 439,058
+Mahjong Ways
+PGSoft
+2094504353925872128-2094504175818937859-106-0
+Ext. ID : CR2094504353925872128-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:26
+Credit
+IDR 24,000
+Balance : IDR 431,058
+Mahjong Ways
+PGSoft
+2094504340424396802-2094504175818937859-106-0
+Ext. ID : CR2094504340424396802-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:23
+Credit
+IDR 4,800
+Balance : IDR 407,058
+Mahjong Ways
+PGSoft
+2094504328617427456-2094504175818937859-106-0
+Ext. ID : CR2094504328617427456-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:20
+Credit
+IDR 21,600
+Balance : IDR 402,258
+Mahjong Ways
+PGSoft
+2094504311664062976-2094504175818937859-106-0
+Ext. ID : CR2094504311664062976-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:15:16
+Credit
+IDR 2,400
+Balance : IDR 380,658
+Mahjong Ways
+PGSoft
+2094504207867628544-2094504175818937859-106-0
+Ext. ID : CR2094504207867628544-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:14:51
+Credit
+IDR 1,200
+Balance : IDR 378,258
+Mahjong Ways
+PGSoft
+2094504193695072770-2094504175818937859-106-0
+Ext. ID : CR2094504193695072770-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:14:48
+Credit
+IDR 7,600
+Balance : IDR 377,058
+Mahjong Ways
+PGSoft
+2094504175818937859-2094504175818937859-106-0
+Ext. ID : CR2094504175818937859-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:14:44
+Credit
+IDR 1,800
+Balance : IDR 369,458
+Mahjong Ways
+PGSoft
+2094504175818937859-2094504175818937859-106-0
+Ext. ID : DB2094504175818937859-2094504175818937859-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:14:44
+Debit
+IDR 2,000
+Balance : IDR 367,658
+Mahjong Ways
+PGSoft
+2094504145322198528-2094504145322198528-106-0
+Ext. ID : CR2094504145322198528-2094504145322198528-106-0
+2409heri
+ITWLAD - lelaa
+01 Sep 2026 - 02:14:37
+Credit
+IDR 6,000
+Balance : IDR 369,658`;
+
 const SAMPLE_HARIAN_ONLY = `Fortune Of Olympus
 Pragmatic Play
 80633368385126
@@ -541,6 +806,177 @@ Debit
 IDR 1,000
 Balance : IDR 27,810`;
 
+const SAMPLE_BUY_SPIN_PG = `Mighty Mania
+PGSoft
+2094413992318556672-2094413652613483520-106-0
+Ext. ID : CR2094413992318556672-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:16:22
+Credit
+IDR 72,000
+Balance : IDR 4,882,085
+Mighty Mania
+PGSoft
+2094413979542636032-2094413652613483520-106-0
+Ext. ID : CR2094413979542636032-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:16:19
+Credit
+IDR 18,000
+Balance : IDR 4,810,085
+Mighty Mania
+PGSoft
+2094413963260404225-2094413652613483520-106-0
+Ext. ID : CR2094413963260404225-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:16:15
+Credit
+IDR 48,000
+Balance : IDR 4,792,085
+Mighty Mania
+PGSoft
+2094413950434234880-2094413652613483520-106-0
+Ext. ID : CR2094413950434234880-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:16:12
+Credit
+IDR 144,000
+Balance : IDR 4,744,085
+Mighty Mania
+PGSoft
+2094413934051260929-2094413652613483520-106-0
+Ext. ID : CR2094413934051260929-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:16:08
+Credit
+IDR 186,000
+Balance : IDR 4,600,085
+Mighty Mania
+PGSoft
+2094413917987039744-2094413652613483520-106-0
+Ext. ID : CR2094413917987039744-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:16:05
+Credit
+IDR 252,000
+Balance : IDR 4,414,085
+Mighty Mania
+PGSoft
+2094413905051805697-2094413652613483520-106-0
+Ext. ID : CR2094413905051805697-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:16:02
+Credit
+IDR 72,000
+Balance : IDR 4,162,085
+Mighty Mania
+PGSoft
+2094413887205023744-2094413652613483520-106-0
+Ext. ID : CR2094413887205023744-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:58
+Credit
+IDR 3,888,000
+Balance : IDR 4,090,085
+Mighty Mania
+PGSoft
+2094413872101380608-2094413652613483520-106-0
+Ext. ID : CR2094413872101380608-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:54
+Credit
+IDR 12,000
+Balance : IDR 202,085
+Mighty Mania
+PGSoft
+2094413857035402753-2094413652613483520-106-0
+Ext. ID : CR2094413857035402753-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:50
+Credit
+IDR 24,000
+Balance : IDR 190,085
+Mighty Mania
+PGSoft
+2094413844423122432-2094413652613483520-106-0
+Ext. ID : CR2094413844423122432-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:47
+Credit
+IDR 36,000
+Balance : IDR 166,085
+Mighty Mania
+PGSoft
+2094413829130755584-2094413652613483520-106-0
+Ext. ID : CR2094413829130755584-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:43
+Credit
+IDR 7,200
+Balance : IDR 130,085
+Mighty Mania
+PGSoft
+2094413808570267649-2094413652613483520-106-0
+Ext. ID : CR2094413808570267649-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:39
+Credit
+IDR 1,800
+Balance : IDR 122,885
+Mighty Mania
+PGSoft
+2094413779910566400-2094413652613483520-106-0
+Ext. ID : CR2094413779910566400-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:32
+Credit
+IDR 1,200
+Balance : IDR 121,085
+Mighty Mania
+PGSoft
+2094413749212467200-2094413652613483520-106-0
+Ext. ID : CR2094413749212467200-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:24
+Credit
+IDR 2,400
+Balance : IDR 119,885
+Mighty Mania
+PGSoft
+2094413728727461889-2094413652613483520-106-0
+Ext. ID : CR2094413728727461889-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:20
+Credit
+IDR 600
+Balance : IDR 117,485
+Mighty Mania
+PGSoft
+2094413652613483520-2094413652613483520-106-0
+Ext. ID : DB2094413652613483520-2094413652613483520-106-0
+jaya66
+ITWL63 - Keoaa
+31 Aug 2026 - 20:15:01
+Debit
+IDR 90,000
+Balance : IDR 116,885`;
+
 interface BonusCalculatorProps {
   initialTab?: 'SLOT' | 'PARLAY';
 }
@@ -561,6 +997,8 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
   // Editable fields (optional)
   const [customNamaRek, setCustomNamaRek] = useState<string>('-');
   const [customNoRek, setCustomNoRek] = useState<string>('-');
+  const [customBetInput, setCustomBetInput] = useState<string>('');
+  const [isEditingBet, setIsEditingBet] = useState<boolean>(false);
 
   // Parsing Engine
   const parsed: ParsedStatement = useMemo(() => {
@@ -601,6 +1039,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     const allGamesSet = new Set<string>();
     const allProvidersSet = new Set<string>();
     const allUsersSet = new Set<string>();
+    const allRoundIdsSet = new Set<string>();
     const debitTickets = new Set<string>();
     const allExtIds: string[] = [];
     const debitAmounts: number[] = [];
@@ -613,6 +1052,40 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     const parseAmount = (str: string): number => {
       const clean = str.replace(/[^0-9]/g, '');
       return parseInt(clean, 10) || 0;
+    };
+
+    const extractRoundOrTicketId = (str: string): string | null => {
+      const trimmed = str.trim();
+      if (!trimmed) return null;
+
+      if (trimmed.includes('Ext. ID')) {
+        const rawExt = trimmed.split(':')[1]?.trim() || '';
+        const clean = rawExt.replace(/^(CR|DB)/i, '').trim();
+        if (clean.includes('-')) {
+          const parts = clean.split('-');
+          if (parts.length >= 2 && parts[1].length >= 8) {
+            return parts[1]; // PGSoft parent round ID
+          }
+          return parts[0];
+        } else if (/^\d{8,}$/.test(clean)) {
+          return clean;
+        }
+        return null;
+      }
+
+      if (/^\d{10,}-\d{10,}/.test(trimmed)) {
+        const parts = trimmed.split('-');
+        if (parts.length >= 2 && parts[1].length >= 8) {
+          return parts[1]; // PGSoft parent round ID
+        }
+        return parts[0];
+      }
+
+      if (/^\d{8,20}$/.test(trimmed)) {
+        return trimmed;
+      }
+
+      return null;
     };
 
     const knownProviders = [
@@ -656,6 +1129,8 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
         if (parts[1]) {
           const cleanId = parts[1].trim();
           allExtIds.push(cleanId);
+          const rId = extractRoundOrTicketId(line);
+          if (rId) allRoundIdsSet.add(rId);
         }
 
         // Line right after Ext. ID is usually the User ID
@@ -702,14 +1177,11 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
       }
 
       // Ticket number / Round ID line (numeric or hyphenated)
-      if (line.match(/^\d{8,}$/) || line.match(/^\d{10,}-\d{10,}/)) {
+      const detectedLineRoundId = extractRoundOrTicketId(line);
+      if (detectedLineRoundId) {
+        allRoundIdsSet.add(detectedLineRoundId);
         if (!detectedTicket) {
-          if (line.includes('-')) {
-            const parts = line.split('-');
-            detectedTicket = parts[1] || parts[0];
-          } else {
-            detectedTicket = line;
-          }
+          detectedTicket = detectedLineRoundId;
         }
       }
 
@@ -733,18 +1205,11 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
         // Look backwards to extract debit ticket / round code
         for (let b = 1; b <= 7 && i - b >= 0; b++) {
           const bLine = lines[i - b];
-          if (bLine.includes('Ext. ID')) {
-            const extVal = bLine.split(':')[1]?.trim() || '';
-            if (extVal.startsWith('DB')) {
-              const clean = extVal.replace(/^DB/, '').split('-')[0];
-              if (clean) debitTickets.add(clean);
-            }
-          } else if (bLine.match(/^\d{10,}-\d{10,}/)) {
-            const parts = bLine.split('-');
-            const roundPart = parts[1] || parts[0];
-            if (roundPart) debitTickets.add(roundPart);
-          } else if (bLine.match(/^\d{8,}$/)) {
-            debitTickets.add(bLine);
+          const dTicket = extractRoundOrTicketId(bLine);
+          if (dTicket) {
+            debitTickets.add(dTicket);
+            allRoundIdsSet.add(dTicket);
+            break;
           }
         }
       }
@@ -760,19 +1225,27 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     }
 
     // Determine final ticket code
-    if (!detectedTicket && debitTickets.size > 0) {
+    if (debitTickets.size > 0) {
       detectedTicket = Array.from(debitTickets)[0];
-    } else if (!detectedTicket && allExtIds.length > 0) {
+    } else if (allRoundIdsSet.size > 0) {
+      detectedTicket = Array.from(allRoundIdsSet)[0];
+    } else if (allExtIds.length > 0) {
       detectedTicket = allExtIds[0].replace(/^[A-Z]{2}/, '').split('-')[0];
     }
 
     // Super scatter check
     const isSuperScatter = detectedGame.toLowerCase().includes('super scatter');
 
+    // Distinct debit values
+    const distinctDebitAmounts = Array.from(new Set(debitAmounts));
+
     // Conflict flags
-    const hasMultiDebit = debitCount > 1;
-    const hasUnderMin = debitAmounts.some(amt => amt < 1000);
-    const hasMultiTicket = debitTickets.size > 1 || allGamesSet.size > 1;
+    // 1. Multiple debit rows or multiple bet amounts
+    const hasMultiDebit = debitCount > 1 || distinctDebitAmounts.length > 1;
+    // 2. Bet under minimal threshold
+    const hasUnderMin = debitAmounts.length > 0 && debitAmounts.some(amt => amt < 1000);
+    // 3. Multiple different tickets / round IDs or multiple different games
+    const hasMultiTicket = allRoundIdsSet.size > 1 || allGamesSet.size > 1 || debitTickets.size > 1;
 
     // Multiplier Win (Credit / Debit)
     const multiplierWin = sumDebit > 0 ? (sumCredit / sumDebit) : 0;
@@ -801,55 +1274,71 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     };
   }, [rawText, customNamaRek, customNoRek]);
 
+  // Effective Bet (Nilai Taruhan Asli dalam game / Diedit untuk Buy Spin / Scatter)
+  const parsedCustomBet = useMemo(() => {
+    if (!customBetInput.trim()) return null;
+    const num = parseInt(customBetInput.replace(/[^0-9]/g, ''), 10);
+    return isNaN(num) || num <= 0 ? null : num;
+  }, [customBetInput]);
+
+  const effectiveDebit = parsedCustomBet !== null ? parsedCustomBet : parsed.totalDebit;
+  const isCustomBetActive = parsedCustomBet !== null && parsedCustomBet !== parsed.totalDebit;
+  const effectiveMultiplier = effectiveDebit > 0 ? (parsed.totalCredit / effectiveDebit) : 0;
+
   // Validation Rules Evaluation
   const validation: ValidationResult = useMemo(() => {
-    if (!rawText.trim() || parsed.totalDebit === 0) {
+    if (!rawText.trim() || (parsed.totalDebit === 0 && parsedCustomBet === null)) {
       return {
         isScatterEligible: false,
-        scatterReason: 'Data kosong atau belum ditempel.',
+        scatterReason: 'Data kosong atau belum ditempel transaksi DEBIT (nilai taruhan).',
         isHarianEligible: false,
-        harianReason: 'Data kosong atau belum ditempel.',
+        harianReason: 'Data kosong atau belum ditempel transaksi DEBIT (nilai taruhan).',
         overallStatus: 'EMPTY'
       };
     }
 
     // Disqualification conditions (Reject All):
-    // 1. Multiple debit category (debit 2x)
-    // 2. Different ticket codes or mixed games in single log
+    // 1. Different ticket codes or mixed games / rounds in single log
+    // 2. Multiple debit category or multiple bet amounts (debit > 1x)
     // 3. Bet amount under minimum threshold (< 1.000)
-    if (parsed.hasMultiDebitConflict) {
-      return {
-        isScatterEligible: false,
-        scatterReason: 'Ada kategori DEBIT lebih dari 1x dalam satu log.',
-        isHarianEligible: false,
-        harianReason: 'Ada kategori DEBIT lebih dari 1x dalam satu log.',
-        overallStatus: 'REJECTED'
-      };
-    }
-
     if (parsed.hasMultiTicketConflict) {
+      const conflictMsg = 'Terdeteksi lebih dari 1 kode tiket / round ID berbeda dalam satu log (mencampur beberapa putaran/sesi permainan).';
       return {
         isScatterEligible: false,
-        scatterReason: 'Kode tiket berbeda / konflik antarsesi.',
+        scatterReason: conflictMsg,
         isHarianEligible: false,
-        harianReason: 'Kode tiket berbeda / konflik antarsesi.',
+        harianReason: conflictMsg,
         overallStatus: 'REJECTED'
       };
     }
 
-    if (parsed.totalDebit < 1000) {
+    if (parsed.hasMultiDebitConflict) {
+      const conflictMsg = parsed.debitCount > 1 
+        ? `Ada kategori DEBIT lebih dari 1x (${parsed.debitCount}x transaksi debit terdeteksi) dalam satu log.`
+        : 'Terdeteksi lebih dari 1 nominal nilai taruhan berbeda dalam satu log.';
       return {
         isScatterEligible: false,
-        scatterReason: `Nominal bet Rp ${parsed.totalDebit.toLocaleString('en-US')} dibawah batas minimal promo.`,
+        scatterReason: conflictMsg,
         isHarianEligible: false,
-        harianReason: `Nominal bet Rp ${parsed.totalDebit.toLocaleString('en-US')} dibawah batas minimal promo.`,
+        harianReason: conflictMsg,
+        overallStatus: 'REJECTED'
+      };
+    }
+
+    if (effectiveDebit < 1000) {
+      const underBetMsg = `Nominal bet Rp ${effectiveDebit.toLocaleString('en-US')} dibawah batas minimal promo (Min Rp 1,000).`;
+      return {
+        isScatterEligible: false,
+        scatterReason: underBetMsg,
+        isHarianEligible: false,
+        harianReason: underBetMsg,
         overallStatus: 'REJECTED'
       };
     }
 
     // Table 1: BONUS SCATTER MAHJONG WAYS 1 & 2
     // Syarat:
-    // 1. Nilai taruhan minimal 1.200 (parsed.totalDebit >= 1200)
+    // 1. Nilai taruhan minimal 1.200 (effectiveDebit >= 1200)
     // 2. Total Kemenangan minimal 100.000 (parsed.totalCredit >= 100000)
     // 3. Permainan Mahjong Ways atau Mahjong Ways 2
     const isMahjongGame = 
@@ -862,8 +1351,8 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
 
     if (!isMahjongGame) {
       scatterMsg = 'Bukan permainan Mahjong Ways 1 atau Mahjong Ways 2.';
-    } else if (parsed.totalDebit < 1200) {
-      scatterMsg = `Nilai taruhan Rp ${parsed.totalDebit.toLocaleString('en-US')} kurang dari batas minimal Rp 1,200.`;
+    } else if (effectiveDebit < 1200) {
+      scatterMsg = `Nilai taruhan Rp ${effectiveDebit.toLocaleString('en-US')} kurang dari batas minimal Rp 1,200.`;
     } else if (parsed.totalCredit < 100000) {
       scatterMsg = `Total kemenangan Rp ${parsed.totalCredit.toLocaleString('en-US')} belum mencapai batas minimal Rp 100,000.`;
     } else {
@@ -873,11 +1362,11 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
 
     // Table 2: BONUS HARIAN SLOT PRAGMATIC PLAY- IDNSLOT - SLOT MANIA - PGSOFT
     // Syarat:
-    // 1. Nilai Taruhan minimal 1.000 (parsed.totalDebit >= 1000)
+    // 1. Nilai Taruhan minimal 1.000 (effectiveDebit >= 1000)
     // 2. Provider: PRAGMATIC PLAY, IDNSLOT, SLOT MANIA, PGSOFT
     // 3. Win Up:
-    //    - Slot Biasa: Minimal Win Up x300 (totalCredit >= totalDebit * 300)
-    //    - Game Super Scatter (e.g. Gates of Olympus Super Scatter): Minimal Win Up x2.000 (totalCredit >= totalDebit * 2000)
+    //    - Slot Biasa: Minimal Win Up x300 (totalCredit >= effectiveDebit * 300)
+    //    - Game Super Scatter (e.g. Gates of Olympus Super Scatter): Minimal Win Up x2.000 (totalCredit >= effectiveDebit * 2000)
     const validProviders = ['pgsoft', 'pg soft', 'pragmatic play', 'pragmatic', 'idnslot', 'idn slot', 'slot mania', 'slotmania'];
     const isProviderValid = validProviders.some(p => parsed.provider.toLowerCase().includes(p) || p.includes(parsed.provider.toLowerCase()));
 
@@ -888,10 +1377,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
 
     if (!isProviderValid) {
       harianMsg = `Provider ${parsed.provider} tidak termasuk dalam daftar promo harian.`;
-    } else if (parsed.totalDebit < 1000) {
-      harianMsg = `Nilai taruhan Rp ${parsed.totalDebit.toLocaleString('en-US')} kurang dari batas minimal Rp 1,000.`;
-    } else if (parsed.multiplierWin < minMultiplierRequired) {
-      harianMsg = `Win Up hanya x${parsed.multiplierWin.toFixed(1)} (Minimal x${minMultiplierRequired.toLocaleString('en-US')} untuk ${parsed.isSuperScatterGame ? 'Super Scatter' : 'Slot Biasa'}).`;
+    } else if (effectiveDebit < 1000) {
+      harianMsg = `Nilai taruhan Rp ${effectiveDebit.toLocaleString('en-US')} kurang dari batas minimal Rp 1,000.`;
+    } else if (effectiveMultiplier < minMultiplierRequired) {
+      harianMsg = `Win Up hanya x${effectiveMultiplier.toFixed(1)} (Minimal x${minMultiplierRequired.toLocaleString('en-US')} untuk ${parsed.isSuperScatterGame ? 'Super Scatter' : 'Slot Biasa'}).`;
     } else {
       harianValid = true;
       harianMsg = 'SAH & BISA CLAIM';
@@ -915,7 +1404,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
       harianReason: harianMsg,
       overallStatus: overall
     };
-  }, [rawText, parsed]);
+  }, [rawText, parsed, effectiveDebit, effectiveMultiplier, parsedCustomBet]);
 
   // Auto-Clear Timer Logic (5 Seconds)
   useEffect(() => {
@@ -939,6 +1428,8 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
 
     timerRef.current = setTimeout(() => {
       setRawText('');
+      setCustomBetInput('');
+      setIsEditingBet(false);
       setCountdown(0);
       setJustCleared(true);
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -952,11 +1443,11 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
   }, [rawText, autoClearEnabled, autoClearSeconds]);
 
   // Copy Scatter (Tab-separated values matching user's exact requested copy line format)
-  // Format: {userId}\t\t\t{permainan}\t{kodeTicket}\t{totalCredit}\t{totalDebit}
+  // Format: {userId}\t\t\t{permainan}\t{kodeTicket}\t{totalCredit}\t{effectiveDebit}
   const handleCopyScatter = () => {
     if (!validation.isScatterEligible) return;
     const formattedCredit = parsed.totalCredit.toLocaleString('en-US');
-    const formattedDebit = parsed.totalDebit.toLocaleString('en-US');
+    const formattedDebit = effectiveDebit.toLocaleString('en-US');
     const namaRek = parsed.namaRekening === '-' ? '' : parsed.namaRekening;
     const noRek = parsed.nomorRekening === '-' ? '' : parsed.nomorRekening;
     const text = `${parsed.userId}\t${namaRek}\t${noRek}\t${parsed.permainan}\t${parsed.kodeTicket}\t${formattedCredit}\t${formattedDebit}`;
@@ -965,16 +1456,32 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     setTimeout(() => setCopiedScatter(false), 2000);
   };
 
+  const formatProviderName = (prov: string): string => {
+    const p = (prov || '').toLowerCase();
+    if (p.includes('pg')) return 'PG SOFT';
+    if (p.includes('pragmatic')) return 'PRAGMATIC PLAY';
+    if (p.includes('idn')) return 'IDNSLOT';
+    if (p.includes('slot mania') || p.includes('slotmania')) return 'SLOT MANIA';
+    if (p.includes('habanero')) return 'HABANERO';
+    if (p.includes('microgaming')) return 'MICROGAMING';
+    if (p.includes('spade')) return 'SPADEGAMING';
+    if (p.includes('joker')) return 'JOKER GAMING';
+    if (p.includes('nolimit')) return 'NOLIMIT CITY';
+    return (prov || '').toUpperCase();
+  };
+
   // Copy Harian Slot (Tab-separated values matching user's exact requested copy line format)
-  // Format: {userId}\t\t\t{permainan}\t{kodeTicket}\t{totalCredit}\t{totalDebit}
+  // Format: {userId}\t{namaRek}\t{noRek}\t{provider}\t{permainan}\t{roundId}\t{superBuy}\t{totalCredit}\t{effectiveDebit}
   const handleCopyHarian = () => {
     if (!validation.isHarianEligible) return;
     const formattedCredit = parsed.totalCredit.toLocaleString('en-US');
-    const formattedDebit = parsed.totalDebit.toLocaleString('en-US');
+    const formattedDebit = effectiveDebit.toLocaleString('en-US');
     const namaRek = parsed.namaRekening === '-' ? '' : parsed.namaRekening;
     const noRek = parsed.nomorRekening === '-' ? '' : parsed.nomorRekening;
-    const ticketToUse = parsed.kodeTicket || parsed.roundId;
-    const text = `${parsed.userId}\t${namaRek}\t${noRek}\t${parsed.permainan}\t${ticketToUse}\t${formattedCredit}\t${formattedDebit}`;
+    const providerFormatted = formatProviderName(parsed.provider);
+    const ticketToUse = parsed.roundId || parsed.kodeTicket;
+    const superBuy = parsed.superBuy === '-' ? '' : parsed.superBuy;
+    const text = `${parsed.userId}\t${namaRek}\t${noRek}\t${providerFormatted}\t${parsed.permainan}\t${ticketToUse}\t${superBuy}\t${formattedCredit}\t${formattedDebit}`;
     navigator.clipboard.writeText(text);
     setCopiedHarian(true);
     setTimeout(() => setCopiedHarian(false), 2000);
@@ -984,6 +1491,8 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRawText('');
+    setCustomBetInput('');
+    setIsEditingBet(false);
     setCountdown(0);
     setJustCleared(true);
     setTimeout(() => setJustCleared(false), 2000);
@@ -1000,21 +1509,35 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
               VALIDATOR KELAYAKAN BONUS
             </span>
             <span className="text-xs text-slate-400 font-mono">
-              Auto Audit & Anti-Double Engine
+              Auto Audit, Anti-Double & Buy Spin Support
             </span>
           </div>
           <h1 className="text-2xl font-black text-white font-['Rajdhani'] uppercase tracking-wider">
             BONUS HARIAN SLOT & MAHJONG WAYS
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Audit otomatis kelayakan klaim bonus member berdasarkan nilai taruhan, total kemenangan, dan batas win-up.
+            Audit otomatis kelayakan klaim bonus member berdasarkan nilai taruhan, total kemenangan, fitur buy spin, dan batas win-up.
           </p>
         </div>
 
         {/* Action Preset Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setRawText(SAMPLE_SCATTER_ONLY)}
+            onClick={() => {
+              setRawText(SAMPLE_BUY_SPIN_PG);
+              setCustomBetInput('1200');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-bold text-xs font-mono transition-all cursor-pointer shadow-[0_0_12px_rgba(168,85,247,0.25)]"
+            title="Contoh: Buy Spin PG Soft (jaya66 - Beli 90k, Bet Asli 1.2k, Menang 4.88 Juta = x4,068.4)"
+          >
+            <Zap className="w-3.5 h-3.5 text-purple-400 fill-purple-400" />
+            <span>Contoh: Buy Spin PG (jaya66 - Bet 1.2k)</span>
+          </button>
+          <button
+            onClick={() => {
+              setRawText(SAMPLE_SCATTER_ONLY);
+              setCustomBetInput('');
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
             title="Contoh 1: Hanya Bonus Scatter Mahjong (ruben77 - Menang 198k, Bet 4k)"
           >
@@ -1022,7 +1545,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
             <span>Contoh: Scatter Sah (ruben77)</span>
           </button>
           <button
-            onClick={() => setRawText(SAMPLE_BOTH_ELIGIBLE)}
+            onClick={() => {
+              setRawText(SAMPLE_BOTH_ELIGIBLE);
+              setCustomBetInput('');
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
             title="Contoh 2: Scatter & Harian Slot Sah (isna - Menang 433k, Bet 1.2k = x361.6)"
           >
@@ -1030,7 +1556,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
             <span>Contoh: Keduanya Sah (isna)</span>
           </button>
           <button
-            onClick={() => setRawText(SAMPLE_HARIAN_ONLY)}
+            onClick={() => {
+              setRawText(SAMPLE_HARIAN_ONLY);
+              setCustomBetInput('');
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
             title="Contoh 3: Hanya Bonus Harian Slot (nirwana04 - Fortune Of Olympus / Pragmatic Play)"
           >
@@ -1038,9 +1567,23 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
             <span>Contoh: Harian Sah (nirwana04)</span>
           </button>
           <button
-            onClick={() => setRawText(SAMPLE_REJECTED)}
+            onClick={() => {
+              setRawText(SAMPLE_MULTI_TICKET_REJECTED);
+              setCustomBetInput('');
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
-            title="Contoh 4: Ditolak (Debit 2x / Bet < 1.000 / Konflik Tiket)"
+            title="Contoh 4: Ditolak (2 Kode Tiket Berbeda / Multi Spin - 2409heri)"
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+            <span>Contoh: Ditolak (2 Tiket - 2409heri)</span>
+          </button>
+          <button
+            onClick={() => {
+              setRawText(SAMPLE_REJECTED);
+              setCustomBetInput('');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
+            title="Contoh 5: Ditolak (Debit 2x / Bet < 1.000 / Konflik Tiket)"
           >
             <XCircle className="w-3.5 h-3.5 text-rose-400" />
             <span>Contoh: Ditolak (Debit 2x)</span>
@@ -1060,14 +1603,19 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                   <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wide">
-                    STATUS VERIFIKASI BONUS:
+                  <div className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-2">
+                    <span>STATUS VERIFIKASI BONUS:</span>
+                    {isCustomBetActive && (
+                      <span className="px-2 py-0.5 rounded bg-purple-500/30 text-purple-300 border border-purple-400 text-[10px]">
+                        BUY SPIN BET DIAUDIT
+                      </span>
+                    )}
                   </div>
                   <div className="text-base font-black text-white font-['Rajdhani'] uppercase tracking-wider">
                     USER ID <span className="text-emerald-300 underline font-mono">{parsed.userId}</span> BISA CLAIM BONUS SCATTER MAHJONG & HARIAN SLOT!
                   </div>
                   <div className="text-xs text-emerald-200/80 font-mono mt-0.5">
-                    Taruhan: Rp {parsed.totalDebit.toLocaleString('en-US')} | Kemenangan: Rp {parsed.totalCredit.toLocaleString('en-US')} (Win Up: x{parsed.multiplierWin.toFixed(1)})
+                    Taruhan: Rp {effectiveDebit.toLocaleString('en-US')} {isCustomBetActive && `(Asli Beli: Rp ${parsed.totalDebit.toLocaleString('en-US')})`} | Kemenangan: Rp {parsed.totalCredit.toLocaleString('en-US')} (Win Up: x{effectiveMultiplier.toFixed(1)})
                   </div>
                 </div>
               </div>
@@ -1084,14 +1632,19 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                   <Flame className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wide">
-                    STATUS VERIFIKASI BONUS:
+                  <div className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wide flex items-center gap-2">
+                    <span>STATUS VERIFIKASI BONUS:</span>
+                    {isCustomBetActive && (
+                      <span className="px-2 py-0.5 rounded bg-purple-500/30 text-purple-300 border border-purple-400 text-[10px]">
+                        BUY SPIN BET DIAUDIT
+                      </span>
+                    )}
                   </div>
                   <div className="text-base font-black text-white font-['Rajdhani'] uppercase tracking-wider">
                     USER ID <span className="text-amber-300 underline font-mono">{parsed.userId}</span> HANYA BISA CLAIM BONUS SCATTER MAHJONG
                   </div>
                   <div className="text-xs text-amber-200/80 font-mono mt-0.5">
-                    Bonus Harian Slot tidak memenuhi syarat (Win Up x{parsed.multiplierWin.toFixed(1)} belum mencapai x300).
+                    Bonus Harian Slot tidak memenuhi syarat (Win Up x{effectiveMultiplier.toFixed(1)} belum mencapai x300).
                   </div>
                 </div>
               </div>
@@ -1108,14 +1661,19 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                   <Gamepad2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wide">
-                    STATUS VERIFIKASI BONUS:
+                  <div className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+                    <span>STATUS VERIFIKASI BONUS:</span>
+                    {isCustomBetActive && (
+                      <span className="px-2 py-0.5 rounded bg-purple-500/30 text-purple-300 border border-purple-400 text-[10px]">
+                        BUY SPIN BET: Rp {effectiveDebit.toLocaleString('en-US')}
+                      </span>
+                    )}
                   </div>
                   <div className="text-base font-black text-white font-['Rajdhani'] uppercase tracking-wider">
                     USER ID <span className="text-cyan-300 underline font-mono">{parsed.userId}</span> HANYA BISA CLAIM BONUS HARIAN SLOT
                   </div>
                   <div className="text-xs text-cyan-200/80 font-mono mt-0.5">
-                    {validation.scatterReason}
+                    {validation.scatterReason} (Win Up: x{effectiveMultiplier.toFixed(1)})
                   </div>
                 </div>
               </div>
@@ -1278,24 +1836,128 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-black/60 border border-white/5 space-y-1">
-                  <div className="text-[9px] font-bold text-gray-400 font-mono uppercase">
-                    TOTAL TARUHAN (BET)
+                {/* Editable Nilai Taruhan (Bet) Box */}
+                <div className={`p-3 rounded-2xl border transition-all space-y-1 ${
+                  isCustomBetActive 
+                    ? 'bg-purple-950/40 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]' 
+                    : 'bg-black/60 border-white/5'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-[9px] font-bold text-gray-400 font-mono uppercase flex items-center gap-1">
+                      <span>NILAI TARUHAN</span>
+                      {isCustomBetActive && <span className="text-purple-400">(DIEDIT)</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingBet(!isEditingBet)}
+                      className="text-[10px] font-mono font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 cursor-pointer underline"
+                      title="Edit nilai taruhan / Atur Bet Buy Spin"
+                    >
+                      <Pencil className="w-2.5 h-2.5" />
+                      <span>{isEditingBet ? 'Tutup' : 'Edit'}</span>
+                    </button>
                   </div>
-                  <div className="text-lg font-black text-cyan-300 font-mono">
-                    Rp {parsed.totalDebit.toLocaleString('en-US')}
+
+                  <div className="text-lg font-black text-cyan-300 font-mono flex items-baseline gap-1.5">
+                    <span>Rp {effectiveDebit.toLocaleString('en-US')}</span>
+                    {isCustomBetActive && (
+                      <span className="text-[10px] text-gray-400 font-normal line-through">
+                        Rp {parsed.totalDebit.toLocaleString('en-US')}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* Collapsible or always accessible Edit Bet Panel */}
+              {(isEditingBet || isCustomBetActive) && (
+                <div className="p-3 rounded-2xl bg-purple-950/30 border border-purple-500/40 space-y-2 animate-in fade-in">
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-purple-300 font-bold flex items-center gap-1">
+                      <SlidersHorizontal className="w-3 h-3" />
+                      <span>Sesuaikan Nilai Taruhan Asli (Buy Spin / Scatter):</span>
+                    </span>
+                    {isCustomBetActive && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomBetInput('');
+                          setIsEditingBet(false);
+                        }}
+                        className="text-rose-400 hover:text-rose-300 flex items-center gap-0.5 font-bold cursor-pointer"
+                        title="Kembalikan ke nilai asli log"
+                      >
+                        <RotateCcw className="w-2.5 h-2.5" />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-2.5 top-1.5 text-xs text-gray-400 font-mono">Rp</span>
+                      <input
+                        type="text"
+                        placeholder="Contoh: 1200"
+                        value={customBetInput}
+                        onChange={e => setCustomBetInput(e.target.value.replace(/[^0-9]/g, ''))}
+                        className="w-full pl-8 pr-2 py-1 rounded-xl bg-black border border-purple-400/50 text-xs font-mono text-purple-200 focus:outline-none focus:border-purple-300 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Preset Buttons for Buy Spin */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[9px] text-gray-400 font-mono">Quick Set:</span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomBetInput('1200')}
+                      className="px-2 py-0.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                      title="Set Bet Asli Rp 1,200 (Batas Min Mahjong & Promo Harian)"
+                    >
+                      ⚡ Bet 1.200
+                    </button>
+                    {parsed.totalDebit > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const val = Math.round(parsed.totalDebit / 75);
+                            setCustomBetInput(String(val));
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                          title="PG Soft Buy Spin (Beli Rp 90,000 / 75 = Rp 1,200)"
+                        >
+                          ÷75 (PG Soft)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const val = Math.round(parsed.totalDebit / 100);
+                            setCustomBetInput(String(val));
+                          }}
+                          className="px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold cursor-pointer"
+                          title="Pragmatic Play Buy Spin (Beli / 100)"
+                        >
+                          ÷100 (Pragmatic)
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* 2 Column Stats: Win Multiplier & Game */}
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="p-3 rounded-2xl bg-black/60 border border-white/5 space-y-1">
-                  <div className="text-[9px] font-bold text-gray-400 font-mono uppercase">
-                    WIN MULTIPLIER (WIN UP)
+                  <div className="text-[9px] font-bold text-gray-400 font-mono uppercase flex items-center justify-between">
+                    <span>WIN MULTIPLIER (WIN UP)</span>
+                    {effectiveMultiplier >= 300 && (
+                      <span className="text-emerald-400 font-bold text-[8px]">≥ x300</span>
+                    )}
                   </div>
-                  <div className={`text-base font-black font-mono ${parsed.multiplierWin >= 300 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    x{parsed.multiplierWin.toFixed(1)}
+                  <div className={`text-base font-black font-mono ${effectiveMultiplier >= 300 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    x{effectiveMultiplier.toFixed(1)}
                   </div>
                 </div>
 
@@ -1398,7 +2060,12 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                     {parsed.totalCredit.toLocaleString('en-US')}
                   </td>
                   <td className="py-3.5 px-4 text-center font-extrabold text-cyan-300">
-                    {parsed.totalDebit.toLocaleString('en-US')}
+                    <div>{effectiveDebit.toLocaleString('en-US')}</div>
+                    {isCustomBetActive && (
+                      <div className="text-[9px] text-purple-400 font-normal">
+                        (Buy: {parsed.totalDebit.toLocaleString('en-US')})
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -1494,7 +2161,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                     {parsed.nomorRekening}
                   </td>
                   <td className="py-3.5 px-3.5 font-semibold text-cyan-400">
-                    {parsed.provider}
+                    {formatProviderName(parsed.provider)}
                   </td>
                   <td className="py-3.5 px-3.5 font-semibold text-yellow-400">
                     {parsed.permainan}
@@ -1509,7 +2176,12 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                     {parsed.totalCredit.toLocaleString('en-US')}
                   </td>
                   <td className="py-3.5 px-3.5 text-center font-extrabold text-cyan-300">
-                    {parsed.totalDebit.toLocaleString('en-US')}
+                    <div>{effectiveDebit.toLocaleString('en-US')}</div>
+                    {isCustomBetActive && (
+                      <div className="text-[9px] text-purple-400 font-normal">
+                        (Buy: {parsed.totalDebit.toLocaleString('en-US')})
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
