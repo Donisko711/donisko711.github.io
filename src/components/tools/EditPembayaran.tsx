@@ -22,6 +22,11 @@ import {
   ArrowRightLeft,
   DollarSign
 } from 'lucide-react';
+import { BniStrukEditor } from './struk/BniStrukEditor';
+import { BcaStrukEditor } from './struk/BcaStrukEditor';
+import { BniWonderStrukEditor } from './struk/BniWonderStrukEditor';
+import { MandiriStrukEditor } from './struk/MandiriStrukEditor';
+import { BriStrukEditor } from './struk/BriStrukEditor';
 
 export type PaymentSubMode = 
   | 'STRUK'
@@ -121,9 +126,10 @@ export const EditPembayaran: React.FC = () => {
 
   const bankOptions = [
     { value: 'BCA', label: 'Bank BCA', color: 'from-blue-600 to-blue-900 border-blue-500' },
+    { value: 'BNI_WONDER', label: 'BNI Wonder', color: 'from-lime-600 to-emerald-950 border-lime-400' },
+    { value: 'BNI', label: 'Bank BNI', color: 'from-teal-600 to-teal-900 border-teal-500' },
     { value: 'MANDIRI', label: 'Bank Mandiri', color: 'from-amber-600 to-blue-950 border-amber-500' },
     { value: 'BRI', label: 'Bank BRI', color: 'from-blue-700 to-cyan-900 border-cyan-500' },
-    { value: 'BNI', label: 'Bank BNI', color: 'from-teal-600 to-teal-900 border-teal-500' },
     { value: 'DANAMON', label: 'Bank Danamon', color: 'from-orange-600 to-amber-900 border-orange-500' },
     { value: 'CIMB', label: 'CIMB Niaga', color: 'from-rose-700 to-red-950 border-red-500' },
     { value: 'PERMATA', label: 'Bank Permata', color: 'from-emerald-700 to-teal-950 border-emerald-500' },
@@ -282,175 +288,235 @@ export const EditPembayaran: React.FC = () => {
       {/* MODE 1: EDIT STRUK TRANSFER (BCA, MANDIRI, BRI, BNI, EWALLET, QRIS DLL)   */}
       {/* ========================================================================= */}
       {subMode === 'STRUK' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in">
-          {/* Form Input Struk */}
-          <div className="lg:col-span-7 p-6 rounded-3xl bg-[#0a0f18] border border-cyan-500/30 space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-black text-cyan-300 font-mono uppercase flex items-center gap-2">
-                <CreditCard className="w-4 h-4" /> Form Parameter Struk Transfer
-              </h3>
-              <button
-                onClick={handleGenerateRef}
-                className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-yellow-300 border border-yellow-500/30 cursor-pointer"
-              >
-                Acak No. Ref
-              </button>
+        <div className="space-y-6 animate-in fade-in">
+          {/* Quick Bank Selector Bar */}
+          <div className="p-4 rounded-2xl bg-[#070d18] border border-cyan-500/30 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-mono font-bold text-gray-300">PILIH BANK / E-WALLET STRUK:</span>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div>
-                <label className="block text-xs font-mono text-gray-400 mb-1">Pilih Bank / E-Wallet:</label>
-                <select
-                  value={bankType}
-                  onChange={e => setBankType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-cyan-500/40 text-xs font-mono font-bold text-yellow-400 focus:outline-none focus:border-cyan-400"
+            <div className="flex flex-wrap items-center gap-1.5">
+              {bankOptions.map((b) => (
+                <button
+                  key={b.value}
+                  type="button"
+                  onClick={() => setBankType(b.value)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                    bankType === b.value
+                      ? b.value === 'BNI'
+                        ? 'bg-[#E55300] text-white shadow-[0_0_15px_rgba(229,83,0,0.5)] border border-orange-400'
+                        : b.value === 'BNI_WONDER'
+                          ? 'bg-[#e5f14e] text-black shadow-[0_0_15px_rgba(229,241,78,0.5)] border border-lime-300 font-black'
+                          : b.value === 'BCA'
+                            ? 'bg-[#0074d9] text-white shadow-[0_0_15px_rgba(0,116,217,0.5)] border border-blue-400'
+                            : b.value === 'MANDIRI'
+                              ? 'bg-[#00c2a8] text-black shadow-[0_0_15px_rgba(0,194,168,0.5)] border border-teal-300 font-black'
+                              : b.value === 'BRI'
+                                ? 'bg-[#00529C] text-white shadow-[0_0_15px_rgba(0,82,156,0.6)] border border-blue-400 font-black'
+                                : 'bg-cyan-500 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                      : 'bg-[#0e1626] text-gray-300 hover:text-white hover:bg-[#18253d] border border-white/5'
+                  }`}
                 >
-                  {bankOptions.map(b => (
-                    <option key={b.value} value={b.value}>{b.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-gray-400 mb-1">Jenis Mutasi:</label>
-                <select
-                  value={trxType}
-                  onChange={e => setTrxType(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-cyan-500/40 text-xs font-mono font-bold text-emerald-400 focus:outline-none focus:border-cyan-400"
-                >
-                  <option value="WITHDRAW">WITHDRAW (PENARIKAN SALDO)</option>
-                  <option value="DEPOSIT">DEPOSIT (SETOR SALDO)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-gray-400 mb-1">Nama Penerima / Member:</label>
-                <input
-                  type="text"
-                  value={recipientName}
-                  onChange={e => setRecipientName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-gray-400 mb-1">No. Rekening / No. HP Tujuan:</label>
-                <input
-                  type="text"
-                  value={recipientAccount}
-                  onChange={e => setRecipientAccount(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-gray-400 mb-1">Nominal Transfer (Rp):</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={e => setAmount(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-emerald-400 font-bold focus:outline-none focus:border-cyan-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-gray-400 mb-1">Status Transaksi:</label>
-                <select
-                  value={status}
-                  onChange={e => setStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-cyan-300 font-bold focus:outline-none focus:border-cyan-400"
-                >
-                  <option value="BERHASIL">BERHASIL (SUCCESS)</option>
-                  <option value="DIPROSES">SEDANG DIPROSES</option>
-                  <option value="PENDING">PENDING ANTRIAN</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-mono text-gray-400 mb-1">Waktu &amp; Tanggal Transaksi:</label>
-                <input
-                  type="text"
-                  value={trxDate}
-                  onChange={e => setTrxDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-cyan-400"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-mono text-gray-400 mb-1">Berita / Catatan Transaksi:</label>
-                <input
-                  type="text"
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-cyan-400"
-                />
-              </div>
+                  {b.value === 'BNI'
+                    ? '🏦 BNI Mobile PRO'
+                    : b.value === 'BNI_WONDER'
+                      ? '✨ BNI Wonder'
+                      : b.value === 'BCA'
+                        ? '🏦 m-BCA Instan'
+                        : b.value === 'MANDIRI'
+                          ? '🏦 Mandiri Livin'
+                          : b.value === 'BRI'
+                            ? '🏦 BRImo PRO'
+                            : b.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Struk Card Digital Preview */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className={`p-6 rounded-3xl bg-gradient-to-b ${currentBankColor} border-2 shadow-2xl text-white space-y-4 font-mono relative overflow-hidden`}>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none" />
-              
-              <div className="flex items-center justify-between border-b border-white/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-white" />
-                  <span className="font-black text-sm tracking-wider uppercase">{bankType} ONLINE</span>
+          {/* Render Specialized Bank Editors */}
+          {bankType === 'BNI_WONDER' ? (
+            <BniWonderStrukEditor onBackToGeneral={() => setBankType('DANAMON')} />
+          ) : bankType === 'BNI' ? (
+            <BniStrukEditor onBackToGeneral={() => setBankType('DANAMON')} />
+          ) : bankType === 'BCA' ? (
+            <BcaStrukEditor onBackToGeneral={() => setBankType('DANAMON')} />
+          ) : bankType === 'MANDIRI' ? (
+            <MandiriStrukEditor onBackToGeneral={() => setBankType('DANAMON')} />
+          ) : bankType === 'BRI' ? (
+            <BriStrukEditor onBackToGeneral={() => setBankType('DANAMON')} />
+          ) : (
+            /* General Bank Struk Editor */
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in">
+              {/* Form Input Struk */}
+              <div className="lg:col-span-7 p-6 rounded-3xl bg-[#0a0f18] border border-cyan-500/30 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <h3 className="text-sm font-black text-cyan-300 font-mono uppercase flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" /> Form Parameter Struk {bankType}
+                  </h3>
+                  <button
+                    onClick={handleGenerateRef}
+                    className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-yellow-300 border border-yellow-500/30 cursor-pointer"
+                  >
+                    Acak No. Ref
+                  </button>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-400 text-black text-[10px] font-black uppercase">
-                  {status}
-                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-mono text-gray-400 mb-1">Pilih Bank / E-Wallet:</label>
+                    <select
+                      value={bankType}
+                      onChange={e => setBankType(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-cyan-500/40 text-xs font-mono font-bold text-yellow-400 focus:outline-none focus:border-cyan-400"
+                    >
+                      {bankOptions.map(b => (
+                        <option key={b.value} value={b.value}>{b.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-gray-400 mb-1">Jenis Mutasi:</label>
+                    <select
+                      value={trxType}
+                      onChange={e => setTrxType(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-cyan-500/40 text-xs font-mono font-bold text-emerald-400 focus:outline-none focus:border-cyan-400"
+                    >
+                      <option value="WITHDRAW">WITHDRAW (PENARIKAN SALDO)</option>
+                      <option value="DEPOSIT">DEPOSIT (SETOR SALDO)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-gray-400 mb-1">Nama Penerima / Member:</label>
+                    <input
+                      type="text"
+                      value={recipientName}
+                      onChange={e => setRecipientName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-gray-400 mb-1">No. Rekening / No. HP Tujuan:</label>
+                    <input
+                      type="text"
+                      value={recipientAccount}
+                      onChange={e => setRecipientAccount(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-gray-400 mb-1">Nominal Transfer (Rp):</label>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={e => setAmount(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-emerald-400 font-bold focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-gray-400 mb-1">Status Transaksi:</label>
+                    <select
+                      value={status}
+                      onChange={e => setStatus(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-cyan-300 font-bold focus:outline-none focus:border-cyan-400"
+                    >
+                      <option value="BERHASIL">BERHASIL (SUCCESS)</option>
+                      <option value="DIPROSES">SEDANG DIPROSES</option>
+                      <option value="PENDING">PENDING ANTRIAN</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-mono text-gray-400 mb-1">Waktu &amp; Tanggal Transaksi:</label>
+                    <input
+                      type="text"
+                      value={trxDate}
+                      onChange={e => setTrxDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-mono text-gray-400 mb-1">Berita / Catatan Transaksi:</label>
+                    <input
+                      type="text"
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="text-center py-2 space-y-1">
-                <span className="text-[10px] text-white/70 block uppercase tracking-widest">TOTAL TRANSFER {trxType}</span>
-                <span className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-md">
-                  Rp {amount.toLocaleString('id-ID')}
-                </span>
-              </div>
+              {/* Struk Card Digital Preview */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className={`p-6 rounded-3xl bg-gradient-to-b ${currentBankColor} border-2 shadow-2xl text-white space-y-4 font-mono relative overflow-hidden`}>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none" />
+                  
+                  <div className="flex items-center justify-between border-b border-white/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-white" />
+                      <span className="font-black text-sm tracking-wider uppercase">{bankType} ONLINE</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-400 text-black text-[10px] font-black uppercase">
+                      {status}
+                    </span>
+                  </div>
 
-              <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-white/60">Penerima:</span>
-                  <span className="font-bold text-white uppercase">{recipientName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">No. Rek / Akun:</span>
-                  <span className="font-bold text-yellow-300">{recipientAccount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">No. Referensi:</span>
-                  <span className="font-mono text-[11px] text-cyan-300">{refNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Waktu:</span>
-                  <span className="text-[11px] text-white/80">{trxDate}</span>
-                </div>
-                <div className="flex justify-between pt-1 border-t border-white/10">
-                  <span className="text-white/60">Catatan:</span>
-                  <span className="text-[11px] text-white/90 truncate max-w-[180px]">{notes}</span>
-                </div>
-              </div>
+                  <div className="text-center py-2 space-y-1">
+                    <span className="text-[10px] text-white/70 block uppercase tracking-widest">TOTAL TRANSFER {trxType}</span>
+                    <span className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-md">
+                      Rp {amount.toLocaleString('id-ID')}
+                    </span>
+                  </div>
 
-              <div className="flex items-center justify-center gap-1.5 text-[10px] text-white/70 pt-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Transaksi Resmi &amp; Terverifikasi Sistem 24/7</span>
+                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Penerima:</span>
+                      <span className="font-bold text-white uppercase">{recipientName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">No. Rek / Akun:</span>
+                      <span className="font-bold text-yellow-300">{recipientAccount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">No. Referensi:</span>
+                      <span className="font-mono text-[11px] text-cyan-300">{refNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Waktu:</span>
+                      <span className="text-[11px] text-white/80">{trxDate}</span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t border-white/10">
+                      <span className="text-white/60">Catatan:</span>
+                      <span className="text-[11px] text-white/90 truncate max-w-[180px]">{notes}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] text-white/70 pt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Transaksi Resmi &amp; Terverifikasi Sistem 24/7</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCopySlipText}
+                  className={`w-full py-3 rounded-2xl font-mono text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    copiedText
+                      ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.5)]'
+                      : 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                  }`}
+                >
+                  {copiedText ? <Check className="w-4 h-4 stroke-[3]" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedText ? 'Format Struk Tersalin!' : 'Salin Format Text Struk Transfer'}</span>
+                </button>
               </div>
             </div>
-
-            <button
-              onClick={handleCopySlipText}
-              className={`w-full py-3 rounded-2xl font-mono text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                copiedText
-                  ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.5)]'
-                  : 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)]'
-              }`}
-            >
-              {copiedText ? <Check className="w-4 h-4 stroke-[3]" /> : <Copy className="w-4 h-4" />}
-              <span>{copiedText ? 'Format Struk Tersalin!' : 'Salin Format Text Struk Transfer'}</span>
-            </button>
-          </div>
+          )}
         </div>
       )}
 
