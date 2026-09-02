@@ -27,6 +27,7 @@ import { BcaStrukEditor } from './struk/BcaStrukEditor';
 import { BniWonderStrukEditor } from './struk/BniWonderStrukEditor';
 import { MandiriStrukEditor } from './struk/MandiriStrukEditor';
 import { BriStrukEditor } from './struk/BriStrukEditor';
+import { TransaksiSlotEditor } from './struk/TransaksiSlotEditor';
 
 export type PaymentSubMode = 
   | 'STRUK'
@@ -587,112 +588,10 @@ export const EditPembayaran: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODE 3: EDIT TRANSAKSI SLOT                                               */}
+      {/* MODE 3: EDIT TRANSAKSI SLOT (GENERATOR SIMULASI & MUTASI TRANSAKSI PEMAIN) */}
       {/* ========================================================================= */}
       {subMode === 'TRANSAKSI_SLOT' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in">
-          <div className="lg:col-span-7 p-6 rounded-3xl bg-[#0a0f18] border border-cyan-500/30 space-y-4 font-mono">
-            <h3 className="text-sm font-black text-cyan-300 uppercase flex items-center gap-2 border-b border-white/10 pb-3">
-              <Gamepad2 className="w-4 h-4" /> Form Detail Spin Jackpot Slot
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Provider Slot:</label>
-                <select
-                  value={slotProvider}
-                  onChange={e => setSlotProvider(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-cyan-500/40 text-xs font-bold text-yellow-400"
-                >
-                  <option value="PRAGMATIC">Pragmatic Play</option>
-                  <option value="PGSOFT">PG Soft</option>
-                  <option value="HABANERO">Habanero</option>
-                  <option value="SPADEGAMING">Spadegaming</option>
-                  <option value="NOLIMIT">NoLimit City</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Nama Game:</label>
-                <input
-                  type="text"
-                  value={slotGame}
-                  onChange={e => setSlotGame(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">User ID Member:</label>
-                <input
-                  type="text"
-                  value={slotUser}
-                  onChange={e => setSlotUser(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-cyan-300 font-bold"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Round ID Spin:</label>
-                <input
-                  type="text"
-                  value={slotRoundId}
-                  onChange={e => setSlotRoundId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-gray-300"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Stake Bet (Rp):</label>
-                <input
-                  type="number"
-                  value={slotBet}
-                  onChange={e => setSlotBet(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Multiplier Pecah:</label>
-                <input
-                  type="text"
-                  value={slotMultiplier}
-                  onChange={e => setSlotMultiplier(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-yellow-400 font-bold"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-xs text-gray-400 block mb-1">Total Payout Kemenangan (Rp):</label>
-                <input
-                  type="number"
-                  value={slotPayout}
-                  onChange={e => setSlotPayout(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-emerald-400 font-black text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 space-y-4">
-            <div className="p-6 rounded-3xl bg-gradient-to-b from-[#1a1505] to-[#0d0a02] border-2 border-yellow-400 shadow-xl space-y-3 font-mono">
-              <div className="flex items-center justify-between border-b border-yellow-400/30 pb-2">
-                <span className="text-xs font-black text-yellow-400 uppercase">SLIP JACKPOT SLOT OFFICIAL</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-yellow-400 text-black font-black">MAXWIN / BIG WIN</span>
-              </div>
-              <div className="space-y-1 text-center py-2">
-                <span className="text-[10px] text-gray-400 uppercase">TOTAL KEMENANGAN SPIN</span>
-                <div className="text-2xl font-black text-yellow-400">Rp {slotPayout.toLocaleString('id-ID')}</div>
-              </div>
-              <div className="p-3 rounded-2xl bg-black/60 border border-white/10 space-y-1.5 text-xs">
-                <div className="flex justify-between"><span className="text-gray-400">User ID:</span><span className="text-white font-bold">{slotUser}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Game:</span><span className="text-cyan-300 font-bold">{slotGame}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Bet / Multiplier:</span><span className="text-yellow-300 font-bold">Rp {slotBet.toLocaleString('id-ID')} ({slotMultiplier})</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Round ID:</span><span className="text-gray-300 text-[10px]">{slotRoundId}</span></div>
-              </div>
-            </div>
-            <button
-              onClick={handleCopySlipText}
-              className="w-full py-3 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-black font-mono text-xs font-black flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-            >
-              <Copy className="w-4 h-4" />
-              <span>Salin Bukti Jackpot Slot</span>
-            </button>
-          </div>
-        </div>
+        <TransaksiSlotEditor />
       )}
 
       {/* ========================================================================= */}
