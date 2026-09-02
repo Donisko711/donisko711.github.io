@@ -50,7 +50,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
           id: 'user-leo',
           username: 'LEO',
           name: 'LEO',
-          role: 'CEO',
+          role: 'INTEL SENIOR',
           shift: shift,
           currentShift: shift,
           avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
@@ -109,7 +109,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         id: 'user-leo',
         username: 'LEO',
         name: 'LEO',
-        role: 'CEO',
+        role: 'INTEL SENIOR',
         shift: 'PAGI',
         currentShift: 'PAGI',
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
@@ -175,8 +175,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               className="p-2 rounded-xl bg-[#00F3FF]/15 hover:bg-[#00F3FF]/30 border border-[#00F3FF]/50 text-[#00F3FF] text-[11px] font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-0.5 shadow-[0_0_10px_rgba(0,243,255,0.15)]"
             >
               <Shield className="w-4 h-4 text-[#00F3FF]" />
-              <span className="font-extrabold">LEO (CEO)</span>
-              <span className="text-[9px] text-zinc-400">LEO (Khusus)</span>
+              <span className="font-extrabold">LEO</span>
+              <span className="text-[9px] text-zinc-400">INTEL SENIOR</span>
             </button>
 
             <button
@@ -199,8 +199,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+        {/* Login Form (Disabled Save Password / Autocomplete) */}
+        <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-3.5">
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
               Username Operator
@@ -210,6 +210,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               <input
                 type="text"
                 required
+                autoComplete="off"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="donisko / LEO / CS"
@@ -227,6 +228,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               <input
                 type="password"
                 required
+                autoComplete="new-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="8989 / LEO / CS"

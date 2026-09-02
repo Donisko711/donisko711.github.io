@@ -977,6 +977,123 @@ Debit
 IDR 90,000
 Balance : IDR 116,885`;
 
+const SAMPLE_MAHJONG_WAYS_CEYA = `Mahjong Ways
+PGSoft
+	2095036057094620160-2095035735567675393-106-0
+Ext. ID : CR2095036057094620160-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:28:14	Credit 	IDR 800
+Balance : IDR 413,397
+	
+	Mahjong Ways
+PGSoft
+	2095035968070516226-2095035735567675393-106-0
+Ext. ID : CR2095035968070516226-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:27:53	Credit 	IDR 192,000
+Balance : IDR 412,597
+	
+	Mahjong Ways
+PGSoft
+	2095035956385233920-2095035735567675393-106-0
+Ext. ID : CR2095035956385233920-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:27:50	Credit 	IDR 12,800
+Balance : IDR 220,597
+	
+	Mahjong Ways
+PGSoft
+	2095035939377312256-2095035735567675393-106-0
+Ext. ID : CR2095035939377312256-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:27:46	Credit 	IDR 400
+Balance : IDR 207,797
+	
+	Mahjong Ways
+PGSoft
+	2095035868724283394-2095035735567675393-106-0
+Ext. ID : CR2095035868724283394-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:27:29	Credit 	IDR 200
+Balance : IDR 207,397
+	
+	Mahjong Ways
+PGSoft
+	2095035839213160449-2095035735567675393-106-0
+Ext. ID : CR2095035839213160449-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:27:22	Credit 	IDR 200
+Balance : IDR 207,197
+	
+	Mahjong Ways
+PGSoft
+	2095035817084012544-2095035735567675393-106-0
+Ext. ID : CR2095035817084012544-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:27:17	Credit 	IDR 60,000
+Balance : IDR 206,997
+	
+	Mahjong Ways
+PGSoft
+	2095035794501879808-2095035735567675393-106-0
+Ext. ID : CR2095035794501879808-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:27:11	Credit 	IDR 2,000
+Balance : IDR 146,997
+	
+	Mahjong Ways
+PGSoft
+	2095035749719173121-2095035735567675393-106-0
+Ext. ID : CR2095035749719173121-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:27:00	Credit 	IDR 600
+Balance : IDR 144,997
+	
+	Mahjong Ways
+PGSoft
+	2095035735567675393-2095035735567675393-106-0
+Ext. ID : DB2095035735567675393-2095035735567675393-106-0
+	ceya77
+ITWLFA - jvsaa
+	02 Sep 2026 - 13:26:57	Debit 	IDR 2,000
+Balance : IDR 144,397`;
+
+const SAMPLE_MIGHTY_MANIA_LEPENK = `Mighty Mania
+PGSoft
+	2095022550924055554-2095022414764358656-106-0
+Ext. ID : CR2095022550924055554-2095022414764358656-106-0
+	lepenk
+ITWL63 - Keoaa
+	02 Sep 2026 - 12:34:34	Credit 	IDR 648,000
+Balance : IDR 666,133
+	
+	Mighty Mania
+PGSoft
+	2095022502697947136-2095022414764358656-106-0
+Ext. ID : CR2095022502697947136-2095022414764358656-106-0
+	lepenk
+ITWL63 - Keoaa
+	02 Sep 2026 - 12:34:23	Credit 	IDR 18,000
+Balance : IDR 18,133
+	
+	Mighty Mania
+PGSoft
+	2095022414764358656-2095022414764358656-106-0
+Ext. ID : DB2095022414764358656-2095022414764358656-106-0
+	lepenk
+ITWL63 - Keoaa
+	02 Sep 2026 - 12:33:57	Debit 	IDR 90,000
+Balance : IDR 18,133`;
+
 interface BonusCalculatorProps {
   initialTab?: 'SLOT' | 'PARLAY';
 }
@@ -1067,21 +1184,30 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
             return parts[1]; // PGSoft parent round ID
           }
           return parts[0];
-        } else if (/^\d{8,}$/.test(clean)) {
+        } else if (/^\d{8,}$/.test(clean) || /^[a-zA-Z0-9]{12,}$/.test(clean)) {
           return clean;
         }
         return null;
       }
 
+      // Format hyphenated e.g. 2095036057094620160-2095035735567675393-106-0
+      if (trimmed.includes('-')) {
+        const clean = trimmed.replace(/^(CR|DB)/i, '').trim();
+        const parts = clean.split('-');
+        if (parts.length >= 2 && /^\d{8,}$/.test(parts[0]) && /^\d{8,}$/.test(parts[1])) {
+          return parts[1]; // PGSoft parent round ID
+        }
+      }
+
       if (/^\d{10,}-\d{10,}/.test(trimmed)) {
         const parts = trimmed.split('-');
         if (parts.length >= 2 && parts[1].length >= 8) {
-          return parts[1]; // PGSoft parent round ID
+          return parts[1];
         }
         return parts[0];
       }
 
-      if (/^\d{8,20}$/.test(trimmed)) {
+      if (/^\d{8,25}$/.test(trimmed) || /^[a-zA-Z0-9]{16,36}$/.test(trimmed)) {
         return trimmed;
       }
 
@@ -1100,8 +1226,9 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
       // Check Provider match
       for (const prov of knownProviders) {
         if (lower === prov.toLowerCase() || (lower.includes(prov.toLowerCase()) && line.length < 25)) {
-          allProvidersSet.add(prov);
-          if (!detectedProvider) detectedProvider = prov;
+          const formattedProv = prov.toLowerCase().includes('pg') ? 'PG SOFT' : (prov.toLowerCase().includes('pragmatic') ? 'PRAGMATIC PLAY' : prov.toUpperCase());
+          allProvidersSet.add(formattedProv);
+          if (!detectedProvider) detectedProvider = formattedProv;
 
           // Game Name is typically the line right before the Provider name
           if (i > 0) {
@@ -1153,7 +1280,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
         }
       }
 
-      // Check Agent line (e.g. ITWLFA - jvsaa), then line before it might be User ID
+      // Check Agent line (e.g. ITWLFA - jvsaa or ITWL63 - Keoaa), then line before it might be User ID
       if (line.includes(' - ') && !line.match(/\d{4}/) && i > 0) {
         const candidateUser = lines[i - 1];
         const candLower = candidateUser.toLowerCase();
@@ -1171,9 +1298,12 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
         }
       }
 
-      // Time detection
+      // Time detection (e.g. 02 Sep 2026 - 13:28:14 or 30 Aug 2026 - 00:57:50)
       if (!detectedTime && (line.match(/\d{1,2}\s+[A-Za-z]{3}\s+\d{4}\s*-\s*\d{2}:\d{2}:\d{2}/) || line.match(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/))) {
-        detectedTime = line;
+        const timeMatch = line.match(/(\d{1,2}\s+[A-Za-z]{3}\s+\d{4}\s*-\s*\d{2}:\d{2}:\d{2})/) || line.match(/(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/);
+        if (timeMatch) {
+          detectedTime = timeMatch[1];
+        }
       }
 
       // Ticket number / Round ID line (numeric or hyphenated)
@@ -1185,25 +1315,36 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
         }
       }
 
-      // Credit parser
-      if (lower === 'credit') {
+      // Credit parser (handles single-line tabbed e.g. "02 Sep 2026 - 13:28:14\tCredit \tIDR 800" or multi-line)
+      if (lower.includes('credit') && !lower.includes('balance') && !lower.includes('ext.')) {
         creditCount++;
-        if (i + 1 < lines.length) {
+        const creditIdx = lower.indexOf('credit');
+        const remainder = line.substring(creditIdx + 6);
+        const amtInLine = parseAmount(remainder);
+        if (amtInLine > 0) {
+          sumCredit += amtInLine;
+        } else if (i + 1 < lines.length) {
           sumCredit += parseAmount(lines[i + 1]);
         }
       }
 
-      // Debit parser
-      if (lower === 'debit') {
+      // Debit parser (handles single-line tabbed e.g. "02 Sep 2026 - 13:26:57\tDebit \tIDR 2,000" or multi-line)
+      if (lower.includes('debit') && !lower.includes('balance') && !lower.includes('ext.')) {
         debitCount++;
-        if (i + 1 < lines.length) {
-          const amt = parseAmount(lines[i + 1]);
-          sumDebit += amt;
-          debitAmounts.push(amt);
+        let amt = 0;
+        const debitIdx = lower.indexOf('debit');
+        const remainder = line.substring(debitIdx + 5);
+        const amtInLine = parseAmount(remainder);
+        if (amtInLine > 0) {
+          amt = amtInLine;
+        } else if (i + 1 < lines.length) {
+          amt = parseAmount(lines[i + 1]);
         }
+        sumDebit += amt;
+        debitAmounts.push(amt);
 
-        // Look backwards to extract debit ticket / round code
-        for (let b = 1; b <= 7 && i - b >= 0; b++) {
+        // Look backwards or current line to extract debit ticket / round code
+        for (let b = 0; b <= 7 && i - b >= 0; b++) {
           const bLine = lines[i - b];
           const dTicket = extractRoundOrTicketId(bLine);
           if (dTicket) {
@@ -1220,7 +1361,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
       if (lines.length > 0 && !lines[0].includes(':') && lines[0].length < 35) {
         detectedGame = lines[0];
       } else {
-        detectedGame = 'Mahjong Ways 2';
+        detectedGame = 'Mahjong Ways';
       }
     }
 
@@ -1255,13 +1396,13 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
       userId: detectedUser || (allUsersSet.size > 0 ? Array.from(allUsersSet)[0] : 'ruben77'),
       namaRekening: customNamaRek || '-',
       nomorRekening: customNoRek || '-',
-      periodePatokan: detectedTime || '30 Aug 2026 - 00:57:50',
+      periodePatokan: detectedTime || '02 Sep 2026 - 13:28:14',
       totalCredit: sumCredit,
       totalDebit: sumDebit,
       debitCount,
       creditCount,
       barisTerbaca: barisCount,
-      provider: detectedProvider || 'PGSoft',
+      provider: detectedProvider || 'PG SOFT',
       permainan: detectedGame,
       kodeTicket: detectedTicket || '2093760049250985473',
       roundId: detectedTicket || '2093760049250985473',
@@ -1576,6 +1717,28 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
           >
             <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
             <span>Contoh: Ditolak (2 Tiket - 2409heri)</span>
+          </button>
+          <button
+            onClick={() => {
+              setRawText(SAMPLE_MAHJONG_WAYS_CEYA);
+              setCustomBetInput('');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+            title="Contoh: Mahjong Ways Tabbed Format (ceya77 - Menang 269k, Bet 2k = x134.5)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Contoh: Mahjong Ways (ceya77)</span>
+          </button>
+          <button
+            onClick={() => {
+              setRawText(SAMPLE_MIGHTY_MANIA_LEPENK);
+              setCustomBetInput('');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+            title="Contoh: Mighty Mania Tabbed Format (lepenk - Menang 666k, Bet 90k = x7.4)"
+          >
+            <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Contoh: Mighty Mania (lepenk)</span>
           </button>
           <button
             onClick={() => {

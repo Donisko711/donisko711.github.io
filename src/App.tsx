@@ -133,14 +133,15 @@ export default function App() {
   };
 
   const handleSelectView = (viewId: ActiveView) => {
-    // Role Leo (CEO) Access Restriction
-    if (currentUser?.role === 'CEO' || currentUser?.username?.toLowerCase() === 'leo') {
+    // Role Leo (INTEL SENIOR / CEO) Access Restriction
+    if (currentUser?.username?.toLowerCase() === 'leo' || currentUser?.role === 'INTEL SENIOR' || currentUser?.role === 'CEO') {
       const allowedViews: ActiveView[] = [
         'home',
         'wd-auto-flop', 
         'jobdesk-kasir',
         'info-wd', 
         'info-data-pl',
+        'modul-promo-situs',
         'modul-sportbooks',
         'modul-togel-cara',
         'modul-togel-hadiah',
@@ -162,7 +163,7 @@ export default function App() {
   const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
     setActiveShift(user.shift);
-    if (user.role === 'CEO') {
+    if (user.username.toLowerCase() === 'leo' || user.role === 'INTEL SENIOR' || user.role === 'CEO') {
       setActiveView('wd-auto-flop');
     }
   };
