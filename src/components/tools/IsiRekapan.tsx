@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   FileSpreadsheet, 
   Copy, 
@@ -19,34 +20,88 @@ import {
   Filter,
   BarChart3,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Upload,
+  FileUp,
+  ChevronDown,
+  ChevronUp,
+  Eye
 } from 'lucide-react';
 
 // Bank list matching the exact columns in Image 1
-export const VALIDATION_BANKS = [
-  'BANK JAGO',
-  'BCA',
-  'BNI',
-  'BRI',
-  'BSI',
-  'CIMB',
-  'DANA',
-  'DANAMON',
-  'GOPAY',
-  'LINKAJA',
-  'MANDIRI',
-  'MAYBANK',
-  'MEGA',
-  'OCBC',
-  'OVO',
-  'PANIN',
-  'PERMATA',
-  'SEABANK',
-  'SINARMAS',
-  'ALLOBANK'
-] as const;
+const B = (w: string) => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i');
 
+export const VALIDATION_BANKS_CONFIG = [
+  { key: 'JAGO', label: 'BANK JAGO', rx: [/bank\s*jago\b/i, B('jago')] },
+  { key: 'BCA', label: 'BCA', rx: [/bank\s*central\s*asia/i, B('bca')] },
+  { key: 'BNI', label: 'BNI', rx: [/bank\s*negara\s*indonesia/i, B('bni')] },
+  { key: 'BRI', label: 'BRI', rx: [/\brakyat\s+indonesia\b/i, /\bbrimo\b/i, B('bri')] },
+  { key: 'BSI', label: 'BSI', rx: [/syariah\s*indonesia/i, B('bsi')] },
+  { key: 'CIMB', label: 'CIMB', rx: [/cimb\s*niaga/i, B('octo'), B('cimb'), B('cwb')] },
+  { key: 'DANA', label: 'DANA', rx: [B('dana')] },
+  { key: 'DANAMON', label: 'DANAMON', rx: [B('danamon')] },
+  { key: 'GOPAY', label: 'GOPAY', rx: [/go-?pay/i, B('gopay')] },
+  { key: 'LINKAJA', label: 'LINKAJA', rx: [/link\s*aja/i, B('linkaja')] },
+  { key: 'MANDIRI', label: 'MANDIRI', rx: [/\blivin\b/i, B('mandiri')] },
+  { key: 'MAYBANK', label: 'MAYBANK', rx: [B('maybank'), B('bii')] },
+  { key: 'MEGA', label: 'MEGA', rx: [B('mega')] },
+  { key: 'OCBC', label: 'OCBC', rx: [/ocbc\s*nisp/i, B('ocbc'), B('nisp')] },
+  { key: 'OVO', label: 'OVO', rx: [B('ovo')] },
+  { key: 'PANIN', label: 'PANIN', rx: [B('panin')] },
+  { key: 'PERMATA', label: 'PERMATA', rx: [B('permata')] },
+  { key: 'SEABANK', label: 'SEABANK', rx: [/\bsea\s*bank\b/i, B('seabank')] },
+  { key: 'SINARMAS', label: 'SINARMAS', rx: [/sinar\s*mas/i, B('sinarmas')] },
+  { key: 'ALLO', label: 'ALLOBANK', rx: [/allo\s*bank/i, B('allobank'), B('allo')] },
+];
+
+export const VALIDATION_BANKS = VALIDATION_BANKS_CONFIG.map(b => b.label);
 export type ValidationBankType = typeof VALIDATION_BANKS[number];
+
+// Helper scrubbing and segmentation for Bank Detection
+function getBankSegment(line: string): string {
+  if (!line) return '';
+  const idx = line.indexOf('-');
+  return (idx !== -1) ? line.slice(idx + 1).trim() : '';
+}
+
+function scrub(t: string): string {
+  if (!t) return '';
+  return t
+    .replace(/[A-Z0-9._%+*-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig, ' ')
+    .replace(/\bhttps?:\/\/\S+/ig, ' ')
+    .replace(/[\d*+()-]{6,}/g, ' ')
+    .replace(/\b\w+Locked\b/ig, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractBankKeyFromSegment(seg: string): string | null {
+  const s = scrub(seg);
+  if (!s) return null;
+
+  for (const b of VALIDATION_BANKS_CONFIG) {
+    for (const r of b.rx) {
+      if (r.test(s)) return b.key;
+    }
+  }
+  return null;
+}
+
+function detectBankKeyFromLine(line: string): string | null {
+  if (!line) return null;
+  const seg = getBankSegment(line);
+  let key = seg ? extractBankKeyFromSegment(seg) : null;
+  if (!key) key = extractBankKeyFromSegment(line);
+  return key;
+}
+
+function prefilter(lines: string[]): string[] {
+  return lines.filter((line, idx, arr) => {
+    if (line.includes('-')) return true;
+    const nextKey = detectBankKeyFromLine(arr[idx + 1] || '');
+    return !nextKey;
+  });
+}
 
 export interface ParsedValidationItem {
   id: string;
@@ -56,6 +111,15 @@ export interface ParsedValidationItem {
   userId?: string;
   nominal?: number;
   dateTime?: string;
+}
+
+export interface HistoryKoinRow {
+  id: string;
+  info: string;
+  by: string;
+  coin: number;
+  type: 'DEPOSIT' | 'WITHDRAW';
+  subType: 'REGULAR' | 'QRIS' | 'PGA_SPV' | 'GARUDA' | 'AUTO_WD';
 }
 
 // Preset Data Sample for quick testing
@@ -98,116 +162,72 @@ export const IsiRekapan: React.FC = () => {
         totalLines: 0,
         detectedCount: 0,
         unrecognizedCount: 0,
-        countsByBank: VALIDATION_BANKS.reduce((acc, b) => ({ ...acc, [b]: 0 }), {} as Record<ValidationBankType, number>),
+        countsByBank: VALIDATION_BANKS_CONFIG.reduce((acc, b) => ({ ...acc, [b.key]: 0 }), {} as Record<string, number>),
         totalBankCount: 0,
         bonus711Count: 0,
+        bonus711Lines: [] as string[],
+        unknownLines: [] as string[],
         items: [] as ParsedValidationItem[]
       };
     }
 
-    const lines = plInputText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const countsByBank = VALIDATION_BANKS.reduce((acc, b) => ({ ...acc, [b]: 0 }), {} as Record<ValidationBankType, number>);
-    let bonus711Count = 0;
-    let detectedCount = 0;
-    let unrecognizedCount = 0;
+    const rawLines = plInputText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const lines = prefilter(rawLines);
+
+    const counts: Record<string, number> = {};
+    VALIDATION_BANKS_CONFIG.forEach(b => { counts[b.key] = 0; });
+
+    const unknown: string[] = [];
     const items: ParsedValidationItem[] = [];
 
-    lines.forEach((line, idx) => {
-      const lower = line.toLowerCase();
-      let matchedBank: ValidationBankType | null = null;
+    for (let idx = 0; idx < lines.length; idx++) {
+      const line = lines[idx];
+      const k = detectBankKeyFromLine(line);
+      const isBonus = /bonus711/i.test(line);
 
-      // Check Bonus711 first
-      const isBonus = lower.includes('bonus711') || lower.includes('bonus 711') || lower.includes('klaim bonus') || lower.includes('bagi bonus');
-
-      // Check Specific Bank Matches
-      if (lower.includes('jago') || lower.includes('bank jago')) {
-        matchedBank = 'BANK JAGO';
-      } else if (lower.includes('allobank') || lower.includes('allo bank') || lower.includes('allo')) {
-        matchedBank = 'ALLOBANK';
-      } else if (lower.includes('seabank') || lower.includes('sea bank')) {
-        matchedBank = 'SEABANK';
-      } else if (lower.includes('sinarmas') || lower.includes('sinar mas')) {
-        matchedBank = 'SINARMAS';
-      } else if (lower.includes('permata') || lower.includes('bank permata')) {
-        matchedBank = 'PERMATA';
-      } else if (lower.includes('panin') || lower.includes('bank panin')) {
-        matchedBank = 'PANIN';
-      } else if (lower.includes('maybank') || lower.includes('may bank')) {
-        matchedBank = 'MAYBANK';
-      } else if (lower.includes('danamon')) {
-        matchedBank = 'DANAMON';
-      } else if (lower.includes('linkaja') || lower.includes('link aja')) {
-        matchedBank = 'LINKAJA';
-      } else if (lower.includes('gopay') || lower.includes('go-pay') || lower.includes('go pay')) {
-        matchedBank = 'GOPAY';
-      } else if (lower.includes('dana') || lower.includes('qris dana')) {
-        matchedBank = 'DANA';
-      } else if (lower.includes('ovo')) {
-        matchedBank = 'OVO';
-      } else if (lower.includes('ocbc') || lower.includes('ocbc nisp')) {
-        matchedBank = 'OCBC';
-      } else if (lower.includes('mega') || lower.includes('bank mega')) {
-        matchedBank = 'MEGA';
-      } else if (lower.includes('cimb') || lower.includes('niaga')) {
-        matchedBank = 'CIMB';
-      } else if (lower.includes('bsi') || lower.includes('syariah indonesia')) {
-        matchedBank = 'BSI';
-      } else if (lower.includes('bca') || lower.includes('klikbca') || lower.includes('qris bca')) {
-        matchedBank = 'BCA';
-      } else if (lower.includes('bni') || lower.includes('bank bni')) {
-        matchedBank = 'BNI';
-      } else if (lower.includes('bri') || lower.includes('bank bri') || lower.includes('brimo')) {
-        matchedBank = 'BRI';
-      } else if (lower.includes('mandiri') || lower.includes('livin')) {
-        matchedBank = 'MANDIRI';
-      }
-
-      if (isBonus) {
-        bonus711Count++;
-        detectedCount++;
-      }
-
-      if (matchedBank) {
-        countsByBank[matchedBank]++;
-        if (!isBonus) {
-          detectedCount++;
-        }
-      }
-
-      if (!matchedBank && !isBonus) {
-        unrecognizedCount++;
+      if (k) {
+        counts[k]++;
+      } else {
+        unknown.push(line);
       }
 
       items.push({
         id: `pl-item-${idx}`,
         rawText: line,
-        bankDetected: matchedBank || (isBonus ? 'BONUS711' : 'TIDAK DIKENALI'),
+        bankDetected: k ? (VALIDATION_BANKS_CONFIG.find(b => b.key === k)?.label || k) : (isBonus ? 'BONUS711' : 'TIDAK DIKENALI'),
         isBonus
       });
+    }
+
+    let detected = 0;
+    VALIDATION_BANKS_CONFIG.forEach(b => {
+      detected += (counts[b.key] || 0);
     });
 
-    const totalBankCount = Object.values(countsByBank).reduce((sum, c) => sum + c, 0);
+    const bonus711Lines = lines.filter(l => /bonus711/i.test(l));
 
     return {
-      totalLines: lines.length,
-      detectedCount,
-      unrecognizedCount,
-      countsByBank,
-      totalBankCount,
-      bonus711Count,
+      totalLines: rawLines.length,
+      detectedCount: detected,
+      unrecognizedCount: unknown.length,
+      countsByBank: counts,
+      totalBankCount: detected,
+      bonus711Count: bonus711Lines.length,
+      bonus711Lines,
+      unknownLines: unknown,
       items
     };
   }, [plInputText]);
 
   // Tab 1 Copy Helpers
   const handleCopyCountsRow = () => {
-    // Exact row order matching Image 1:
-    // BANK JAGO \t BCA \t BNI \t BRI \t BSI \t CIMB \t DANA \t DANAMON \t GOPAY \t LINKAJA \t MANDIRI \t MAYBANK \t MEGA \t OCBC \t OVO \t PANIN \t PERMATA \t SEABANK \t SINARMAS \t ALLOBANK \t TOTAL \t BONUS711
-    const values = [
-      ...VALIDATION_BANKS.map(b => parsedPlResult.countsByBank[b]),
-      parsedPlResult.totalBankCount,
-      parsedPlResult.bonus711Count
-    ];
+    // Exact row order matching script and Image 1:
+    // JAGO ... ALLOBANK -> TOTAL -> BONUS711
+    const keys = VALIDATION_BANKS_CONFIG.map(b => b.key);
+    const values = keys.map(k => String(parsedPlResult.countsByBank[k] || 0));
+    values.push(String(parsedPlResult.totalBankCount || 0));
+    values.push(String(parsedPlResult.bonus711Count || 0));
+
     const tsvRow = values.join('\t');
     navigator.clipboard.writeText(tsvRow);
     setCopiedCountsRow(true);
@@ -219,12 +239,12 @@ export const IsiRekapan: React.FC = () => {
   };
 
   const handleCopyAllColumns = () => {
-    const headers = [...VALIDATION_BANKS, 'TOTAL', 'BONUS711'];
-    const values = [
-      ...VALIDATION_BANKS.map(b => parsedPlResult.countsByBank[b]),
-      parsedPlResult.totalBankCount,
-      parsedPlResult.bonus711Count
-    ];
+    const headers = [...VALIDATION_BANKS_CONFIG.map(b => b.label), 'TOTAL', 'BONUS711'];
+    const keys = VALIDATION_BANKS_CONFIG.map(b => b.key);
+    const values = keys.map(k => String(parsedPlResult.countsByBank[k] || 0));
+    values.push(String(parsedPlResult.totalBankCount || 0));
+    values.push(String(parsedPlResult.bonus711Count || 0));
+
     const fullTsv = `${headers.join('\t')}\n${values.join('\t')}`;
     navigator.clipboard.writeText(fullTsv);
     setCopiedAllColumns(true);
@@ -239,9 +259,9 @@ export const IsiRekapan: React.FC = () => {
       day: 'numeric'
     });
 
-    const activeBankLines = VALIDATION_BANKS
-      .filter(b => parsedPlResult.countsByBank[b] > 0)
-      .map(b => `• ${b}: ${parsedPlResult.countsByBank[b]} Transaksi`)
+    const activeBankLines = VALIDATION_BANKS_CONFIG
+      .filter(b => (parsedPlResult.countsByBank[b.key] || 0) > 0)
+      .map(b => `• ${b.label}: ${parsedPlResult.countsByBank[b.key]} Transaksi`)
       .join('\n');
 
     const report = 
@@ -274,102 +294,758 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
   };
 
   // ==========================================
-  // TAB 2: REKAP KOIN STATE
+  // TAB 2: REKAP HISTORY KOIN STATE & PARSER
   // ==========================================
-  const [koinShift, setKoinShift] = useState<'PAGI' | 'SORE' | 'MALAM'>('PAGI');
-  const [koinDate, setKoinDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [koinAwal, setKoinAwal] = useState<number>(50000000);
-  const [koinMasuk, setKoinMasuk] = useState<number>(24500000);
-  const [koinKeluar, setKoinKeluar] = useState<number>(18200000);
-  const [koinAdjust, setKoinAdjust] = useState<number>(0);
-  const [koinAkhirReal, setKoinAkhirReal] = useState<number>(56300000);
-  const [copiedKoinReport, setCopiedKoinReport] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string>('');
+  const [rawKoinRows, setRawKoinRows] = useState<any[]>([]);
+  const [copiedKoinRow, setCopiedKoinRow] = useState<boolean>(false);
+  const [copiedKoinFull, setCopiedKoinFull] = useState<boolean>(false);
+  const [isParsingFile, setIsParsingFile] = useState<boolean>(false);
+  const [showDataPreview, setShowDataPreview] = useState<boolean>(false);
+  const [filterPreview, setFilterPreview] = useState<'ALL' | 'DEPOSIT' | 'WITHDRAW' | 'QRIS' | 'PGA_SPV'>('ALL');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const koinCalculations = useMemo(() => {
-    const sistemAkhir = koinAwal + koinMasuk - koinKeluar + koinAdjust;
-    const selisih = koinAkhirReal - sistemAkhir;
-    const winLoseKoin = koinMasuk - koinKeluar;
-    const status = selisih === 0 ? 'BALANCE (COCOK)' : selisih > 0 ? `LEBIH (+${selisih.toLocaleString('id-ID')})` : `KURANG (${selisih.toLocaleString('id-ID')})`;
+  // Normalization and Helper Functions from Script
+  const normalizeTextKoin = (value: any): string => {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  };
 
-    return {
-      sistemAkhir,
-      selisih,
-      winLoseKoin,
-      status,
-      isBalanced: selisih === 0
+  const parseCoinValue = (value: any): number => {
+    if (typeof value === 'number') return isNaN(value) ? 0 : value;
+
+    let text = String(value ?? '').trim();
+    if (!text) return 0;
+
+    text = text.replace(/\s/g, '');
+    text = text.replace(/,/g, '');
+    text = text.replace(/[^0-9.\-]/g, '');
+
+    const number = Number(text);
+    return Number.isFinite(number) ? number : 0;
+  };
+
+  const getRowValue = (row: any, possibleNames: string[]): any => {
+    for (const key of Object.keys(row)) {
+      const cleanKey = normalizeTextKoin(key).replace(/\s+/g, '');
+
+      for (const name of possibleNames) {
+        const cleanName = normalizeTextKoin(name).replace(/\s+/g, '');
+        if (cleanKey === cleanName) return row[key];
+      }
+    }
+    return '';
+  };
+
+  // Process Excel / CSV File matching the Script
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    setUploadedFileName(file.name);
+    setIsParsingFile(true);
+
+    try {
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      let rawData: any[] = [];
+
+      if (isExcel) {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        rawData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      } else {
+        const text = await file.text();
+        const workbook = XLSX.read(text, { type: 'string' });
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        rawData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      }
+
+      setRawKoinRows(rawData);
+    } catch (err) {
+      console.error('Error parsing history koin file:', err);
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  // Sample Demo Preset for instant test
+  const handleLoadSampleKoin = () => {
+    setUploadedFileName('sample_history_koin_711.xlsx');
+    const demoData = [
+      { Info: 'Deposit', BY: 'admin_pagi', Coin: 1500000 },
+      { Info: 'Deposit', BY: 'pga2_garuda', Coin: 2300000 },
+      { Info: 'Deposit', BY: 'admin_pagi', Coin: 850000 },
+      { Info: 'Deposit (PGA)', BY: 'pga', Coin: 750000 },
+      { Info: 'Deposit (PGA)', BY: 'pga', Coin: 1250000 },
+      { Info: 'Deposit', BY: 'pga2_express', Coin: 650000 },
+      { Info: 'Withdraw', BY: 'admin_pagi', Coin: -1200000 },
+      { Info: 'Withdraw', BY: 'admin_pagi', Coin: -800000 },
+      { Info: 'Withdraw (PGA-IDF)', BY: 'admin_pagi', Coin: -1500000 },
+      { Info: 'Withdraw', BY: 'autowd_engine', Coin: -450000 },
+    ];
+    setRawKoinRows(demoData);
+  };
+
+  // Reset Rekap Koin
+  const handleResetKoin = () => {
+    setUploadedFileName('');
+    setRawKoinRows([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // 14 Column Calculations matching Script Exactly
+  const rekapKoinStats = useMemo(() => {
+    const res = {
+      deposit: 0,
+      qris: 0,
+      withdraw: 0,
+      dpPgaSpv: 0,
+      wdPgaSpv: 0,
+      totalDeposit: 0,
+      realWithdraw: 0,
+      hasil: 0,
+      formDp: 0,
+      formDpGaruda: 0,
+      formDpQris: 0,
+      totalFormDp: 0,
+      formWd: 0,
+      formAutoWd: 0
     };
-  }, [koinAwal, koinMasuk, koinKeluar, koinAdjust, koinAkhirReal]);
 
-  const handleCopyKoinReport = () => {
-    const report = 
-`🎰 REKAPAN KOIN / CHIPS SHIFT ${koinShift}
-📅 Tanggal : ${koinDate}
-━━━━━━━━━━━━━━━━━━━━━
-• Koin Awal          : Rp ${koinAwal.toLocaleString('id-ID')}
-• Koin Masuk (Depo)  : Rp ${koinMasuk.toLocaleString('id-ID')}
-• Koin Keluar (WD)   : Rp ${koinKeluar.toLocaleString('id-ID')}
-• Penyesuaian/Adjust : Rp ${koinAdjust.toLocaleString('id-ID')}
-━━━━━━━━━━━━━━━━━━━━━
-• Koin Akhir Sistem  : Rp ${koinCalculations.sistemAkhir.toLocaleString('id-ID')}
-• Koin Fisik/Real    : Rp ${koinAkhirReal.toLocaleString('id-ID')}
-• Selisih Saldo      : Rp ${koinCalculations.selisih.toLocaleString('id-ID')}
-• Win/Lose Shift     : Rp ${koinCalculations.winLoseKoin.toLocaleString('id-ID')} (${koinCalculations.winLoseKoin >= 0 ? 'PROFIT' : 'MINUS'})
-• Status Rekapan     : ${koinCalculations.status}
-━━━━━━━━━━━━━━━━━━━━━
-Dicatat oleh: CS Shift ${koinShift}`;
+    if (rawKoinRows.length === 0) {
+      return res;
+    }
 
-    navigator.clipboard.writeText(report);
-    setCopiedKoinReport(true);
-    setTimeout(() => setCopiedKoinReport(false), 2500);
+    for (const row of rawKoinRows) {
+      const info = normalizeTextKoin(getRowValue(row, ['Info']));
+      const by = normalizeTextKoin(getRowValue(row, ['BY', 'By']));
+      const coin = parseCoinValue(getRowValue(row, ['Coin']));
+
+      const isDeposit = info === 'deposit';
+      const isDepositPga = info === 'deposit (pga)';
+      const isWithdraw = info === 'withdraw';
+      const isWithdrawPgaIdf =
+        info === 'withdraw(pga-idf)' ||
+        info === 'withdraw (pga-idf)';
+      const isReject = info.includes('reject');
+
+      if (isDeposit) {
+        res.deposit += coin;
+
+        if (by.includes('pga2')) {
+          res.formDpGaruda += 1;
+        } else {
+          res.formDp += 1;
+        }
+      }
+
+      if (isDepositPga) {
+        res.qris += coin;
+        if (by === 'pga') res.formDpQris += 1;
+      }
+
+      if (!isReject && (isWithdraw || isWithdrawPgaIdf)) {
+        res.withdraw += Math.abs(coin);
+
+        if (by.includes('autowd')) {
+          res.formAutoWd += 1;
+        } else {
+          res.formWd += 1;
+        }
+      }
+    }
+
+    res.dpPgaSpv = 0;
+    res.wdPgaSpv = 0;
+    res.totalDeposit = res.deposit + res.qris + res.dpPgaSpv;
+    res.realWithdraw = res.withdraw - res.wdPgaSpv;
+    res.hasil = res.totalDeposit - res.realWithdraw;
+    res.totalFormDp =
+      res.formDp +
+      res.formDpGaruda +
+      res.formDpQris;
+
+    return res;
+  }, [rawKoinRows]);
+
+  // Transformed preview rows
+  const previewKoinRows = useMemo(() => {
+    return rawKoinRows.map((row, idx) => {
+      const info = normalizeTextKoin(getRowValue(row, ['Info']));
+      const by = normalizeTextKoin(getRowValue(row, ['BY', 'By']));
+      const coin = parseCoinValue(getRowValue(row, ['Coin']));
+
+      let type: 'DEPOSIT' | 'WITHDRAW' = 'DEPOSIT';
+      let subType: 'REGULAR' | 'QRIS' | 'PGA_SPV' | 'GARUDA' | 'AUTO_WD' = 'REGULAR';
+
+      if (info === 'deposit (pga)') {
+        type = 'DEPOSIT';
+        subType = 'QRIS';
+      } else if (info === 'deposit') {
+        type = 'DEPOSIT';
+        subType = by.includes('pga2') ? 'GARUDA' : (by.includes('spv') || by.includes('pga') ? 'PGA_SPV' : 'REGULAR');
+      } else if (info.includes('withdraw')) {
+        type = 'WITHDRAW';
+        subType = by.includes('autowd') ? 'AUTO_WD' : (by.includes('spv') || by.includes('pga') ? 'PGA_SPV' : 'REGULAR');
+      }
+
+      return {
+        id: `koin-row-${idx}`,
+        info: String(getRowValue(row, ['Info']) || info),
+        by: String(getRowValue(row, ['BY', 'By']) || by),
+        coin: Math.abs(coin),
+        type,
+        subType: subType as 'REGULAR' | 'QRIS' | 'PGA_SPV' | 'GARUDA' | 'AUTO_WD'
+      };
+    });
+  }, [rawKoinRows]);
+
+  // Copy 14 TSV Values for Excel/Google Sheets matching Script
+  const handleCopyKoinOnly = () => {
+    const order = [
+      'deposit',
+      'qris',
+      'withdraw',
+      'dpPgaSpv',
+      'wdPgaSpv',
+      'totalDeposit',
+      'realWithdraw',
+      'hasil',
+      'formDp',
+      'formDpGaruda',
+      'formDpQris',
+      'totalFormDp',
+      'formWd',
+      'formAutoWd'
+    ] as const;
+
+    const values = order.map(key => rekapKoinStats[key]);
+    const tsvRow = values.join('\t');
+    navigator.clipboard.writeText(tsvRow);
+    setCopiedKoinRow(true);
+    setTimeout(() => setCopiedKoinRow(false), 2500);
+  };
+
+  const handleCopyKoinWithHeader = () => {
+    const headers = [
+      'Deposit',
+      'Total QRIS IDN',
+      'Withdraw',
+      'DP PGA SPV',
+      'WD PGA SPV',
+      'Total Deposit',
+      'Real Withdraw',
+      'Hasil',
+      'Form DP',
+      'Form DP garuda',
+      'Form DP QRIS',
+      'Total Form DP',
+      'Form WD',
+      'Form auto WD'
+    ];
+    const order = [
+      'deposit',
+      'qris',
+      'withdraw',
+      'dpPgaSpv',
+      'wdPgaSpv',
+      'totalDeposit',
+      'realWithdraw',
+      'hasil',
+      'formDp',
+      'formDpGaruda',
+      'formDpQris',
+      'totalFormDp',
+      'formWd',
+      'formAutoWd'
+    ] as const;
+
+    const values = order.map(key => rekapKoinStats[key]);
+    const fullTsv = `${headers.join('\t')}\n${values.join('\t')}`;
+    navigator.clipboard.writeText(fullTsv);
+    setCopiedKoinFull(true);
+    setTimeout(() => setCopiedKoinFull(false), 2500);
   };
 
   // ==========================================
-  // TAB 3: DATA TURNOVER STATE
+  // TAB 3: DATA TURNOVER (EXTRACTOR TRANSAKSI LENGKAP) - EXACT SCRIPT LOGIC
   // ==========================================
-  const [toSlot, setToSlot] = useState<number>(145000000);
-  const [toCasino, setToCasino] = useState<number>(68000000);
-  const [toSports, setToSports] = useState<number>(35000000);
-  const [toTogel, setToTogel] = useState<number>(12000000);
-  const [toArcade, setToArcade] = useState<number>(5000000);
-  const [copiedToReport, setCopiedToReport] = useState(false);
+  const TURNOVER_GROUPS = [
+    { key: "TOGEL", label: "TOGEL", aliases: ["TOGEL", "TOTO"] },
+    { key: "TOTOMACAU", label: "TOTOMACAU", aliases: ["TOTOMACAU", "TOTO MACAU"] },
+    { key: "TOTOMACAU_5D", label: "TOTOMACAU 5D", aliases: ["TOTOMACAU 5D", "TOTO MACAU 5D", "TOTOMACAU5D"] },
+    { key: "KINGKONG_4D", label: "KINGKONG 4D", aliases: ["KINGKONG 4D", "KINGKONG4D"] },
+    { key: "PRAGMATIC", label: "Pragmatic Play", aliases: ["PRAGMATIC PLAY", "PRAGMATIC"] },
+    { key: "ELOTTERY", label: "Elottery", aliases: ["ELOTTERY", "E-LOTTERY"] },
+    { key: "ARCADE", label: "Arcade", aliases: ["ARCADE"] },
+    { key: "POKER", label: "poker", aliases: ["POKER"] },
+    { key: "ESPORTS", label: "Esports", aliases: ["ESPORTS", "E-SPORTS"] },
+    { key: "SBO", label: "Sbo Sportsbook", aliases: ["SBO SPORTSBOOK", "SBO"] },
+    { key: "SABA", label: "Saba Sportsbook", aliases: ["SABA SPORTSBOOK", "SABA"] },
+    { key: "STREAMSPIN", label: "Streamspin", aliases: ["STREAMSPIN"] },
+    { key: "STREAMSPIN_GIFT", label: "Streamspin Gift", aliases: ["STREAMSPIN GIFT"] },
+    { key: "PP98", label: "Pp98", aliases: ["PP98", "PP 98"] },
+    { key: "LIVE_GAME", label: "Live Game", aliases: ["LIVE GAME", "LIVEGAME"] },
+    { key: "SLOT", label: "Slot", aliases: ["SLOT"] },
+    { key: "TOTAL", label: "TOTAL", aliases: ["TOTAL ALL", "TOTAL"] }
+  ];
 
-  const toCalculations = useMemo(() => {
-    const totalTo = toSlot + toCasino + toSports + toTogel + toArcade;
-    return {
-      totalTo,
-      slotPct: totalTo > 0 ? ((toSlot / totalTo) * 100).toFixed(1) : '0',
-      casinoPct: totalTo > 0 ? ((toCasino / totalTo) * 100).toFixed(1) : '0',
-      sportsPct: totalTo > 0 ? ((toSports / totalTo) * 100).toFixed(1) : '0',
-      togelPct: totalTo > 0 ? ((toTogel / totalTo) * 100).toFixed(1) : '0',
-      arcadePct: totalTo > 0 ? ((toArcade / totalTo) * 100).toFixed(1) : '0'
-    };
-  }, [toSlot, toCasino, toSports, toTogel, toArcade]);
+  const SAMPLE_TRANSAKSI_LENGKAP = `TOGEL	15,450,000	-2,340,000
+TOTOMACAU	28,900,000	+4,120,000
+TOTOMACAU 5D	8,650,000	-1,200,000
+KINGKONG 4D	4,300,000	+650,000
+Pragmatic Play	85,400,000	-12,500,000
+Elottery	2,100,000	-350,000
+Arcade	6,750,000	+980,000
+poker	18,200,000	+1,450,000
+Esports	3,400,000	-450,000
+Sbo Sportsbook	42,600,000	+8,300,000
+Saba Sportsbook	21,150,000	-3,200,000
+Streamspin	1,850,000	-250,000
+Streamspin Gift	950,000	+150,000
+Pp98	3,200,000	-600,000
+Live Game	54,800,000	+11,200,000
+Slot	98,600,000	-14,350,000`;
 
-  const handleCopyToReport = () => {
-    const dateStr = new Date().toLocaleDateString('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+  const [rawTurnoverText, setRawTurnoverText] = useState<string>('');
+  const [clipboardHtml, setClipboardHtml] = useState<string>('');
+  const [turnoverValues, setTurnoverValues] = useState<Record<string, { turnover: string; wl: string }>>(() => {
+    const obj: Record<string, { turnover: string; wl: string }> = {};
+    TURNOVER_GROUPS.forEach(g => { obj[g.key] = { turnover: '0', wl: '0' }; });
+    return obj;
+  });
+  const [copiedTurnoverRow, setCopiedTurnoverRow] = useState<boolean>(false);
+  const [extractorStatusMsg, setExtractorStatusMsg] = useState<string>('');
+
+  // Helper Functions from Extractor Script
+  function norm(s: any): string {
+    return String(s || '')
+      .replace(/\u00a0/g, ' ')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '');
+  }
+
+  function cleanNumber(s: any): string {
+    let t = String(s || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[−–—]/g, '-')
+      .trim();
+
+    const paren = t.match(/\(\s*(\d[\d,]*(?:\.\d+)?)\s*\)/);
+    if (paren) return '-' + paren[1];
+
+    const m = t.match(/[+-]?\d[\d,]*(?:\.\d+)?/);
+    return m ? m[0] : '';
+  }
+
+  function isPercent(s: any): boolean {
+    return /%/.test(String(s || ''));
+  }
+
+  function findGroup(name: string) {
+    const n = norm(name);
+    return TURNOVER_GROUPS.find(g => g.aliases.some(a => norm(a) === n)) || null;
+  }
+
+  function defaultValues() {
+    const obj: Record<string, { turnover: string; wl: string }> = {};
+    TURNOVER_GROUPS.forEach(g => { obj[g.key] = { turnover: '0', wl: '0' }; });
+    return obj;
+  }
+
+  function parseHtml(html: string) {
+    const out = defaultValues();
+    if (!html) return out;
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const rows = Array.from(doc.querySelectorAll('tr'));
+
+    let turnoverIndex = -1;
+    let wlIndex = -1;
+
+    for (const tr of rows) {
+      const cells = Array.from(tr.querySelectorAll('th,td')).map(x => (x.textContent || '').trim());
+      if (!cells.length) continue;
+
+      cells.forEach((c, i) => {
+        const n = norm(c);
+        if (turnoverIndex === -1 && n.includes('TURNOVER')) {
+          turnoverIndex = i;
+        }
+
+        if (
+          wlIndex === -1 &&
+          (
+            n.includes('WLGAME') ||
+            n.includes('PLAYERMENANGKALAH') ||
+            n === 'WL' ||
+            n.includes('WINLOSS')
+          )
+        ) {
+          wlIndex = i;
+        }
+      });
+
+      if (turnoverIndex !== -1 && wlIndex !== -1) break;
+    }
+
+    rows.forEach(tr => {
+      const cells = Array.from(tr.querySelectorAll('th,td')).map(x => (x.textContent || '').trim());
+      if (!cells.length) return;
+
+      let grp = null;
+      let idx = -1;
+
+      for (let i = 0; i < Math.min(6, cells.length); i++) {
+        grp = findGroup(cells[i]);
+        if (grp) { idx = i; break; }
+      }
+
+      if (!grp || grp.key === 'TOTAL') return;
+
+      let turnover = '';
+      let wl = '';
+
+      if (
+        turnoverIndex >= 0 &&
+        wlIndex >= 0 &&
+        turnoverIndex < cells.length &&
+        wlIndex < cells.length
+      ) {
+        turnover = cleanNumber(cells[turnoverIndex]);
+        wl = cleanNumber(cells[wlIndex]);
+      }
+
+      if (turnover === '' || wl === '') {
+        const after = cells.slice(idx + 1);
+        const nums: string[] = [];
+
+        for (const c of after) {
+          if (isPercent(c)) continue;
+          const n = cleanNumber(c);
+          if (n !== '') nums.push(n);
+        }
+
+        if (nums.length >= 2) {
+          turnover = nums[0];
+          wl = nums[1];
+        }
+      }
+
+      if (turnover !== '' && wl !== '') {
+        out[grp.key] = { turnover, wl };
+      }
     });
 
-    const report = 
-`📈 REKAPAN TURNOVER (TO) HARIAN
-📅 Tanggal : ${dateStr}
-━━━━━━━━━━━━━━━━━━━━━
-• Slot Games    : Rp ${toSlot.toLocaleString('id-ID')} (${toCalculations.slotPct}%)
-• Live Casino   : Rp ${toCasino.toLocaleString('id-ID')} (${toCalculations.casinoPct}%)
-• Sportsbooks   : Rp ${toSports.toLocaleString('id-ID')} (${toCalculations.sportsPct}%)
-• Togel Online  : Rp ${toTogel.toLocaleString('id-ID')} (${toCalculations.togelPct}%)
-• Arcade/Others : Rp ${toArcade.toLocaleString('id-ID')} (${toCalculations.arcadePct}%)
-━━━━━━━━━━━━━━━━━━━━━
-🔥 TOTAL TURNOVER (TO) : Rp ${toCalculations.totalTo.toLocaleString('id-ID')}
-━━━━━━━━━━━━━━━━━━━━━
-Status: REKAP TO DONE`;
+    return out;
+  }
 
-    navigator.clipboard.writeText(report);
-    setCopiedToReport(true);
-    setTimeout(() => setCopiedToReport(false), 2500);
+  function hasRealValue(v: any): boolean {
+    return !!v && (String(v.turnover) !== '0' || String(v.wl) !== '0');
+  }
+
+  function mergeParsed(primary: any, secondary: any) {
+    const out = defaultValues();
+    TURNOVER_GROUPS.forEach(g => {
+      if (g.key === 'TOTAL') return;
+      const a = primary && primary[g.key];
+      const b = secondary && secondary[g.key];
+      out[g.key] = hasRealValue(a) ? a : (hasRealValue(b) ? b : { turnover: '0', wl: '0' });
+    });
+    return out;
+  }
+
+  function parseText(text: string) {
+    const out = defaultValues();
+
+    const raw = String(text || '')
+      .replace(/\r/g, '\n')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[−–—]/g, '-')
+      .replace(/\u2028|\u2029/g, '\n');
+
+    const lines = raw.split(/\n+/);
+
+    const candidates: { g: typeof TURNOVER_GROUPS[0]; a: string }[] = [];
+    TURNOVER_GROUPS.forEach(g => {
+      if (g.key === 'TOTAL') return;
+      g.aliases.forEach(a => candidates.push({ g, a }));
+    });
+    candidates.sort((x, y) => y.a.length - x.a.length);
+
+    let turnoverIndex = -1;
+    let wlIndex = -1;
+
+    for (const originalLine of lines) {
+      const tabCells = originalLine.split('\t').map(x => x.trim());
+      if (tabCells.length < 2) continue;
+
+      tabCells.forEach((c, i) => {
+        const n = norm(c);
+
+        if (turnoverIndex === -1 && n.includes('TURNOVER')) {
+          turnoverIndex = i;
+        }
+
+        if (
+          wlIndex === -1 &&
+          (
+            n.includes('WLGAME') ||
+            n.includes('PLAYERMENANGKALAH') ||
+            n === 'WL' ||
+            n.includes('WINLOSS')
+          )
+        ) {
+          wlIndex = i;
+        }
+      });
+
+      if (turnoverIndex !== -1 && wlIndex !== -1) break;
+    }
+
+    for (const originalLine of lines) {
+      const line = originalLine.trim();
+      if (!line) continue;
+
+      const tabCells = originalLine.split('\t').map(x => x.trim());
+
+      let matched: { item: { g: typeof TURNOVER_GROUPS[0]; a: string }; re?: RegExp } | null = null;
+      let matchedCellIndex = -1;
+
+      if (tabCells.length > 1) {
+        for (let i = 0; i < Math.min(6, tabCells.length); i++) {
+          const g = findGroup(tabCells[i]);
+          if (g && g.key !== 'TOTAL') {
+            matched = { item: { g, a: tabCells[i] } };
+            matchedCellIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (!matched) {
+        for (const item of candidates) {
+          const esc = item.a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const aliasPattern = esc.replace(/\s+/g, '\\s+');
+          const re = new RegExp('^\\s*' + aliasPattern + '(?=\\s|\\t|:|-)', 'i');
+
+          if (re.test(line)) {
+            matched = { item, re };
+            break;
+          }
+        }
+      }
+
+      if (!matched) continue;
+
+      let turnover = '';
+      let wl = '';
+
+      if (
+        tabCells.length > 1 &&
+        turnoverIndex >= 0 &&
+        wlIndex >= 0 &&
+        turnoverIndex < tabCells.length &&
+        wlIndex < tabCells.length
+      ) {
+        turnover = cleanNumber(tabCells[turnoverIndex]);
+        wl = cleanNumber(tabCells[wlIndex]);
+      }
+
+      if (turnover === '' || wl === '') {
+        let rest = line;
+
+        if (matched.re) {
+          rest = line.replace(matched.re, '').replace(/^[\s\t:|-]+/, '');
+        } else if (matchedCellIndex >= 0) {
+          rest = tabCells.slice(matchedCellIndex + 1).join('\t');
+        }
+
+        const parts = rest.match(/\(?[+-]?\d[\d,]*(?:\.\d+)?\)?%?/g) || [];
+        const nums: string[] = [];
+
+        for (const p of parts) {
+          if (isPercent(p)) continue;
+          const n = cleanNumber(p);
+          if (n !== '') nums.push(n);
+        }
+
+        if (nums.length >= 2) {
+          turnover = nums[0];
+          wl = nums[1];
+        }
+      }
+
+      if (turnover !== '' && wl !== '') {
+        out[matched.item.g.key] = { turnover, wl };
+      }
+    }
+
+    const flat = raw.replace(/\s+/g, ' ').trim();
+
+    for (const item of candidates) {
+      if (hasRealValue(out[item.g.key])) continue;
+
+      const esc = item.a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const aliasPattern = esc.replace(/\s+/g, '\\s+');
+
+      const re = new RegExp(
+        '(?:^|\\s)' + aliasPattern +
+        '\\s+([+-]?\\d[\\d,]*(?:\\.\\d+)?)' +
+        '\\s+(?:[+-]?\\d+(?:\\.\\d+)?%\\s+)?' +
+        '([+-]?\\d[\\d,]*(?:\\.\\d+)?)',
+        'i'
+      );
+
+      const m = flat.match(re);
+      if (m) {
+        out[item.g.key] = {
+          turnover: m[1],
+          wl: m[2]
+        };
+      }
+    }
+
+    return out;
+  }
+
+  function toNumber(v: any): number {
+    const n = parseFloat(String(v ?? '0').replace(/,/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function formatNumber(n: number): string {
+    return n.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  // Exact Sign Inversion Rule for WL_GAME:
+  //  100.00  -> -100.00
+  // -100.00  -> +100.00
+  // +100.00  -> -100.00
+  //  0       -> 0
+  function invertWLValue(v: any): string {
+    const raw = String(v ?? '0').trim();
+    const n = toNumber(raw);
+
+    if (n === 0 || raw === '') return '0';
+
+    const unsigned = raw.replace(/^[+-]/, '');
+    return n < 0 ? '+' + unsigned : '-' + unsigned;
+  }
+
+  function applyWLRuleToAllColumns(source: Record<string, { turnover: string; wl: string }>) {
+    const out = defaultValues();
+
+    TURNOVER_GROUPS.forEach(g => {
+      if (g.key === 'TOTAL') return;
+
+      const item = source[g.key] || { turnover: '0', wl: '0' };
+
+      out[g.key] = {
+        turnover: item.turnover ?? '0',
+        wl: invertWLValue(item.wl ?? '0')
+      };
+    });
+
+    return out;
+  }
+
+  function calculateTotal(valObj: Record<string, { turnover: string; wl: string }>) {
+    let totalTurnover = 0;
+    let totalWL = 0;
+
+    TURNOVER_GROUPS.forEach(g => {
+      if (g.key === 'TOTAL') return;
+      const v = valObj[g.key] || { turnover: '0', wl: '0' };
+      totalTurnover += toNumber(v.turnover);
+      totalWL += toNumber(v.wl);
+    });
+
+    valObj.TOTAL = {
+      turnover: formatNumber(totalTurnover),
+      wl: totalWL > 0 ? '+' + formatNumber(totalWL) : formatNumber(totalWL)
+    };
+  }
+
+  const handleProcessTurnoverData = () => {
+    const fromHtml = clipboardHtml ? parseHtml(clipboardHtml) : defaultValues();
+    const fromText = parseText(rawTurnoverText);
+    const rawVals = mergeParsed(fromHtml, fromText);
+
+    // Apply rule: inverse sign for all WL_GAME columns
+    const finalVals = applyWLRuleToAllColumns(rawVals);
+    calculateTotal(finalVals);
+
+    setTurnoverValues(finalVals);
+
+    const count = Object.entries(finalVals).filter(([k, v]) =>
+      k !== 'TOTAL' && (v.turnover !== '0' || v.wl !== '0')
+    ).length;
+
+    const checked = ['PRAGMATIC', 'POKER', 'SABA', 'LIVE_GAME']
+      .map(k => `${TURNOVER_GROUPS.find(g => g.key === k)?.label || k}: ${finalVals[k]?.wl ?? '0'}`)
+      .join(' | ');
+
+    setExtractorStatusMsg(
+      `Selesai. ${count} kelompok data terbaca. Semua kolom WL_GAME sudah dibalik: plus jadi minus, minus jadi plus. ${checked} | TOTAL WL_GAME = ${finalVals.TOTAL.wl}`
+    );
+  };
+
+  function sanitizeCopyValue(v: any): string {
+    let s = String(v ?? '').trim();
+    s = s.replace(/^=+\s*/, '');
+    s = s.replace(/^\+\s*/, '');
+    return s;
+  }
+
+  function getFlatValuesForCopy() {
+    const arr: string[] = [];
+
+    TURNOVER_GROUPS.forEach(g => {
+      if (g.key === 'TOTAL') return;
+      if (g.key === 'SLOT') arr.push('', '');
+
+      const v = turnoverValues[g.key] || { turnover: '0', wl: '0' };
+      arr.push(sanitizeCopyValue(v.turnover));
+      arr.push(sanitizeCopyValue(v.wl));
+    });
+
+    return arr;
+  }
+
+  const handleCopyTurnoverRow = () => {
+    const data = getFlatValuesForCopy();
+    const tsvString = data.join('\t');
+    navigator.clipboard.writeText(tsvString);
+    setCopiedTurnoverRow(true);
+    setExtractorStatusMsg(
+      'Data berhasil disalin. Semua WL_GAME sudah memakai hasil pembalikan tanda. Nilai negatif tetap membawa tanda minus.'
+    );
+    setTimeout(() => setCopiedTurnoverRow(false), 2500);
+  };
+
+  const handleClearTurnover = () => {
+    setRawTurnoverText('');
+    setClipboardHtml('');
+    const fresh = defaultValues();
+    calculateTotal(fresh);
+    setTurnoverValues(fresh);
+    setExtractorStatusMsg('Data dibersihkan.');
+  };
+
+  const handleLoadSampleTurnover = () => {
+    setRawTurnoverText(SAMPLE_TRANSAKSI_LENGKAP);
   };
 
   return (
@@ -649,266 +1325,477 @@ Status: REKAP TO DONE`;
       )}
 
       {/* ========================================================= */}
-      {/* TAB 2: REKAP KOIN (Rekapan Chips & Saldo Kasir/CS)         */}
+      {/* TAB 2: REKAP HISTORY KOIN (Persis Gambar Uploaded User)   */}
       {/* ========================================================= */}
       {activeTab === 'rekap-koin' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-[#080d17] border border-cyan-500/30 shadow-2xl space-y-6">
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#080d17] border border-cyan-500/30 shadow-2xl space-y-6">
             
-            {/* Header Tab 2 */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-              <div>
-                <h3 className="text-base font-black text-white uppercase tracking-wider font-sans flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-yellow-400" />
-                  <span>REKAPITULASI KOIN &amp; SALDO CHIPS</span>
-                </h3>
-                <p className="text-xs text-gray-400 font-mono">
-                  Hitung selisih koin masuk (deposit), koin keluar (withdraw), koin fisik, dan profit/loss per shift.
-                </p>
+            {/* Top Badge: REKAP HISTORY KOIN (Persis Gambar) */}
+            <div className="text-center space-y-2.5">
+              <div className="inline-block px-7 py-1.5 rounded-full bg-[#05131d] border border-cyan-500/50 text-[#00F3FF] text-xs font-black font-mono tracking-widest uppercase shadow-[0_0_20px_rgba(0,243,255,0.25)]">
+                REKAP HISTORY KOIN
               </div>
-
-              {/* Shift Selector */}
-              <div className="flex items-center gap-2 bg-[#040810] p-1.5 rounded-xl border border-white/10">
-                {(['PAGI', 'SORE', 'MALAM'] as const).map((s) => (
-                  <button
-                    key={`koin-shift-${s}`}
-                    onClick={() => setKoinShift(s)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer ${
-                      koinShift === s
-                        ? 'bg-yellow-400 text-black font-black shadow-[0_0_10px_rgba(250,204,21,0.4)]'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    SHIFT {s}
-                  </button>
-                ))}
-              </div>
+              <p className="text-xs sm:text-sm text-gray-300 font-mono">
+                Upload file Excel/CSV history koin. Rekap akan dihitung otomatis dari kolom <strong className="text-cyan-300">Info</strong>, <strong className="text-cyan-300">BY</strong>, dan <strong className="text-cyan-300">Coin</strong>.
+              </p>
             </div>
 
-            {/* Input Grid Form */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
-              {/* Koin Awal */}
-              <div className="p-4 rounded-2xl bg-[#040810] border border-white/10 space-y-2">
-                <label className="text-gray-400 font-bold block">1. Koin Awal Shift (Rp):</label>
-                <input
-                  type="number"
-                  value={koinAwal}
-                  onChange={(e) => setKoinAwal(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-white/15 text-white font-bold text-sm outline-none focus:border-cyan-400"
-                />
-                <span className="text-[11px] text-cyan-300">Rp {koinAwal.toLocaleString('id-ID')}</span>
+            {/* Controls Bar: Pilih File, Copy Hasil Saja, Reset (Persis Gambar) */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+              {/* File Input Box */}
+              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#040813] border border-cyan-500/40 text-xs font-mono text-gray-300 shadow-inner">
+                <label className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-gray-100 text-black font-bold text-xs font-sans cursor-pointer transition-colors flex items-center gap-1.5 shadow-sm">
+                  <Upload className="w-3.5 h-3.5 text-black" />
+                  <span>Pilih File</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv,.tsv,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+                <span className="text-xs text-gray-300 max-w-[180px] sm:max-w-[280px] truncate font-mono">
+                  {uploadedFileName || 'Tidak ada file yang dipilih'}
+                </span>
               </div>
 
-              {/* Koin Masuk (Depo) */}
-              <div className="p-4 rounded-2xl bg-[#040810] border border-emerald-500/30 space-y-2">
-                <label className="text-emerald-400 font-bold block">2. Koin Masuk / Depo (Rp):</label>
-                <input
-                  type="number"
-                  value={koinMasuk}
-                  onChange={(e) => setKoinMasuk(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-emerald-500/40 text-emerald-300 font-bold text-sm outline-none focus:border-emerald-400"
-                />
-                <span className="text-[11px] text-emerald-400">Rp {koinMasuk.toLocaleString('id-ID')}</span>
-              </div>
-
-              {/* Koin Keluar (WD) */}
-              <div className="p-4 rounded-2xl bg-[#040810] border border-rose-500/30 space-y-2">
-                <label className="text-rose-400 font-bold block">3. Koin Keluar / WD (Rp):</label>
-                <input
-                  type="number"
-                  value={koinKeluar}
-                  onChange={(e) => setKoinKeluar(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-rose-500/40 text-rose-300 font-bold text-sm outline-none focus:border-rose-400"
-                />
-                <span className="text-[11px] text-rose-400">Rp {koinKeluar.toLocaleString('id-ID')}</span>
-              </div>
-
-              {/* Penyesuaian / Adjust */}
-              <div className="p-4 rounded-2xl bg-[#040810] border border-white/10 space-y-2">
-                <label className="text-gray-400 font-bold block">4. Penyesuaian / Adjust (Rp):</label>
-                <input
-                  type="number"
-                  value={koinAdjust}
-                  onChange={(e) => setKoinAdjust(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-white/15 text-white font-bold text-sm outline-none focus:border-cyan-400"
-                />
-                <span className="text-[11px] text-gray-400">Rp {koinAdjust.toLocaleString('id-ID')}</span>
-              </div>
-
-              {/* Koin Fisik / Real */}
-              <div className="p-4 rounded-2xl bg-[#040810] border border-yellow-500/30 space-y-2">
-                <label className="text-yellow-400 font-bold block">5. Koin Akhir Fisik / Real (Rp):</label>
-                <input
-                  type="number"
-                  value={koinAkhirReal}
-                  onChange={(e) => setKoinAkhirReal(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-yellow-500/40 text-yellow-300 font-bold text-sm outline-none focus:border-yellow-400"
-                />
-                <span className="text-[11px] text-yellow-400">Rp {koinAkhirReal.toLocaleString('id-ID')}</span>
-              </div>
-
-              {/* Tanggal Rekapan */}
-              <div className="p-4 rounded-2xl bg-[#040810] border border-white/10 space-y-2">
-                <label className="text-gray-400 font-bold block">6. Tanggal Rekapan:</label>
-                <input
-                  type="date"
-                  value={koinDate}
-                  onChange={(e) => setKoinDate(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-white/15 text-white font-bold text-sm outline-none focus:border-cyan-400"
-                />
-              </div>
-            </div>
-
-            {/* Calculations Summary Card */}
-            <div className="p-5 rounded-2xl bg-[#040810] border-2 border-cyan-500/40 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
-                <div className="p-3 rounded-xl bg-[#09101d] border border-white/10">
-                  <span className="text-[10px] text-gray-400 block uppercase">Koin Akhir Sistem:</span>
-                  <span className="text-sm font-black text-white">Rp {koinCalculations.sistemAkhir.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-[#09101d] border border-white/10">
-                  <span className="text-[10px] text-gray-400 block uppercase">Selisih Koin:</span>
-                  <span className={`text-sm font-black ${koinCalculations.isBalanced ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    Rp {koinCalculations.selisih.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-[#09101d] border border-white/10">
-                  <span className="text-[10px] text-gray-400 block uppercase">Win / Lose Koin:</span>
-                  <span className={`text-sm font-black ${koinCalculations.winLoseKoin >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    Rp {koinCalculations.winLoseKoin.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-[#09101d] border border-white/10">
-                  <span className="text-[10px] text-gray-400 block uppercase">Status Koin:</span>
-                  <span className={`text-xs font-black ${koinCalculations.isBalanced ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {koinCalculations.status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Button */}
+              {/* Copy Hasil Saja Button (Orange / Yellow Gold) */}
               <button
                 type="button"
-                onClick={handleCopyKoinReport}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-black text-xs font-mono transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                onClick={handleCopyKoinOnly}
+                className="px-6 py-2.5 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] active:scale-[0.98] text-black font-black text-xs font-mono transition-all cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.35)] flex items-center gap-2"
+                title="Menyalin 14 angka hasil rekap (dipisahkan TAB) untuk ditempel ke Excel/Google Sheets"
               >
-                {copiedKoinReport ? <Check className="w-4 h-4 text-black" /> : <Copy className="w-4 h-4 text-black" />}
-                <span>{copiedKoinReport ? 'Rekapan Koin Tersalin!' : 'Salin Laporan Rekapan Koin (Chat)'}</span>
+                {copiedKoinRow ? <Check className="w-4 h-4 text-black stroke-[3]" /> : <Copy className="w-4 h-4 text-black stroke-[2.5]" />}
+                <span>{copiedKoinRow ? 'Hasil Tersalin!' : 'Copy Hasil Saja'}</span>
+              </button>
+
+              {/* Reset Button (Dark Red) */}
+              <button
+                type="button"
+                onClick={handleResetKoin}
+                className="px-6 py-2.5 rounded-xl bg-[#3B1219] hover:bg-[#521A24] active:scale-[0.98] text-rose-200 border border-rose-600/40 font-black text-xs font-mono transition-all cursor-pointer shadow-sm flex items-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4 text-rose-300" />
+                <span>Reset</span>
               </button>
             </div>
+
+            {/* Quick Demo & Status Text */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left pt-1">
+              <p className="text-xs text-gray-400 font-mono">
+                {isParsingFile ? (
+                  <span className="text-yellow-400 flex items-center justify-center sm:justify-start gap-1.5 animate-pulse">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Sedang memproses file Excel/CSV...
+                  </span>
+                ) : uploadedFileName ? (
+                  <span className="text-emerald-400 font-bold flex items-center justify-center sm:justify-start gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    File "{uploadedFileName}" terbaca ({rawKoinRows.length} baris transaksi)
+                  </span>
+                ) : (
+                  'Upload file Excel/CSV history koin, lalu rekap akan muncul otomatis.'
+                )}
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleLoadSampleKoin}
+                  className="px-3 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 text-xs font-mono font-bold border border-cyan-500/30 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Contoh Data (Demo)</span>
+                </button>
+                {rawKoinRows.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDataPreview(!showDataPreview)}
+                    className="px-3 py-1 rounded-lg bg-[#131d2e] hover:bg-[#1a2840] text-gray-300 text-xs font-mono font-bold border border-white/10 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>{showDataPreview ? 'Tutup Rincian' : 'Lihat Rincian'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 14-KOLOM TABEL REKAPAN KOIN (PERSIS GAMBAR DENGAN WARNA & TAMPILAN RESMI)   */}
+            {/* ========================================================================= */}
+            <div className="rounded-2xl border-2 border-amber-500/40 bg-[#040711] overflow-x-auto shadow-2xl">
+              <table className="w-full border-collapse font-mono text-xs text-center whitespace-nowrap">
+                {/* Header Row: Orange/Golden Amber Background */}
+                <thead>
+                  <tr className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-black font-black uppercase text-xs tracking-wider">
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Deposit</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Total QRIS IDN</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Withdraw</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">DP PGA SPV</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">WD PGA SPV</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Total Deposit</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Real Withdraw</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Hasil</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Form DP</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Form DP garuda</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Form DP QRIS</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Total Form DP</th>
+                    <th className="px-4 py-3.5 border-r border-amber-600/40">Form WD</th>
+                    <th className="px-4 py-3.5">Form auto WD</th>
+                  </tr>
+                </thead>
+
+                {/* Data Row: Warna Cell Persis Gambar (White, Yellow, Green) */}
+                <tbody>
+                  <tr className="font-extrabold text-sm text-black">
+                    {/* 1. Deposit (White) */}
+                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {rekapKoinStats.deposit.toLocaleString('id-ID')}
+                    </td>
+
+                    {/* 2. Total QRIS IDN (Yellow) */}
+                    <td className="px-4 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
+                      {rekapKoinStats.qris.toLocaleString('id-ID')}
+                    </td>
+
+                    {/* 3. Withdraw (White) */}
+                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {rekapKoinStats.withdraw.toLocaleString('id-ID')}
+                    </td>
+
+                    {/* 4. DP PGA SPV (Green) */}
+                    <td className="px-4 py-3.5 bg-[#00FF66] border-r border-zinc-300 font-black">
+                      {rekapKoinStats.dpPgaSpv.toLocaleString('id-ID')}
+                    </td>
+
+                    {/* 5. WD PGA SPV (Green) */}
+                    <td className="px-4 py-3.5 bg-[#00FF66] border-r border-zinc-300 font-black">
+                      {rekapKoinStats.wdPgaSpv.toLocaleString('id-ID')}
+                    </td>
+
+                    {/* 6. Total Deposit (Yellow) */}
+                    <td className="px-4 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
+                      {rekapKoinStats.totalDeposit.toLocaleString('id-ID')}
+                    </td>
+
+                    {/* 7. Real Withdraw (Yellow) */}
+                    <td className="px-4 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
+                      {rekapKoinStats.realWithdraw.toLocaleString('id-ID')}
+                    </td>
+
+                    {/* 8. Hasil (Yellow) */}
+                    <td className="px-4 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
+                      {rekapKoinStats.hasil.toLocaleString('id-ID')}
+                    </td>
+
+                    {/* 9. Form DP (White) */}
+                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {rekapKoinStats.formDp}
+                    </td>
+
+                    {/* 10. Form DP garuda (White) */}
+                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {rekapKoinStats.formDpGaruda}
+                    </td>
+
+                    {/* 11. Form DP QRIS (White) */}
+                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {rekapKoinStats.formDpQris}
+                    </td>
+
+                    {/* 12. Total Form DP (White) */}
+                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {rekapKoinStats.totalFormDp}
+                    </td>
+
+                    {/* 13. Form WD (White) */}
+                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {rekapKoinStats.formWd}
+                    </td>
+
+                    {/* 14. Form auto WD (White) */}
+                    <td className="px-4 py-3.5 bg-white font-bold">
+                      {rekapKoinStats.formAutoWd}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Subtext Footnote (Persis Gambar) */}
+            <p className="text-xs text-gray-400 text-center font-mono">
+              Hasil copy dipisahkan dengan TAB agar bisa langsung ditempel ke Excel/Google Sheets.
+            </p>
+
+            {/* Additional Secondary Action: Copy dengan Header */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={handleCopyKoinWithHeader}
+                className="px-4 py-2 rounded-xl bg-[#131d2e] hover:bg-[#1a2840] text-cyan-300 border border-cyan-500/30 text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2"
+              >
+                {copiedKoinFull ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Table className="w-3.5 h-3.5 text-cyan-400" />}
+                <span>{copiedKoinFull ? 'Header + Data Tersalin!' : 'Copy Baris Header + Nilai (TSV)'}</span>
+              </button>
+            </div>
+
+            {/* Optional Collapsible Audit Preview Table */}
+            {showDataPreview && previewKoinRows.length > 0 && (
+              <div className="p-4 rounded-2xl bg-[#040810] border border-cyan-500/30 space-y-3 font-mono text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+                  <span className="font-bold text-yellow-400 flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5" />
+                    Pratinjau Data Transaksi Terbaca ({previewKoinRows.length} Baris):
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {(['ALL', 'DEPOSIT', 'WITHDRAW', 'QRIS', 'PGA_SPV'] as const).map((f) => (
+                      <button
+                        key={`filter-${f}`}
+                        onClick={() => setFilterPreview(f)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                          filterPreview === f
+                            ? 'bg-cyan-500 text-black font-black'
+                            : 'bg-white/5 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto rounded-xl border border-white/10">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-[#0b1424] text-gray-300 sticky top-0">
+                      <tr>
+                        <th className="p-2 border-b border-white/10">#</th>
+                        <th className="p-2 border-b border-white/10">Info</th>
+                        <th className="p-2 border-b border-white/10">BY</th>
+                        <th className="p-2 border-b border-white/10">Tipe</th>
+                        <th className="p-2 border-b border-white/10">Kategori</th>
+                        <th className="p-2 border-b border-white/10 text-right">Coin (Nominal)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {previewKoinRows
+                        .filter((r) => {
+                          if (filterPreview === 'DEPOSIT') return r.type === 'DEPOSIT';
+                          if (filterPreview === 'WITHDRAW') return r.type === 'WITHDRAW';
+                          if (filterPreview === 'QRIS') return r.subType === 'QRIS';
+                          if (filterPreview === 'PGA_SPV') return r.subType === 'PGA_SPV';
+                          return true;
+                        })
+                        .slice(0, 100)
+                        .map((r, i) => (
+                          <tr key={r.id} className="hover:bg-white/[0.03]">
+                            <td className="p-2 text-gray-500">{i + 1}</td>
+                            <td className="p-2 text-white font-medium">{r.info}</td>
+                            <td className="p-2 text-cyan-300">{r.by}</td>
+                            <td className="p-2">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                r.type === 'DEPOSIT' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                              }`}>
+                                {r.type}
+                              </span>
+                            </td>
+                            <td className="p-2 text-gray-400 text-[10px]">{r.subType}</td>
+                            <td className="p-2 text-right font-bold text-yellow-300">
+                              Rp {r.coin.toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* TAB 3: DATA TURNOVER (TO HARIAN PER GAME)                 */}
+      {/* TAB 3: DATA TURNOVER (EXTRACTOR TRANSAKSI LENGKAP)        */}
       {/* ========================================================= */}
       {activeTab === 'data-turnover' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-[#080d17] border border-cyan-500/30 shadow-2xl space-y-6">
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#080d17] border border-cyan-500/30 shadow-2xl space-y-6">
             
-            <div className="border-b border-white/10 pb-4">
-              <h3 className="text-base font-black text-white uppercase tracking-wider font-sans flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-cyan-400" />
-                <span>REKAPAN TURNOVER (TO) PER GAME &amp; PROVIDER</span>
-              </h3>
-              <p className="text-xs text-gray-400 font-mono">
-                Catat dan kalkulasikan total turnover harian per kategori game untuk laporan shift dan pembagian komisi / bonus.
+            {/* Top Badge: DATA TRANSAKSI LENGKAP */}
+            <div className="text-center">
+              <div className="inline-block px-7 py-1.5 rounded-full bg-[#05131d] border border-cyan-500/50 text-[#00F3FF] text-xs font-black font-mono tracking-widest uppercase shadow-[0_0_20px_rgba(0,243,255,0.25)]">
+                DATA TRANSAKSI LENGKAP
+              </div>
+            </div>
+
+            {/* Extractor Laporan Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-wide font-sans">
+                  Extractor Laporan
+                </h3>
+                <p className="text-xs text-gray-300 font-mono mt-0.5">
+                  Paste tabel <strong className="text-cyan-300">Transaksi Lengkap</strong>, lalu tekan <strong className="text-cyan-300">Proses Data</strong>. Sistem mengambil TURNOVER dan WL_GAME.
+                </p>
+              </div>
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#040810] border border-white/20 text-[11px] font-mono font-bold text-gray-300 shadow-inner flex items-center gap-1.5">
+                <span className="text-cyan-400 font-mono">Ctrl + Enter</span>
+                <span>= Proses</span>
+              </div>
+            </div>
+
+            {/* Textarea Input Container */}
+            <div className="rounded-2xl bg-[#040810] border border-cyan-500/40 p-4 space-y-2 shadow-inner">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="font-extrabold text-cyan-400 tracking-wider">DATA TRANSAKSI LENGKAP</span>
+                <span className="text-gray-400 text-[11px]">
+                  {rawTurnoverText.length} karakter • {rawTurnoverText ? rawTurnoverText.split(/\r?\n/).filter(Boolean).length : 0} baris
+                </span>
+              </div>
+              <textarea
+                rows={7}
+                value={rawTurnoverText}
+                onChange={(e) => setRawTurnoverText(e.target.value)}
+                onPaste={(e) => {
+                  const html = e.clipboardData.getData('text/html');
+                  if (html) {
+                    setClipboardHtml(html);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    handleProcessTurnoverData();
+                  }
+                }}
+                placeholder="Paste tabel laporan di sini..."
+                className="w-full bg-transparent text-gray-200 font-mono text-xs focus:outline-none resize-y p-1 leading-relaxed placeholder:text-gray-600 min-h-[140px]"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleProcessTurnoverData}
+                className="px-6 py-2.5 rounded-xl bg-[#00F3FF] hover:bg-[#00d0dc] active:scale-[0.98] text-black font-black text-xs font-mono transition-all cursor-pointer shadow-[0_0_15px_rgba(0,243,255,0.35)] flex items-center gap-2 uppercase tracking-wider"
+              >
+                <Sparkles className="w-4 h-4 text-black stroke-[2.5]" />
+                <span>PROSES DATA</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyTurnoverRow}
+                className="px-6 py-2.5 rounded-xl bg-[#00FF66] hover:bg-[#00dd55] active:scale-[0.98] text-black font-black text-xs font-mono transition-all cursor-pointer shadow-[0_0_15px_rgba(0,255,102,0.35)] flex items-center gap-2 uppercase tracking-wider"
+                title="Salin 34 nilai baris data (dipisahkan TAB) untuk Excel/Google Sheets"
+              >
+                {copiedTurnoverRow ? <Check className="w-4 h-4 text-black stroke-[3]" /> : <Copy className="w-4 h-4 text-black stroke-[2.5]" />}
+                <span>{copiedTurnoverRow ? 'BARIS TERSALIN!' : 'SALIN BARIS DATA'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearTurnover}
+                className="px-6 py-2.5 rounded-xl bg-[#131d2e] hover:bg-[#1a2840] active:scale-[0.98] text-gray-200 border border-white/20 font-black text-xs font-mono transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wider"
+              >
+                <RotateCcw className="w-4 h-4 text-gray-300" />
+                <span>BERSIHKAN</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLoadSampleTurnover}
+                className="px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold text-xs font-mono transition-all cursor-pointer sm:ml-auto flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                <span>Contoh Data (Demo)</span>
+              </button>
+            </div>
+
+            {/* Status Feedback Message */}
+            {extractorStatusMsg && (
+              <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs font-mono text-cyan-300 leading-relaxed">
+                {extractorStatusMsg}
+              </div>
+            )}
+
+            {/* Hasil Data Section */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="font-extrabold text-white text-sm tracking-wider uppercase">HASIL DATA</span>
+                <span className="text-gray-400 text-[11px]">Geser horizontal untuk melihat seluruh data</span>
+              </div>
+
+              {/* 34-Column Table */}
+              <div className="rounded-2xl border-2 border-amber-500/40 bg-[#040711] overflow-x-auto shadow-2xl">
+                <table className="w-full border-collapse font-mono text-xs text-center whitespace-nowrap">
+                  <thead>
+                    {/* Row 1: Categories */}
+                    <tr className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-black font-black uppercase text-xs tracking-wider">
+                      {TURNOVER_GROUPS.filter(g => g.key !== 'TOTAL').map((cat) => (
+                        <th key={`head1-${cat.key}`} colSpan={2} className="px-4 py-3 border-r border-amber-600/40">
+                          {cat.label}
+                        </th>
+                      ))}
+                      <th colSpan={2} className="px-4 py-3 bg-[#f59e0b] text-black font-black">
+                        TOTAL
+                      </th>
+                    </tr>
+
+                    {/* Row 2: Sub-headers TURNOVER & WL_GAME */}
+                    <tr className="bg-[#fbbf24] text-black font-black text-[11px] uppercase tracking-wider border-t border-amber-500/50">
+                      {TURNOVER_GROUPS.filter(g => g.key !== 'TOTAL').map((cat) => (
+                        <React.Fragment key={`head2-${cat.key}`}>
+                          <th className="px-3 py-2 border-r border-amber-600/30 font-bold">TURNOVER</th>
+                          <th className="px-3 py-2 border-r border-amber-600/40 font-bold">WL_GAME</th>
+                        </React.Fragment>
+                      ))}
+                      <th className="px-3 py-2 border-r border-amber-600/30 font-black">TURNOVER</th>
+                      <th className="px-3 py-2 font-black">WL_GAME</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr className="font-bold text-sm text-black">
+                      {TURNOVER_GROUPS.filter(g => g.key !== 'TOTAL').map((cat) => {
+                        const data = turnoverValues[cat.key] || { turnover: '0', wl: '0' };
+                        const wlNum = toNumber(data.wl);
+                        return (
+                          <React.Fragment key={`val-${cat.key}`}>
+                            <td className="px-3 py-3 bg-white border-r border-zinc-300 font-bold">
+                              {data.turnover}
+                            </td>
+                            <td className={`px-3 py-3 bg-white border-r border-zinc-300 font-bold ${
+                              wlNum > 0 ? 'text-emerald-600' : wlNum < 0 ? 'text-rose-600' : 'text-black'
+                            }`}>
+                              {data.wl}
+                            </td>
+                          </React.Fragment>
+                        );
+                      })}
+
+                      {/* TOTAL Cells */}
+                      <td className="px-3 py-3 bg-white border-r border-zinc-300 font-black text-black">
+                        {turnoverValues.TOTAL?.turnover || '0.00'}
+                      </td>
+                      <td className={`px-3 py-3 bg-white font-black ${
+                        toNumber(turnoverValues.TOTAL?.wl) > 0 ? 'text-emerald-600' : toNumber(turnoverValues.TOTAL?.wl) < 0 ? 'text-rose-600' : 'text-black'
+                      }`}>
+                        {turnoverValues.TOTAL?.wl || '0.00'}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="text-xs text-gray-400 text-center font-mono pt-1">
+                Hasil salin berupa data teks biasa agar mudah ditempel langsung ke Excel, Google Sheets, atau dokumen kerja.
               </p>
             </div>
-
-            {/* Input Grid TO */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
-              <div className="p-4 rounded-2xl bg-[#040810] border border-cyan-500/30 space-y-2">
-                <label className="text-cyan-400 font-bold block">1. TO Slot Games (Rp):</label>
-                <input
-                  type="number"
-                  value={toSlot}
-                  onChange={(e) => setToSlot(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-cyan-500/40 text-cyan-300 font-bold text-sm outline-none focus:border-cyan-400"
-                />
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-400">Rp {toSlot.toLocaleString('id-ID')}</span>
-                  <span className="text-cyan-300 font-bold">{toCalculations.slotPct}%</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#040810] border border-purple-500/30 space-y-2">
-                <label className="text-purple-400 font-bold block">2. TO Live Casino (Rp):</label>
-                <input
-                  type="number"
-                  value={toCasino}
-                  onChange={(e) => setToCasino(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-purple-500/40 text-purple-300 font-bold text-sm outline-none focus:border-purple-400"
-                />
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-400">Rp {toCasino.toLocaleString('id-ID')}</span>
-                  <span className="text-purple-300 font-bold">{toCalculations.casinoPct}%</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#040810] border border-emerald-500/30 space-y-2">
-                <label className="text-emerald-400 font-bold block">3. TO Sportsbooks (Rp):</label>
-                <input
-                  type="number"
-                  value={toSports}
-                  onChange={(e) => setToSports(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-emerald-500/40 text-emerald-300 font-bold text-sm outline-none focus:border-emerald-400"
-                />
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-400">Rp {toSports.toLocaleString('id-ID')}</span>
-                  <span className="text-emerald-300 font-bold">{toCalculations.sportsPct}%</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#040810] border border-yellow-500/30 space-y-2">
-                <label className="text-yellow-400 font-bold block">4. TO Togel Online (Rp):</label>
-                <input
-                  type="number"
-                  value={toTogel}
-                  onChange={(e) => setToTogel(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-yellow-500/40 text-yellow-300 font-bold text-sm outline-none focus:border-yellow-400"
-                />
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-400">Rp {toTogel.toLocaleString('id-ID')}</span>
-                  <span className="text-yellow-300 font-bold">{toCalculations.togelPct}%</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#040810] border border-pink-500/30 space-y-2">
-                <label className="text-pink-400 font-bold block">5. TO Arcade / Lainnya (Rp):</label>
-                <input
-                  type="number"
-                  value={toArcade}
-                  onChange={(e) => setToArcade(Number(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-[#09101d] border border-pink-500/40 text-pink-300 font-bold text-sm outline-none focus:border-pink-400"
-                />
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-gray-400">Rp {toArcade.toLocaleString('id-ID')}</span>
-                  <span className="text-pink-300 font-bold">{toCalculations.arcadePct}%</span>
-                </div>
-              </div>
-
-              {/* Total TO Card */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-[#0c1c30] to-[#060e1a] border-2 border-cyan-400 space-y-2 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                <span className="text-cyan-300 font-black block uppercase text-[11px]">🔥 TOTAL TURNOVER HARIAN:</span>
-                <span className="text-lg font-black text-white block">
-                  Rp {toCalculations.totalTo.toLocaleString('id-ID')}
-                </span>
-                <span className="text-[10px] text-cyan-200 block font-mono">100% Volume Taruhan Member</span>
-              </div>
-            </div>
-
-            {/* Copy Button */}
-            <button
-              type="button"
-              onClick={handleCopyToReport}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 hover:from-cyan-400 hover:to-teal-400 text-black font-black text-xs font-mono transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-            >
-              {copiedToReport ? <Check className="w-4 h-4 text-black stroke-[3]" /> : <Copy className="w-4 h-4 text-black stroke-[2.5]" />}
-              <span>{copiedToReport ? 'Rekapan TO Tersalin!' : 'Salin Laporan Turnover (Chat)'}</span>
-            </button>
 
           </div>
         </div>
