@@ -32,31 +32,39 @@ import { JadwalPasaranTogel } from './components/tools/JadwalPasaranTogel';
 import { ModulPromoSitus } from './components/tools/ModulPromoSitus';
 import { ShiftType, UserProfile, JobdeskTask } from './types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from './data/initialData';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight, Home, Lock } from 'lucide-react';
 
 export const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
+export const CURRENT_RELEASE_VERSION = 'RELEASE_HS711_AUTH_20260903_STRICT';
 
 export default function App() {
   // Session / User Profile with mandatory login: defaults to null (logged out)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     if (typeof window !== 'undefined') {
-      // Clear legacy master auto-login from localStorage to force re-login on publish
       try {
+        // Clear legacy master auto-login from localStorage
         localStorage.removeItem('don_isko_current_user');
-      } catch {
-        // ignore
-      }
-      const savedUser = sessionStorage.getItem('don_isko_auth_user');
-      if (savedUser) {
-        try {
+
+        // Check release version: when a new build is published, force logout all users
+        const storedRelease = localStorage.getItem('don_isko_publish_version');
+        if (storedRelease !== CURRENT_RELEASE_VERSION) {
+          localStorage.setItem('don_isko_publish_version', CURRENT_RELEASE_VERSION);
+          localStorage.removeItem('don_isko_auth_user');
+          sessionStorage.removeItem('don_isko_auth_user');
+          return null;
+        }
+
+        // Within current release, read active session from sessionStorage
+        const savedUser = sessionStorage.getItem('don_isko_auth_user');
+        if (savedUser) {
           const parsed = JSON.parse(savedUser);
           const u = parsed.username?.toLowerCase();
           if (u === 'donisko' || u === 'leo' || u === 'cs') {
             return parsed;
           }
-        } catch {
-          // ignore
         }
+      } catch {
+        // ignore
       }
     }
     return null;
@@ -194,12 +202,25 @@ export default function App() {
       try {
         sessionStorage.removeItem('don_isko_auth_user');
         localStorage.removeItem('don_isko_current_user');
+        localStorage.setItem('don_isko_force_logout', String(Date.now()));
       } catch {
         // ignore
       }
     }
     setIsLoginModalOpen(true);
   };
+
+  // Synchronize logout across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'don_isko_force_logout' || e.key === 'don_isko_publish_version') {
+        setCurrentUser(null);
+        setIsLoginModalOpen(true);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Jobdesk progress counts for the current shift
   const csShiftTasks = tasks.filter(t => t.category === 'CS' && t.shift === activeShift);
@@ -255,8 +276,8 @@ export default function App() {
         backgroundAttachment: 'fixed'
       }}
     >
-      {/* Dark & Glass Overlay if Background Applied - blurred and non-interactive until logged in */}
-      <div className={`min-h-screen ${bgImage ? 'bg-black/25 backdrop-blur-[0.5px]' : 'bg-[#0A0A0A]'} ${!currentUser ? 'filter blur-[4px] pointer-events-none select-none transition-all duration-300' : ''}`}>
+      {/* Dark & Glass Overlay if Background Applied */}
+      <div className={`min-h-screen ${bgImage ? 'bg-black/25 backdrop-blur-[0.5px]' : 'bg-[#0A0A0A]'}`}>
         {/* Top Header */}
         <Header
           sidebarOpen={isSidebarOpen}
@@ -467,14 +488,6 @@ export default function App() {
           </main>
         </div>
 
-        {/* Login Modal (Mandatory until user enters valid credentials) */}
-        <LoginModal
-          isOpen={!currentUser || isLoginModalOpen}
-          isMandatory={!currentUser}
-          onClose={currentUser ? () => setIsLoginModalOpen(false) : undefined}
-          onLogin={handleLogin}
-        />
-
         <BackgroundSelectorModal
           isOpen={isBgModalOpen}
           onClose={() => setIsBgModalOpen(false)}
@@ -486,6 +499,14 @@ export default function App() {
           onUpdateUserProfile={handleUpdateUserProfile}
         />
       </div>
+
+      {/* Login Modal (Mandatory until user enters valid credentials) */}
+      <LoginModal
+        isOpen={!currentUser || isLoginModalOpen}
+        isMandatory={!currentUser}
+        onClose={currentUser ? () => setIsLoginModalOpen(false) : undefined}
+        onLogin={handleLogin}
+      />
     </div>
   );
 }

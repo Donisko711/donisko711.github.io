@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, User, Key, CheckCircle, Sunrise, Sun, Moon, AlertCircle, Crown, X } from 'lucide-react';
+import { Lock, User, CheckCircle, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { ShiftType, UserProfile } from '../types';
 import donIskoLogo from '../assets/images/don_isko_711_1788035559676.jpg';
 
@@ -13,6 +13,7 @@ interface LoginModalProps {
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, isMandatory = false }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [shift, setShift] = useState<ShiftType>('PAGI');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -49,7 +50,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       }
     }
 
-    // 2. Staff LEO: LEO / leo
+    // 2. Staff LEO: LEO / leo (or LEO)
     if (u === 'leo') {
       if (p.toLowerCase() === 'leo') {
         onLogin({
@@ -68,7 +69,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       }
     }
 
-    // 3. Staff CS: CS / cs
+    // 3. Staff CS: CS / cs (or CS)
     if (u === 'cs') {
       if (p.toLowerCase() === 'cs') {
         onLogin({
@@ -87,20 +88,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       }
     }
 
-    // Akses Ditolak untuk username lain
-    setErrorMsg('User ID atau Password tidak terdaftar! Akses ditolak.');
+    // Akses Ditolak untuk username selain 3 di atas
+    setErrorMsg('User ID atau Password salah! Akses ditolak.');
   };
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200 pointer-events-auto"
       onClick={e => {
         if (!isMandatory && onClose && e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="relative w-full max-w-md bg-[#0d1117] border border-[#00F3FF]/50 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,243,255,0.25)] overflow-hidden">
+      <div className="relative w-full max-w-md bg-[#0d1117] border border-[#00F3FF]/50 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,243,255,0.25)] overflow-hidden pointer-events-auto">
         {/* Close button if not mandatory */}
         {!isMandatory && onClose && (
           <button
@@ -135,13 +136,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
           </p>
           <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-[11px] font-mono text-yellow-300">
             <Lock className="w-3 h-3 text-yellow-400" />
-            <span>Masukkan User ID & Password untuk Akses</span>
+            <span>Masukkan User ID & Password Anda</span>
           </div>
         </div>
 
         {/* Error Notification */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-mono flex items-center gap-2 animate-shake">
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-mono flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -158,11 +159,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               <input
                 type="text"
                 required
+                autoFocus
                 autoComplete="off"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="Masukkan User ID..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-[#00F3FF] focus:ring-1 focus:ring-[#00F3FF] text-sm text-white placeholder-slate-500 outline-none font-mono transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-[#00F3FF] focus:ring-1 focus:ring-[#00F3FF] text-sm text-white placeholder-slate-500 outline-none font-mono transition-all cursor-text"
               />
             </div>
           </div>
@@ -174,14 +176,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-400" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
-                autoComplete="new-password"
+                autoComplete="current-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Masukkan Password..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 text-sm text-white placeholder-slate-500 outline-none font-mono transition-all"
+                className="w-full pl-10 pr-11 py-2.5 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 text-sm text-white placeholder-slate-500 outline-none font-mono transition-all cursor-text"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                title={showPassword ? 'Sembunyikan password' : 'Lihat password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
