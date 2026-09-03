@@ -37,25 +37,29 @@ import { ChevronRight, Home } from 'lucide-react';
 export const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
 
 export default function App() {
-  // Session / User Profile with LocalStorage persistence
+  // Session / User Profile with mandatory login: defaults to null (logged out)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('don_isko_current_user');
+      // Clear legacy master auto-login from localStorage to force re-login on publish
+      try {
+        localStorage.removeItem('don_isko_current_user');
+      } catch {
+        // ignore
+      }
+      const savedUser = sessionStorage.getItem('don_isko_auth_user');
       if (savedUser) {
         try {
-          return JSON.parse(savedUser);
+          const parsed = JSON.parse(savedUser);
+          const u = parsed.username?.toLowerCase();
+          if (u === 'donisko' || u === 'leo' || u === 'cs') {
+            return parsed;
+          }
         } catch {
-          // fallback
+          // ignore
         }
       }
     }
-    return {
-      username: 'donisko',
-      name: 'DON ISKO',
-      role: 'MASTER / OWNER',
-      avatar: 'https://ik.imagekit.io/donisko711/donisko711.jpg',
-      shift: 'PAGI'
-    };
+    return null;
   });
 
   const [activeShift, setActiveShift] = useState<ShiftType>(() => currentUser?.shift || 'PAGI');
@@ -102,7 +106,11 @@ export default function App() {
     setCurrentUser(updated);
     setActiveShift(updated.shift);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('don_isko_current_user', JSON.stringify(updated));
+      try {
+        sessionStorage.setItem('don_isko_auth_user', JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
     }
   };
 
@@ -163,8 +171,13 @@ export default function App() {
   const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
     setActiveShift(user.shift);
+    setIsLoginModalOpen(false);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('don_isko_current_user', JSON.stringify(user));
+      try {
+        sessionStorage.setItem('don_isko_auth_user', JSON.stringify(user));
+      } catch {
+        // ignore
+      }
     }
     if (user.username.toLowerCase() === 'leo' || user.role === 'INTEL SENIOR' || user.role === 'CEO') {
       setActiveView('wd-auto-flop');
@@ -178,7 +191,12 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('don_isko_current_user');
+      try {
+        sessionStorage.removeItem('don_isko_auth_user');
+        localStorage.removeItem('don_isko_current_user');
+      } catch {
+        // ignore
+      }
     }
     setIsLoginModalOpen(true);
   };
@@ -237,8 +255,8 @@ export default function App() {
         backgroundAttachment: 'fixed'
       }}
     >
-      {/* Dark & Glass Overlay if Background Applied */}
-      <div className={`min-h-screen ${bgImage ? 'bg-black/25 backdrop-blur-[0.5px]' : 'bg-[#0A0A0A]'}`}>
+      {/* Dark & Glass Overlay if Background Applied - blurred and non-interactive until logged in */}
+      <div className={`min-h-screen ${bgImage ? 'bg-black/25 backdrop-blur-[0.5px]' : 'bg-[#0A0A0A]'} ${!currentUser ? 'filter blur-[4px] pointer-events-none select-none transition-all duration-300' : ''}`}>
         {/* Top Header */}
         <Header
           sidebarOpen={isSidebarOpen}
@@ -247,7 +265,11 @@ export default function App() {
           setCurrentShift={handleShiftChange}
           user={currentUser}
           onLogout={handleLogout}
-          onOpenBgModal={() => setIsBgModalOpen(true)}
+          onOpenBgModal={() => {
+            if (currentUser?.username?.toLowerCase() === 'donisko') {
+              setIsBgModalOpen(true);
+            }
+          }}
           onOpenLoginModal={() => setIsLoginModalOpen(true)}
           soundEnabled={soundEnabled}
           setSoundEnabled={setSoundEnabled}
@@ -445,10 +467,11 @@ export default function App() {
           </main>
         </div>
 
-        {/* Modals */}
+        {/* Login Modal (Mandatory until user enters valid credentials) */}
         <LoginModal
-          isOpen={isLoginModalOpen}
-          onClose={() => setIsLoginModalOpen(false)}
+          isOpen={!currentUser || isLoginModalOpen}
+          isMandatory={!currentUser}
+          onClose={currentUser ? () => setIsLoginModalOpen(false) : undefined}
           onLogin={handleLogin}
         />
 

@@ -46,6 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
   onShiftChange,
   onLogout,
   onOpenBgModal,
+  onOpenLoginModal,
   soundEnabled = true,
   setSoundEnabled,
   activeMenuTitle,
@@ -283,8 +284,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         ) : (
           <button
-            onClick={onLogout}
-            className="bg-yellow-500 text-black px-4 py-1.5 rounded-full text-xs font-bold hover:bg-yellow-400"
+            onClick={onOpenLoginModal}
+            id="btn-header-login"
+            className="bg-yellow-500 text-black px-4 py-1.5 rounded-full text-xs font-bold hover:bg-yellow-400 cursor-pointer shadow-[0_0_10px_rgba(234,179,8,0.3)]"
           >
             LOGIN
           </button>
