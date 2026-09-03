@@ -8,12 +8,16 @@ import {
   Plus, 
   Trash2, 
   Printer, 
-  Sparkles,
-  Info,
-  Sliders,
-  Eye
+  Sparkles, 
+  Info, 
+  Sliders, 
+  Eye,
+  Gamepad2,
+  Table,
+  Layers
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { IdnSlotRoundEditor } from './IdnSlotRoundEditor';
 
 export interface SlotTxRow {
   id: string;
@@ -49,6 +53,7 @@ export const TransaksiSlotEditor: React.FC = () => {
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [activeFormat, setActiveFormat] = useState<'ALL' | 'MUTASI' | 'IDN_ROUND'>('ALL');
 
   // Initial Sample Data (Mirrors the exact reference HTML)
   const [rows, setRows] = useState<SlotTxRow[]>([
@@ -365,20 +370,99 @@ export const TransaksiSlotEditor: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-4 animate-in fade-in">
+    <div className="space-y-6 animate-in fade-in">
+      {/* ========================================================= */}
+      {/* DUAL-FORMAT SELECTOR BANNER DI ATAS MENU TRANSAKSI SLOT   */}
+      {/* ========================================================= */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#090e1a] via-[#0d172a] to-[#090e1a] border border-cyan-500/40 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-bold font-mono border border-cyan-500/40 tracking-wider">
+              DUAL SLOT TRANSACTION SUITE
+            </span>
+            <span className="text-xs text-yellow-400 font-mono font-bold flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              2 TRANSAKSI SLOT DALAM 1 MENU
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-white font-mono uppercase tracking-wide mt-1">
+            Edit Transaksi Slot Game
+          </h1>
+          <p className="text-xs text-gray-300 font-mono">
+            Menu gabungan untuk mengedit <b>Format 1 (Mutasi Saldo Pemain / Deposit PGA)</b> dan <b>Format 2 (Detail Ronde Slot IDN / Debit &amp; Credit)</b>.
+          </p>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-xl bg-[#050811] border border-white/10 font-mono text-xs shadow-inner">
+          <button
+            type="button"
+            onClick={() => setActiveFormat('ALL')}
+            className={`px-3.5 py-2 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeFormat === 'ALL'
+                ? 'bg-cyan-500 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                : 'text-gray-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Tampilkan Keduanya</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFormat('MUTASI')}
+            className={`px-3.5 py-2 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeFormat === 'MUTASI'
+                ? 'bg-cyan-500 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                : 'text-gray-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Table className="w-3.5 h-3.5" />
+            <span>1. Mutasi Saldo Pemain</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFormat('IDN_ROUND')}
+            className={`px-3.5 py-2 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeFormat === 'IDN_ROUND'
+                ? 'bg-cyan-500 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                : 'text-gray-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Gamepad2 className="w-3.5 h-3.5" />
+            <span>2. Detail Ronde IDN (Debit &amp; Credit)</span>
+          </button>
+        </div>
+      </div>
+
       {/* ========================================================================= */}
-      {/* 1. EASY PANEL GENERATOR CONTROLS (MIRRORS HTML SCRIPT)                    */}
+      {/* FORMAT 1: MUTASI TRANSAKSI PEMAIN (PGA / TARIK DANA)                      */}
       {/* ========================================================================= */}
-      <div 
-        style={{
-          background: '#f7fbff',
-          border: '1px solid #cfd8e3',
-          borderRadius: '12px',
-          padding: '12px 16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-        }}
-        className="text-gray-900 font-sans"
-      >
+      {(activeFormat === 'ALL' || activeFormat === 'MUTASI') && (
+        <div className="space-y-4">
+          {activeFormat === 'ALL' && (
+            <div className="flex items-center gap-3 pt-2">
+              <div className="h-px bg-amber-500/30 flex-1" />
+              <span className="text-xs font-mono font-bold text-amber-400 px-3 py-1 rounded-full bg-[#0a101d] border border-amber-500/40 uppercase tracking-wider flex items-center gap-1.5">
+                <Table className="w-3.5 h-3.5" />
+                Format 1: Mutasi Saldo Pemain (Deposit PGA &amp; Tarik Dana)
+              </span>
+              <div className="h-px bg-amber-500/30 flex-1" />
+            </div>
+          )}
+
+          {/* 1. EASY PANEL GENERATOR CONTROLS (MIRRORS HTML SCRIPT) */}
+          <div 
+            style={{
+              background: '#f7fbff',
+              border: '1px solid #cfd8e3',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            }}
+            className="text-gray-900 font-sans"
+          >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#cfd8e3] pb-2.5 mb-3">
           <div style={{ fontWeight: 800, fontSize: '14px', color: '#163b63' }} className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-blue-600" />
@@ -958,5 +1042,27 @@ export const TransaksiSlotEditor: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+    )}
+
+    {/* ========================================================================= */}
+    {/* FORMAT 2: DETAIL RONDE TRANSAKSI SLOT (METRONIC IDN / DEBIT & CREDIT)     */}
+    {/* ========================================================================= */}
+    {(activeFormat === 'ALL' || activeFormat === 'IDN_ROUND') && (
+      <div className="space-y-4 pt-2">
+        {activeFormat === 'ALL' && (
+          <div className="flex items-center gap-3 pt-4 border-t border-cyan-500/20">
+            <div className="h-px bg-cyan-500/30 flex-1" />
+            <span className="text-xs font-mono font-bold text-cyan-400 px-3 py-1 rounded-full bg-[#0a101d] border border-cyan-500/40 uppercase tracking-wider flex items-center gap-1.5">
+              <Gamepad2 className="w-3.5 h-3.5" />
+              Format 2: Detail Ronde Game Slot (Debit Taruhan &amp; Credit Kemenangan)
+            </span>
+            <div className="h-px bg-cyan-500/30 flex-1" />
+          </div>
+        )}
+
+        <IdnSlotRoundEditor />
+      </div>
+    )}
+  </div>
+);
 };

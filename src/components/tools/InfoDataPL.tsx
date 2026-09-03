@@ -2,13 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Copy, 
   Check, 
+  RotateCcw,
   Table, 
   Info, 
   User, 
-  Trash2,
-  Layers,
-  FileCheck2,
-  Sparkles
+  Trash2, 
+  Layers, 
+  FileCheck2, 
+  Sparkles,
+  Link,
+  SlidersHorizontal
 } from 'lucide-react';
 import { UserProfile } from '../../types';
 
@@ -26,6 +29,7 @@ export interface ParsedNameFixItem {
   newName: string;
   keterangan: string;
   status: string;
+  ssValidasi?: string;
 }
 
 export const KET_MEMBER_OPTIONS = [
@@ -42,6 +46,11 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
   const [rawText, setRawText] = useState('');
   const [extractedText, setExtractedText] = useState('');
   const [parsedList, setParsedList] = useState<ParsedNameFixItem[]>([]);
+  const [lastRawBackup, setLastRawBackup] = useState('');
+  const [justCleared, setJustCleared] = useState(false);
+
+  // SS Validasi mode: with helper text or blank
+  const [useHelperSsText, setUseHelperSsText] = useState<boolean>(true);
 
   // Copy feedbacks
   const [copiedRaw, setCopiedRaw] = useState(false);
@@ -54,13 +63,21 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
   const idleTimerRef = useRef<any>(null);
   const countdownIntervalRef = useRef<any>(null);
 
-  const startIdleTimer = () => {
-    if (!autoClearEnabled) return;
+  const startIdleTimer = (currentText: string) => {
+    if (!autoClearEnabled || !currentText.trim()) {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      setCountdown(null);
+      return;
+    }
+
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
+    setLastRawBackup(currentText);
     setCountdown(5);
     let secondsLeft = 5;
+
     countdownIntervalRef.current = setInterval(() => {
       secondsLeft -= 1;
       if (secondsLeft <= 0) {
@@ -72,8 +89,11 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
     }, 1000);
 
     idleTimerRef.current = setTimeout(() => {
+      setLastRawBackup(currentText);
       setRawText('');
       setCountdown(null);
+      setJustCleared(true);
+      setTimeout(() => setJustCleared(false), 8000);
     }, 5000);
   };
 
@@ -88,9 +108,14 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
 
   // =========================================================================
   // PARSING ENGINE (Handles member name change logs)
+  // Format:
+  // 1 28-08-2026 12:58:53 jvsaaks3 change user info julamri12 bank : dana => DANA,bank : JULAMRI => JUL AMRI,bank : dana => DANA,acc : JULAMRI => JUL AMRI,rek : 085184408544 => 085184408544,color : #FFFFFF => white julamri12
+  // 2 28-08-2026 12:56:46 jvsaaautowd accept withdraw total withdraw 100,000 :403540892 julamri12
+  // 3 28-08-2026 11:24:34 jvsaaks3 change user info desi23 bank : dana => DANA,bank : Henikristiyanti => Heni kristiyanti,bank : dana => DANA,acc : Henikristiyanti => Heni kristiyanti,rek : 081393953962 => 081393953962,color : #FFFFFF => white desi23
   // =========================================================================
   useEffect(() => {
     if (!rawText.trim()) {
+      // Keep existing parsedList intact when rawText is auto-cleared
       return;
     }
 
@@ -172,6 +197,17 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
 
   // =========================================================================
   // REPORT COMPOSER
+  // Exactly matching:
+  // Update Spasi Nama Member
+  // Tanggal : 28-08-2026
+  // Jam : 12:58:53
+  //
+  // User ID : julamri12
+  // Nama Sebelumnya : JULAMRI
+  // Nama Setelahnya : JUL AMRI
+  // Keterangan : Perbaiki Spasi
+  // Status : Done
+  // SS Validasi Bank : (kosongkan Saja karena harus isi manual berupa link screenshot)
   // =========================================================================
   useEffect(() => {
     if (parsedList.length === 0) {
@@ -183,23 +219,36 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
     const reportDate = firstItem?.date || getTodayDateStr();
     const reportTime = firstItem?.time || new Date().toLocaleTimeString('id-ID', { hour12: false });
 
-    const memberBlocks = parsedList.map(item => 
-`User ID : ${item.userId}
+    const memberBlocks = parsedList.map(item => {
+      const defaultSsText = useHelperSsText 
+        ? '(kosongkan Saja karena harus isi manual berupa link screenshot)' 
+        : '';
+      const ssContent = item.ssValidasi?.trim() ? item.ssValidasi.trim() : defaultSsText;
+      const ssLine = ssContent ? `SS Validasi Bank : ${ssContent}` : `SS Validasi Bank : `;
+
+      return `User ID : ${item.userId}
 Nama Sebelumnya : ${item.oldName}
 Nama Setelahnya : ${item.newName}
-Keterangan : ${item.keterangan}
+Keterangan : ${item.keterangan || 'Perbaiki Spasi'}
 Status : ${item.status || 'Done'}
-SS Validasi Bank : `
-    );
+${ssLine}`;
+    });
 
     const fullReport = `Update Spasi Nama Member\nTanggal : ${reportDate}\nJam : ${reportTime}\n\n${memberBlocks.join('\n\n')}`;
     setExtractedText(fullReport);
-  }, [parsedList]);
+  }, [parsedList, useHelperSsText]);
 
   // Update Keterangan for a single individual row
   const handleUpdateItemKet = (id: string, newKet: string) => {
     setParsedList(prev => prev.map(item => 
       item.id === id ? { ...item, keterangan: newKet } : item
+    ));
+  };
+
+  // Update SS Validasi for a single individual row
+  const handleUpdateItemSs = (id: string, newSs: string) => {
+    setParsedList(prev => prev.map(item => 
+      item.id === id ? { ...item, ssValidasi: newSs } : item
     ));
   };
 
@@ -222,11 +271,14 @@ SS Validasi Bank : `
     setCopiedReport(true);
     
     // Auto-clear input format immediately upon copy if autoClearEnabled
-    if (autoClearEnabled) {
+    if (autoClearEnabled && rawText) {
+      setLastRawBackup(rawText);
       setRawText('');
       setCountdown(null);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      setJustCleared(true);
+      setTimeout(() => setJustCleared(false), 8000);
     }
 
     setTimeout(() => setCopiedReport(false), 2500);
@@ -234,9 +286,9 @@ SS Validasi Bank : `
 
   const handleCopyDetail = () => {
     const rows = parsedList.map(item => 
-      `${item.no}\t${item.date} ${item.time}\t${item.userId}\t${item.oldName}\t${item.newName}\t${item.keterangan}\t${item.status}`
+      `${item.no}\t${item.date} ${item.time}\t${item.userId}\t${item.oldName}\t${item.newName}\t${item.keterangan}\t${item.status}\t${item.ssValidasi || '-'}`
     ).join('\n');
-    const header = 'NO\tTANGGAL & JAM\tUSER ID\tNAMA SEBELUMNYA\tNAMA SETELAHNYA\tKETERANGAN\tSTATUS\n';
+    const header = 'NO\tTANGGAL & JAM\tUSER ID\tNAMA SEBELUMNYA\tNAMA SETELAHNYA\tKETERANGAN\tSTATUS\tSS VALIDASI\n';
     navigator.clipboard.writeText(header + rows);
     setCopiedDetail(true);
     setTimeout(() => setCopiedDetail(false), 2000);
@@ -247,8 +299,17 @@ SS Validasi Bank : `
     setExtractedText('');
     setParsedList([]);
     setCountdown(null);
+    setJustCleared(false);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+  };
+
+  const handleRestoreBackup = () => {
+    if (lastRawBackup) {
+      setRawText(lastRawBackup);
+      startIdleTimer(lastRawBackup);
+      setJustCleared(false);
+    }
   };
 
   const handlePasteFromClipboard = async () => {
@@ -256,7 +317,7 @@ SS Validasi Bank : `
       const text = await navigator.clipboard.readText();
       if (text) {
         setRawText(text);
-        startIdleTimer();
+        startIdleTimer(text);
       }
     } catch {
       // Ignore
@@ -280,45 +341,94 @@ SS Validasi Bank : `
             </span>
           </div>
           <h1 className="text-2xl font-black text-white font-sans uppercase tracking-wider">
-            INFO DATA MEMBER & GANTI DATA
+            INFO DATA MEMBER (UPDATE SPASI NAMA)
           </h1>
           <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
-            Ekstraksi otomatis log ganti data dan perbaikan spasi nama rekening member tanpa nama staff.
+            Ekstraksi otomatis log ganti data dan perbaikan spasi nama rekening member dengan format laporan resmi siap salin.
           </p>
         </div>
 
-        {/* Counter Badge */}
-        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#090e1a] border border-amber-500/30 shadow-inner">
-          <FileCheck2 className="w-4 h-4 text-amber-400" />
-          <span className="text-xs font-mono font-bold text-amber-300">
-            {parsedList.length} Akun Diproses
-          </span>
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Format SS Validasi Toggle */}
+          <button
+            onClick={() => setUseHelperSsText(!useHelperSsText)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer shadow-sm ${
+              useHelperSsText 
+                ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' 
+                : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
+            }`}
+            title="Pilih apakah menyertakan teks petunjuk '(kosongkan Saja karena harus isi manual...)' atau langsung kosong"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{useHelperSsText ? 'Petunjuk SS: AKTIF' : 'Petunjuk SS: KOSONG'}</span>
+          </button>
+
+          {/* Counter Badge */}
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-[#090e1a] border border-amber-500/30 shadow-inner">
+            <FileCheck2 className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-mono font-bold text-amber-300">
+              {parsedList.length} Akun Diproses
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Auto Clear Notification Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#09101d] border border-amber-500/20 text-xs shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-          <Info className="w-4 h-4 text-amber-400 shrink-0" />
-          <span className="text-gray-300 font-mono text-[11px] sm:text-xs">
-            {autoClearEnabled 
-              ? countdown !== null 
-                ? `⏱️ Format mentah otomatis terhapus dalam ${countdown} detik jika tidak ada perubahan.` 
-                : 'Auto-Clear Aktif: Format input otomatis dibersihkan saat laporan disalin (atau 5 detik setelah tempel).'
-              : 'Auto-Clear sedang dinonaktifkan (format input tidak akan terhapus otomatis).'}
-          </span>
+      {/* Auto Clear Notification Bar & Countdown */}
+      <div className="space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#09101d] border border-amber-500/20 text-xs shadow-md">
+          <div className="flex items-center gap-3">
+            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${countdown !== null ? 'bg-amber-400 animate-ping' : 'bg-amber-400'}`} />
+            <Info className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="text-gray-300 font-mono text-[11px] sm:text-xs">
+              {autoClearEnabled 
+                ? countdown !== null 
+                  ? `⏱️ Format mentah otomatis terhapus dalam ${countdown} detik jika tidak ada perubahan...` 
+                  : 'Auto-Clear Aktif: Format mentah otomatis dibersihkan setelah 5 detik tanpa perubahan (hasil laporan tetap tersimpan).'
+                : 'Auto-Clear sedang dinonaktifkan (format input tidak akan terhapus otomatis).'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {lastRawBackup && (
+              <button
+                type="button"
+                onClick={handleRestoreBackup}
+                className="px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                title="Kembalikan format mentah yang baru saja terhapus otomatis"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Kembalikan Input Mentah</span>
+              </button>
+            )}
+            <button
+              onClick={() => setAutoClearEnabled(!autoClearEnabled)}
+              className={`px-3.5 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border ${
+                autoClearEnabled 
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' 
+                  : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
+              }`}
+            >
+              {autoClearEnabled ? 'Auto-Clear 5s: AKTIF' : 'Auto-Clear 5s: NONAKTIF'}
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setAutoClearEnabled(!autoClearEnabled)}
-          className={`self-start sm:self-auto px-3.5 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border ${
-            autoClearEnabled 
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' 
-              : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
-          }`}
-        >
-          {autoClearEnabled ? 'Auto-Clear: AKTIF' : 'Auto-Clear: NONAKTIF'}
-        </button>
+
+        {/* Banner if just cleared */}
+        {justCleared && (
+          <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs font-mono text-emerald-300 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Format mentah telah otomatis dibersihkan (5 detik hening). Hasil laporan di kolom kanan tetap aman!</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleRestoreBackup}
+              className="text-xs underline font-bold hover:text-white cursor-pointer ml-3"
+            >
+              Undo / Tampilkan Lagi
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ========================================================= */}
@@ -361,11 +471,12 @@ SS Validasi Bank : `
             <textarea
               value={rawText}
               onChange={(e) => {
-                setRawText(e.target.value);
-                startIdleTimer();
+                const val = e.target.value;
+                setRawText(val);
+                startIdleTimer(val);
               }}
-              placeholder={`Tempelkan format log ganti data / perbaikan spasi nama member di sini...\n\nContoh format yang didukung:\n1 28-08-2026 12:58:53 jvsaaks3 change user info julamri12 bank : dana => DANA,bank : JULAMRI => JUL AMRI,bank : dana => DANA,acc : JULAMRI => JUL AMRI,rek : 085184408544 => 085184408544,color : #FFFFFF => white julamri12\n3 28-08-2026 11:24:34 jvsaaks3 change user info desi23 bank : dana => DANA,bank : Henikristiyanti => Heni kristiyanti,acc : Henikristiyanti => Heni kristiyanti ...`}
-              className="w-full h-72 p-4 rounded-xl bg-[#050811] border border-amber-900/40 text-xs text-gray-200 placeholder-gray-500 font-mono outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 transition-all resize-none shadow-inner leading-relaxed"
+              placeholder={`Tempelkan format log ganti data / perbaikan spasi nama member di sini...\n\nContoh format yang didukung:\n1 28-08-2026 12:58:53 jvsaaks3 change user info julamri12 bank : dana => DANA,bank : JULAMRI => JUL AMRI,bank : dana => DANA,acc : JULAMRI => JUL AMRI,rek : 085184408544 => 085184408544,color : #FFFFFF => white julamri12\n2 28-08-2026 12:56:46 jvsaaautowd accept withdraw total withdraw 100,000 :403540892 julamri12\n3 28-08-2026 11:24:34 jvsaaks3 change user info desi23 bank : dana => DANA,bank : Henikristiyanti => Heni kristiyanti,bank : dana => DANA,acc : Henikristiyanti => Heni kristiyanti,rek : 081393953962 => 081393953962,color : #FFFFFF => white desi23`}
+              className="w-full h-80 p-4 rounded-xl bg-[#050811] border border-amber-900/40 text-xs text-gray-200 placeholder-gray-500 font-mono outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 transition-all resize-none shadow-inner leading-relaxed"
             />
           </div>
 
@@ -413,7 +524,7 @@ SS Validasi Bank : `
               readOnly
               value={extractedText}
               placeholder={`Laporan Update Spasi Nama Member akan otomatis terformat rapi di sini...`}
-              className="w-full h-72 p-4 rounded-xl bg-[#050811] border border-emerald-900/40 text-xs text-emerald-200 placeholder-gray-500 font-mono outline-none focus:border-emerald-500 transition-all resize-none shadow-inner leading-relaxed select-all font-semibold"
+              className="w-full h-80 p-4 rounded-xl bg-[#050811] border border-emerald-900/40 text-xs text-emerald-200 placeholder-gray-500 font-mono outline-none focus:border-emerald-500 transition-all resize-none shadow-inner leading-relaxed select-all font-semibold"
             />
           </div>
 
@@ -450,7 +561,7 @@ SS Validasi Bank : `
       </div>
 
       {/* ========================================================= */}
-      {/* BOX 3: DETAIL DATA TABLE (EDIT KETERANGAN 1 PER 1)        */}
+      {/* BOX 3: DETAIL DATA TABLE (EDIT KETERANGAN & SS PER ROW)   */}
       {/* ========================================================= */}
       <div className="p-5 rounded-2xl bg-[#090e1a] border border-white/10 shadow-xl space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-3">
@@ -460,10 +571,10 @@ SS Validasi Bank : `
             </span>
             <div>
               <h3 className="text-sm font-black text-white uppercase tracking-wider font-sans">
-                Tabel Rincian & Ganti Keterangan Per User ID
+                Tabel Rincian & Validasi Per User ID
               </h3>
               <p className="text-[11px] text-gray-400 font-mono">
-                Ubah keterangan nama member secara terpisah jika terdapat kebutuhan khusus per akun:
+                Ubah keterangan nama member secara terpisah atau tambahkan link screenshot validasi bank:
               </p>
             </div>
           </div>
@@ -507,14 +618,15 @@ SS Validasi Bank : `
                 <th className="py-3 px-3.5">USER ID</th>
                 <th className="py-3 px-3.5">NAMA SEBELUMNYA</th>
                 <th className="py-3 px-3.5">NAMA SETELAHNYA</th>
-                <th className="py-3 px-3.5 min-w-[260px]">KETERANGAN (BISA DIUBAH 1 PER 1)</th>
+                <th className="py-3 px-3.5 min-w-[220px]">KETERANGAN</th>
+                <th className="py-3 px-3.5 min-w-[200px]">LINK SS VALIDASI BANK (OPSIONAL)</th>
                 <th className="py-3 px-3.5">STATUS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 bg-[#070c18]/50">
               {parsedList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500 font-mono">
+                  <td colSpan={8} className="py-8 text-center text-gray-500 font-mono">
                     Belum ada data perbaikan nama member. Silakan tempelkan log di Box 01 untuk mengekstrak data otomatis.
                   </td>
                 </tr>
@@ -548,6 +660,18 @@ SS Validasi Bank : `
                           <option key={opt} value={opt}>{opt}</option>
                         ))}
                       </select>
+                    </td>
+                    <td className="py-3 px-3.5">
+                      <div className="flex items-center gap-1.5">
+                        <Link className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <input
+                          type="text"
+                          value={item.ssValidasi || ''}
+                          onChange={(e) => handleUpdateItemSs(item.id, e.target.value)}
+                          placeholder="Link SS (Opsional)"
+                          className="w-full px-2 py-1 rounded bg-[#050811] text-xs font-mono text-cyan-200 placeholder-gray-600 border border-white/10 outline-none focus:border-cyan-400"
+                        />
+                      </div>
                     </td>
                     <td className="py-3 px-3.5">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/15 text-emerald-300 border-emerald-500/30">
