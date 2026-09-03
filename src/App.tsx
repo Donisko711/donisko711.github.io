@@ -50,10 +50,10 @@ export default function App() {
       }
     }
     return {
-      username: 'sinta_manis',
-      name: 'SINTA MANIS',
-      role: 'Secretary Don Isko',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      username: 'donisko',
+      name: 'DON ISKO',
+      role: 'MASTER / OWNER',
+      avatar: 'https://ik.imagekit.io/donisko711/donisko711.jpg',
       shift: 'PAGI'
     };
   });
@@ -163,13 +163,23 @@ export default function App() {
   const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
     setActiveShift(user.shift);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('don_isko_current_user', JSON.stringify(user));
+    }
     if (user.username.toLowerCase() === 'leo' || user.role === 'INTEL SENIOR' || user.role === 'CEO') {
       setActiveView('wd-auto-flop');
+    } else if (user.username.toLowerCase() === 'cs' || user.role === 'CS MANTAP') {
+      setActiveView('jobdesk-cs');
+    } else if (user.username.toLowerCase() === 'donisko') {
+      setActiveView('home');
     }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('don_isko_current_user');
+    }
     setIsLoginModalOpen(true);
   };
 

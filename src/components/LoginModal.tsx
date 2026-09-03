@@ -11,7 +11,7 @@ interface LoginModalProps {
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
   const [username, setUsername] = useState('donisko');
-  const [password, setPassword] = useState('8989');
+  const [password, setPassword] = useState('6969');
   const [shift, setShift] = useState<ShiftType>('PAGI');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -24,9 +24,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     const u = username.trim().toLowerCase();
     const p = password.trim();
 
-    // 1. Master Login: donisko / 8989
+    // 1. Master Login: donisko / 6969
     if (u === 'donisko') {
-      if (p === '8989') {
+      if (p === '6969') {
         onLogin({
           id: 'user-master-donisko',
           username: 'donisko',
@@ -38,7 +38,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         });
         return;
       } else {
-        setErrorMsg('Password salah untuk user Master donisko (Gunakan: 8989)');
+        setErrorMsg('Password salah untuk user Master donisko (Gunakan: 6969)');
         return;
       }
     }
@@ -166,7 +166,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             >
               <Crown className="w-4 h-4 text-yellow-400" />
               <span className="font-extrabold">MASTER</span>
-              <span className="text-[9px] text-zinc-400">donisko (Full)</span>
+              <span className="text-[9px] text-zinc-400">donisko / 6969</span>
             </button>
 
             <button
@@ -231,7 +231,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 autoComplete="new-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="8989 / LEO / CS"
+                placeholder="6969 / LEO / CS"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 text-sm text-white placeholder-slate-500 outline-none font-mono transition-all"
               />
             </div>
