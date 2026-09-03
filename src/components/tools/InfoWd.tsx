@@ -37,20 +37,19 @@ export interface ParsedTransactionItem {
 }
 
 export const KETERANGAN_OPTIONS = [
-  '(Kosongkan / Isi Sendiri)',
+  'WD Diatas 500.000',
+  'WD Diatas 1.000.000',
+  'GG FLOP | Saldo Belum Refund',
+  'GG Akun PL Limit',
   'GG No Rek Tidak Valid',
   'GG Nama Rek Beda',
   'GG Akun Belum Premium',
-  'GG Akun PL Limit',
-  'Bantu Cek WD BARU',
-  'WD Diatas 500.000',
-  'WD Diatas 1.000.000',
-  'STATUS PROSES | SALDO TERPOTONG',
-  'Salah Nominal Depo',
   'Spam Form Kosong',
+  'Salah Nominal Deposit',
   'Deposit Two In One',
-  'GG FLOP | Saldo Belum Refund',
-  'GG FLOP | Saldo Sudah Refund'
+  'Bantu Cek WD BARU',
+  'GG FLOP | Saldo Sudah Refund',
+  '(Kosongkan / Isi Sendiri)'
 ];
 
 export const InfoWd: React.FC<InfoWdProps> = () => {
@@ -119,6 +118,78 @@ export const InfoWd: React.FC<InfoWdProps> = () => {
   // Helper formatting numbers with Indonesian dot separator (e.g. 500.000, 1.500.000)
   const formatRupiahDots = (num: number): string => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  const MONTHS_INDONESIA = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
+  const formatIndonesianDate = (rawDate?: string | Date, uppercaseMonth = false): string => {
+    if (!rawDate) {
+      const now = new Date();
+      const d = String(now.getDate()).padStart(2, '0');
+      const mName = MONTHS_INDONESIA[now.getMonth()];
+      const m = uppercaseMonth ? mName.toUpperCase() : mName;
+      return `${d} ${m} ${now.getFullYear()}`;
+    }
+
+    if (rawDate instanceof Date) {
+      const d = String(rawDate.getDate()).padStart(2, '0');
+      const mName = MONTHS_INDONESIA[rawDate.getMonth()];
+      const m = uppercaseMonth ? mName.toUpperCase() : mName;
+      return `${d} ${m} ${rawDate.getFullYear()}`;
+    }
+
+    const str = String(rawDate).trim();
+
+    const wordMonthMatch = str.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+    if (wordMonthMatch) {
+      const d = wordMonthMatch[1].padStart(2, '0');
+      const foundMonth = wordMonthMatch[2].toLowerCase();
+      const monthIndex = MONTHS_INDONESIA.findIndex(m => m.toLowerCase() === foundMonth);
+      const mName = monthIndex >= 0 ? MONTHS_INDONESIA[monthIndex] : (wordMonthMatch[2].charAt(0).toUpperCase() + wordMonthMatch[2].slice(1).toLowerCase());
+      const m = uppercaseMonth ? mName.toUpperCase() : mName;
+      const y = wordMonthMatch[3];
+      return `${d} ${m} ${y}`;
+    }
+
+    const matchDMY = str.match(/(\d{1,2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{4})/);
+    if (matchDMY) {
+      const d = matchDMY[1].padStart(2, '0');
+      const monthIndex = parseInt(matchDMY[2], 10) - 1;
+      const y = matchDMY[3];
+      const mName = (monthIndex >= 0 && monthIndex < 12) ? MONTHS_INDONESIA[monthIndex] : matchDMY[2];
+      const m = uppercaseMonth ? mName.toUpperCase() : mName;
+      return `${d} ${m} ${y}`;
+    }
+
+    const matchYMD = str.match(/(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})/);
+    if (matchYMD) {
+      const y = matchYMD[1];
+      const monthIndex = parseInt(matchYMD[2], 10) - 1;
+      const d = matchYMD[3].padStart(2, '0');
+      const mName = (monthIndex >= 0 && monthIndex < 12) ? MONTHS_INDONESIA[monthIndex] : matchYMD[2];
+      const m = uppercaseMonth ? mName.toUpperCase() : mName;
+      return `${d} ${m} ${y}`;
+    }
+
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const mName = MONTHS_INDONESIA[now.getMonth()];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${now.getFullYear()}`;
+  };
+
+  const formatIndonesianDateTime = (rawDateTime?: string): string => {
+    if (!rawDateTime) return formatIndonesianDate();
+    const str = rawDateTime.trim();
+    const dateFormatted = formatIndonesianDate(str, false);
+    const timeMatch = str.match(/(\d{2}[:.]\d{2}(?:[:.]\d{2})?)/);
+    if (timeMatch) {
+      return `${dateFormatted} ${timeMatch[1].replace(/\./g, ':')}`;
+    }
+    return dateFormatted;
   };
 
   // Get current date/time string fallback
@@ -540,18 +611,25 @@ NB : Tolong Bantu Check Yaa Ko/ Ci`
 
     // General Reports
     const blocks: string[] = [];
+    let hasWdHighNominal = false;
 
     displayList.forEach((item) => {
       // Header greeting: strictly 'Info Ko/ Ci' unless explicitly specified by user via globalKodeAlias
       const alias = (globalKodeAlias || '').trim().toUpperCase();
       const headerGreeting = alias ? `Info Ko/ Ci, ${alias}` : `Info Ko/ Ci`;
       const isFlop = item.rawType === 'FLOP' || (item.keterangan && item.keterangan.includes('FLOP'));
+      const formattedDate = formatIndonesianDate(item.dateTime, false);
+
+      // Check if item qualifies for WD Bantu Check NB
+      if (item.nominal >= 500000 || item.keterangan === 'WD Diatas 500.000' || item.keterangan === 'WD Diatas 1.000.000') {
+        hasWdHighNominal = true;
+      }
 
       // 1. FLOP Skenario
       if (item.keterangan === 'GG FLOP | Saldo Sudah Refund') {
         const block = 
 `${headerGreeting}
-Tanggal & Jam : ${item.dateTime}
+Tanggal : ${formattedDate}
 User ID : ${item.userId}
 Nominal : ${item.nominalFormatted}
 Bank : Bank ${item.bank.replace(/^Bank\s+/i, '')}
@@ -562,7 +640,7 @@ Status : ${item.status || 'Done Proses Manual BK / Docs'}`;
       else if (isFlop) {
         const block = 
 `${headerGreeting}
-Tanggal & Jam : ${item.dateTime}
+Tanggal : ${formattedDate}
 User ID : ${item.userId}
 Nominal : ${item.nominalFormatted}
 Bank : Bank ${item.bank.replace(/^Bank\s+/i, '')}
@@ -571,14 +649,14 @@ Status : ${item.status || 'Tunggu Saldo Flop Refund Baru Proses Manual'}`;
         blocks.push(block);
       } 
       // 2. SALAH NOMINAL DEPO
-      else if (item.keterangan === 'Salah Nominal Depo') {
+      else if (item.keterangan === 'Salah Nominal Depo' || item.keterangan === 'Salah Nominal Deposit') {
         const block = 
 `${headerGreeting}
-Tanggal & Jam : ${item.dateTime}
+Tanggal : ${formattedDate}
 User ID : ${item.userId}
 Bank : ${item.bank}
 Nominal : ${item.nominalFormatted}
-Ket : Salah Nominal Depo
+Ket : ${item.keterangan || 'Salah Nominal Depo'}
 NB : Tolong Bantu Manualkan Ko/ Ci`;
         blocks.push(block);
       } 
@@ -586,7 +664,7 @@ NB : Tolong Bantu Manualkan Ko/ Ci`;
       else if (item.keterangan === 'Spam Form Kosong') {
         const block = 
 `${headerGreeting}
-Tanggal & Jam : ${item.dateTime}
+Tanggal & Jam : ${formatIndonesianDateTime(item.dateTime)}
 User ID : ${item.userId}
 Bank : ${item.bank}
 Nominal : ${item.nominalFormatted}
@@ -594,7 +672,7 @@ Ket : Spam Form Kosong
 NB : Tolong Bantu Locked Yaa Ko/ Ci`;
         blocks.push(block);
       } 
-      // 4. WD & TRANSAKSI LAINNYA (Format Standar Kasir: Info Ko/ Ci, Tanggal & Jam, User ID, Bank, Nominal, Ket)
+      // 4. WD & TRANSAKSI LAINNYA (Format Standar Kasir: Info Ko/ Ci, Tanggal, User ID, Bank, Nominal, Ket)
       else {
         const rawKet = (item.keterangan || '').trim();
         const ketVal = rawKet && rawKet !== '(Kosongkan / Isi Sendiri)' ? rawKet : '';
@@ -602,7 +680,7 @@ NB : Tolong Bantu Locked Yaa Ko/ Ci`;
 
         const block = 
 `${headerGreeting}
-Tanggal & Jam : ${item.dateTime}
+Tanggal : ${formattedDate}
 User ID : ${item.userId}
 Bank : ${item.bank}
 Nominal : ${item.nominalFormatted}
@@ -613,9 +691,17 @@ ${ketLine}`;
 
     let fullOutput = blocks.join('\n\n');
 
-    // Tambahkan NB di bagian akhir laporan jika toggle includeNb aktif
-    if (includeNb) {
-      fullOutput += `\n\nNB : Tolong Bantu Check Yaa Ko/ Ci`;
+    // Tambahkan NB jika ada nominal >= 500k/1jt, ket WD Diatas 500k/1jt, atau toggle includeNb aktif
+    if (includeNb || hasWdHighNominal) {
+      // Pastikan tidak menduplikasi jika hanya berisi item yang sudah punya NB sendiri
+      const onlyHasDedicatedNb = displayList.every(it => 
+        it.keterangan === 'Salah Nominal Depo' || 
+        it.keterangan === 'Salah Nominal Deposit' || 
+        it.keterangan === 'Spam Form Kosong'
+      );
+      if (!onlyHasDedicatedNb) {
+        fullOutput += `\n\nNB : Tolong Bantu Check Yaa Ko/ Ci`;
+      }
     }
 
     setExtractedText(fullOutput);
@@ -713,7 +799,7 @@ ${ketLine}`;
 
   const handleCopyDetail = () => {
     const rows = parsedList.map(item => 
-      `${item.no}\t${item.dateTime}\t${item.userId}\t${item.bank}\t${item.nominalFormatted}\t${item.keterangan}\t${item.kodeAlias || '-'}\t${item.status || 'Done'}`
+      `${item.no}\t${formatIndonesianDateTime(item.dateTime)}\t${item.userId}\t${item.bank}\t${item.nominalFormatted}\t${item.keterangan}\t${item.kodeAlias || '-'}\t${item.status || 'Done'}`
     ).join('\n');
     const header = 'NO\tTANGGAL & JAM\tUSER ID\tBANK\tNOMINAL\tKETERANGAN\tKODE ALIAS\tSTATUS\n';
     navigator.clipboard.writeText(header + rows);
@@ -1125,7 +1211,7 @@ ${ketLine}`;
                 parsedList.map((item) => (
                   <tr key={item.id} className="hover:bg-white/5 transition-colors">
                     <td className="py-3 px-3.5 text-gray-400">{item.no}</td>
-                    <td className="py-3 px-3.5 text-gray-300 whitespace-nowrap">{item.dateTime}</td>
+                    <td className="py-3 px-3.5 text-gray-300 whitespace-nowrap">{formatIndonesianDateTime(item.dateTime)}</td>
                     <td className="py-3 px-3.5">
                       <span className="font-bold text-amber-300 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
                         {item.userId}

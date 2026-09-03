@@ -10,8 +10,7 @@ import {
   Layers, 
   FileCheck2, 
   Sparkles,
-  Link,
-  SlidersHorizontal
+  Link
 } from 'lucide-react';
 import { UserProfile } from '../../types';
 
@@ -41,6 +40,73 @@ export const KET_MEMBER_OPTIONS = [
   'Koreksi Nama E-Wallet'
 ];
 
+export const MONTHS_INDONESIA = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
+/**
+ * Format date string into Indonesian format, e.g. "03 Agustus 2026"
+ */
+export const formatIndonesianDate = (rawDate?: string | Date, uppercaseMonth = false): string => {
+  if (!rawDate) {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const mName = MONTHS_INDONESIA[now.getMonth()];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${now.getFullYear()}`;
+  }
+
+  if (rawDate instanceof Date) {
+    const d = String(rawDate.getDate()).padStart(2, '0');
+    const mName = MONTHS_INDONESIA[rawDate.getMonth()];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${rawDate.getFullYear()}`;
+  }
+
+  const str = String(rawDate).trim();
+
+  // If already formatted like "03 Agustus 2026" or "03 SEPTEMBER 2026"
+  const wordMonthMatch = str.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+  if (wordMonthMatch) {
+    const d = wordMonthMatch[1].padStart(2, '0');
+    const foundMonth = wordMonthMatch[2].toLowerCase();
+    const monthIndex = MONTHS_INDONESIA.findIndex(m => m.toLowerCase() === foundMonth);
+    const mName = monthIndex >= 0 ? MONTHS_INDONESIA[monthIndex] : (wordMonthMatch[2].charAt(0).toUpperCase() + wordMonthMatch[2].slice(1).toLowerCase());
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    const y = wordMonthMatch[3];
+    return `${d} ${m} ${y}`;
+  }
+
+  // Try matching DD-MM-YYYY or DD/MM/YYYY or DD - MM - YYYY with optional spaces anywhere
+  const matchDMY = str.match(/(\d{1,2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{4})/);
+  if (matchDMY) {
+    const d = matchDMY[1].padStart(2, '0');
+    const monthIndex = parseInt(matchDMY[2], 10) - 1;
+    const y = matchDMY[3];
+    const mName = (monthIndex >= 0 && monthIndex < 12) ? MONTHS_INDONESIA[monthIndex] : matchDMY[2];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${y}`;
+  }
+
+  // Try matching YYYY-MM-DD or YYYY/MM/DD with optional spaces anywhere
+  const matchYMD = str.match(/(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})/);
+  if (matchYMD) {
+    const y = matchYMD[1];
+    const monthIndex = parseInt(matchYMD[2], 10) - 1;
+    const d = matchYMD[3].padStart(2, '0');
+    const mName = (monthIndex >= 0 && monthIndex < 12) ? MONTHS_INDONESIA[monthIndex] : matchYMD[2];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${y}`;
+  }
+
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, '0');
+  const mName = MONTHS_INDONESIA[now.getMonth()];
+  const m = uppercaseMonth ? mName.toUpperCase() : mName;
+  return `${d} ${m} ${now.getFullYear()}`;
+};
+
 export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
   // Raw input and parsed state (empty by default)
   const [rawText, setRawText] = useState('');
@@ -48,9 +114,6 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
   const [parsedList, setParsedList] = useState<ParsedNameFixItem[]>([]);
   const [lastRawBackup, setLastRawBackup] = useState('');
   const [justCleared, setJustCleared] = useState(false);
-
-  // SS Validasi mode: with helper text or blank
-  const [useHelperSsText, setUseHelperSsText] = useState<boolean>(true);
 
   // Copy feedbacks
   const [copiedRaw, setCopiedRaw] = useState(false);
@@ -97,13 +160,9 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
     }, 5000);
   };
 
-  // Get current date string formatted DD-MM-YYYY
+  // Get current date string formatted as Indonesian Date (e.g. 03 Agustus 2026)
   const getTodayDateStr = () => {
-    const now = new Date();
-    const d = String(now.getDate()).padStart(2, '0');
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const y = now.getFullYear();
-    return `${d}-${m}-${y}`;
+    return formatIndonesianDate();
   };
 
   // =========================================================================
@@ -134,17 +193,14 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
 
       let date = todayDate;
       let time = defaultTime;
-      const dtMatch = line.match(/(\d{2}[-/]\d{2}[-/]\d{4})\s+(\d{2}:\d{2}:\d{2})/)
-        || line.match(/(\d{4}[-/]\d{2}[-/]\d{2})\s+(\d{2}:\d{2}:\d{2})/);
+      const dtMatch = line.match(/(\d{1,2}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{4})\s+(\d{2}:\d{2}:\d{2})/)
+        || line.match(/(\d{4}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{1,2})\s+(\d{2}:\d{2}:\d{2})/)
+        || line.match(/(\d{1,2}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{4})/)
+        || line.match(/(\d{4}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{1,2})/);
       if (dtMatch) {
-        const rawDate = dtMatch[1];
-        if (/^\d{4}/.test(rawDate)) {
-          const parts = rawDate.split(/[-/]/);
-          date = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        } else {
-          date = rawDate.replace(/\//g, '-');
-        }
-        time = dtMatch[2];
+        date = dtMatch[1].replace(/\s+/g, '').replace(/\//g, '-');
+        const tmMatch = line.match(/(\d{2}:\d{2}:\d{2})/);
+        if (tmMatch) time = tmMatch[1];
       }
 
       let userId = '';
@@ -192,7 +248,18 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
       });
     });
 
-    setParsedList(items);
+    // Deduplicate by userId
+    const seenUsers = new Set<string>();
+    const uniqueItems: ParsedNameFixItem[] = [];
+    items.forEach(it => {
+      const key = it.userId.toLowerCase();
+      if (!seenUsers.has(key)) {
+        seenUsers.add(key);
+        uniqueItems.push(it);
+      }
+    });
+
+    setParsedList(uniqueItems);
   }, [rawText]);
 
   // =========================================================================
@@ -216,14 +283,11 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
     }
 
     const firstItem = parsedList[0];
-    const reportDate = firstItem?.date || getTodayDateStr();
+    const reportDate = formatIndonesianDate(firstItem?.date, false);
     const reportTime = firstItem?.time || new Date().toLocaleTimeString('id-ID', { hour12: false });
 
     const memberBlocks = parsedList.map(item => {
-      const defaultSsText = useHelperSsText 
-        ? '(kosongkan Saja karena harus isi manual berupa link screenshot)' 
-        : '';
-      const ssContent = item.ssValidasi?.trim() ? item.ssValidasi.trim() : defaultSsText;
+      const ssContent = item.ssValidasi?.trim() || '';
       const ssLine = ssContent ? `SS Validasi Bank : ${ssContent}` : `SS Validasi Bank : `;
 
       return `User ID : ${item.userId}
@@ -236,7 +300,7 @@ ${ssLine}`;
 
     const fullReport = `Update Spasi Nama Member\nTanggal : ${reportDate}\nJam : ${reportTime}\n\n${memberBlocks.join('\n\n')}`;
     setExtractedText(fullReport);
-  }, [parsedList, useHelperSsText]);
+  }, [parsedList]);
 
   // Update Keterangan for a single individual row
   const handleUpdateItemKet = (id: string, newKet: string) => {
@@ -286,7 +350,7 @@ ${ssLine}`;
 
   const handleCopyDetail = () => {
     const rows = parsedList.map(item => 
-      `${item.no}\t${item.date} ${item.time}\t${item.userId}\t${item.oldName}\t${item.newName}\t${item.keterangan}\t${item.status}\t${item.ssValidasi || '-'}`
+      `${item.no}\t${formatIndonesianDate(item.date, false)} ${item.time}\t${item.userId}\t${item.oldName}\t${item.newName}\t${item.keterangan}\t${item.status}\t${item.ssValidasi || '-'}`
     ).join('\n');
     const header = 'NO\tTANGGAL & JAM\tUSER ID\tNAMA SEBELUMNYA\tNAMA SETELAHNYA\tKETERANGAN\tSTATUS\tSS VALIDASI\n';
     navigator.clipboard.writeText(header + rows);
@@ -350,20 +414,6 @@ ${ssLine}`;
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Format SS Validasi Toggle */}
-          <button
-            onClick={() => setUseHelperSsText(!useHelperSsText)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer shadow-sm ${
-              useHelperSsText 
-                ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' 
-                : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
-            }`}
-            title="Pilih apakah menyertakan teks petunjuk '(kosongkan Saja karena harus isi manual...)' atau langsung kosong"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{useHelperSsText ? 'Petunjuk SS: AKTIF' : 'Petunjuk SS: KOSONG'}</span>
-          </button>
-
           {/* Counter Badge */}
           <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-[#090e1a] border border-amber-500/30 shadow-inner">
             <FileCheck2 className="w-4 h-4 text-amber-400" />
@@ -634,7 +684,7 @@ ${ssLine}`;
                 parsedList.map((item) => (
                   <tr key={item.id} className="hover:bg-white/5 transition-colors">
                     <td className="py-3 px-3.5 text-gray-400">{item.no}</td>
-                    <td className="py-3 px-3.5 text-gray-300 whitespace-nowrap">{item.date} {item.time}</td>
+                    <td className="py-3 px-3.5 text-gray-300 whitespace-nowrap">{formatIndonesianDate(item.date, false)} {item.time}</td>
                     <td className="py-3 px-3.5">
                       <span className="font-bold text-yellow-300 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20">
                         {item.userId}

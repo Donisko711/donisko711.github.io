@@ -50,11 +50,78 @@ interface ParsedLockedItem {
   userId: string;
 }
 
+export const MONTHS_INDONESIA = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
+/**
+ * Format date string into Indonesian format, e.g. "03 Agustus 2026"
+ */
+export const formatIndonesianDate = (rawDate?: string | Date, uppercaseMonth = false): string => {
+  if (!rawDate) {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const mName = MONTHS_INDONESIA[now.getMonth()];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${now.getFullYear()}`;
+  }
+
+  if (rawDate instanceof Date) {
+    const d = String(rawDate.getDate()).padStart(2, '0');
+    const mName = MONTHS_INDONESIA[rawDate.getMonth()];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${rawDate.getFullYear()}`;
+  }
+
+  const str = String(rawDate).trim();
+
+  // If already formatted like "03 Agustus 2026" or "03 SEPTEMBER 2026"
+  const wordMonthMatch = str.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+  if (wordMonthMatch) {
+    const d = wordMonthMatch[1].padStart(2, '0');
+    const foundMonth = wordMonthMatch[2].toLowerCase();
+    const monthIndex = MONTHS_INDONESIA.findIndex(m => m.toLowerCase() === foundMonth);
+    const mName = monthIndex >= 0 ? MONTHS_INDONESIA[monthIndex] : (wordMonthMatch[2].charAt(0).toUpperCase() + wordMonthMatch[2].slice(1).toLowerCase());
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    const y = wordMonthMatch[3];
+    return `${d} ${m} ${y}`;
+  }
+
+  // Try matching DD-MM-YYYY or DD/MM/YYYY or DD - MM - YYYY with optional spaces anywhere
+  const matchDMY = str.match(/(\d{1,2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{4})/);
+  if (matchDMY) {
+    const d = matchDMY[1].padStart(2, '0');
+    const monthIndex = parseInt(matchDMY[2], 10) - 1;
+    const y = matchDMY[3];
+    const mName = (monthIndex >= 0 && monthIndex < 12) ? MONTHS_INDONESIA[monthIndex] : matchDMY[2];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${y}`;
+  }
+
+  // Try matching YYYY-MM-DD or YYYY/MM/DD with optional spaces anywhere
+  const matchYMD = str.match(/(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})/);
+  if (matchYMD) {
+    const y = matchYMD[1];
+    const monthIndex = parseInt(matchYMD[2], 10) - 1;
+    const d = matchYMD[3].padStart(2, '0');
+    const mName = (monthIndex >= 0 && monthIndex < 12) ? MONTHS_INDONESIA[monthIndex] : matchYMD[2];
+    const m = uppercaseMonth ? mName.toUpperCase() : mName;
+    return `${d} ${m} ${y}`;
+  }
+
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, '0');
+  const mName = MONTHS_INDONESIA[now.getMonth()];
+  const m = uppercaseMonth ? mName.toUpperCase() : mName;
+  return `${d} ${m} ${now.getFullYear()}`;
+};
+
 export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA', currentUser }) => {
   const [activeTab, setActiveTab] = useState<'GANTI_DATA' | 'LOCKED'>(initialTab);
 
-  // Common Staff Alias manual field
-  const [staffAlias, setStaffAlias] = useState(currentUser?.username || 'kode alias');
+  // Common Staff Alias manual field - default empty as requested (Staff : )
+  const [staffAlias, setStaffAlias] = useState('');
 
   // GANTI DATA STATES - Clean initial state (empty to prevent double data)
   const [gdRawText, setGdRawText] = useState('');
@@ -111,25 +178,44 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
 
   // Helper clean format reason
   const cleanReason = (rawReason: string) => {
-    let r = rawReason.trim();
+    const r = rawReason.trim();
     if (!r) return 'Kendala Akun';
-    if (/form\s*kosong/i.test(r)) return 'Spam Form Kosong';
-    if (/nomor\s*rekening\s*tidak\s*valid|no\s*rek\s*tidak\s*valid/i.test(r)) return 'No Rekening Tidak Valid';
-    if (/rek\s*tidak\s*valid/i.test(r)) return 'Rek Tidak Valid';
-    if (/invest\s*2d\s*depan/i.test(r)) return 'Invest 2D Depan';
-    if (/ingin\s*menggunakan\s*user\s*id/i.test(r)) {
-      return toTitleCase(r);
-    }
-    return toTitleCase(r);
-  };
 
-  // Get current date string formatted DD-MM-YYYY
-  const getTodayDateStr = () => {
-    const now = new Date();
-    const d = String(now.getDate()).padStart(2, '0');
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const y = now.getFullYear();
-    return `${d}-${m}-${y}`;
+    // Priority regex mapping
+    if (/^rek\s*tidak\s*valid$/i.test(r)) {
+      return 'Rek Tidak Valid';
+    }
+    if (/nomor\s*rekening\s*tidak\s*valid|no\s*rekening\s*tidak\s*valid|no\s*rek\s*tidak\s*valid/i.test(r)) {
+      return 'No Rekening Tidak Valid';
+    }
+    if (/nama\s*rekening\s*beda|nama\s*rek\s*beda|nama\s*beda/i.test(r)) {
+      return 'Nama Rek Beda';
+    }
+    if (/akun\s*belum\s*premium|belum\s*premium/i.test(r)) {
+      return 'Akun Belum Premium';
+    }
+    if (/ewallet\s*pl\s*limit|e-wallet\s*pl\s*limit/i.test(r)) {
+      return 'Ewallet Pl Limit';
+    }
+    if (/akun\s*pl\s*limit/i.test(r)) {
+      return 'Akun PL Limit';
+    }
+    if (/form\s*kosong|spam\s*form\s*kosong/i.test(r)) {
+      return 'Spam Form Kosong';
+    }
+    if (/invest\s*2d\s*depan/i.test(r)) {
+      return 'Invest 2D Depan';
+    }
+
+    // Default to clean title case with acronym preservation
+    let formatted = toTitleCase(r);
+    formatted = formatted
+      .replace(/\bPl\b/g, 'PL')
+      .replace(/\bId\b/g, 'ID')
+      .replace(/\bWd\b/g, 'WD')
+      .replace(/\bDp\b/g, 'DP')
+      .replace(/\bNomor\b/g, 'No');
+    return formatted;
   };
 
   // ==========================================
@@ -143,7 +229,7 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
 
     const lines = gdRawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const parsedItems: ParsedGantiDataItem[] = [];
-    const todayDate = getTodayDateStr();
+    let detectedRawDate = '';
 
     lines.forEach((line, index) => {
       // Find user ID
@@ -156,17 +242,22 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
         userId = tokens[tokens.length - 1] || `user_${index + 1}`;
       }
 
-      // Date and Time (Always use today's date automatic)
-      let date = todayDate;
-      let time = new Date().toLocaleTimeString('id-ID');
-      const dtMatch = line.match(/(\d{2}[-/]\d{2}[-/]\d{4})\s+(\d{2}:\d{2}:\d{2})/);
+      // Date and Time
+      let date = '';
+      let time = new Date().toLocaleTimeString('id-ID', { hour12: false });
+      const dtMatch = line.match(/(\d{1,2}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{4})\s+(\d{2}:\d{2}:\d{2})/)
+        || line.match(/(\d{1,2}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{4})/)
+        || line.match(/(\d{4}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{1,2})\s+(\d{2}:\d{2}:\d{2})/)
+        || line.match(/(\d{4}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{1,2})/);
       if (dtMatch) {
-        date = dtMatch[1].replace(/\//g, '-');
-        time = dtMatch[2];
+        date = dtMatch[1].replace(/\s+/g, '').replace(/\//g, '-');
+        if (!detectedRawDate) detectedRawDate = date;
+        const tmMatch = line.match(/(\d{2}:\d{2}:\d{2})/);
+        if (tmMatch) time = tmMatch[1];
       }
 
       // Staff code
-      let staff = staffAlias || 'kode alias';
+      let staff = staffAlias ? staffAlias.trim() : '';
       const staffMatch = line.match(/jvsaacs\d+|jvsaaks\d+|staff\w+/i);
       if (staffMatch) {
         staff = staffMatch[0];
@@ -202,9 +293,9 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
       const item: ParsedGantiDataItem = {
         id: `gd-${index}-${Date.now()}`,
         no: index + 1,
-        date: todayDate,
+        date: date || detectedRawDate || new Date().toISOString().slice(0, 10),
         time,
-        staff: staffAlias || staff,
+        staff: staffAlias ? staffAlias.trim() : staff,
         userId,
         oldBank,
         newBank,
@@ -218,7 +309,18 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
       parsedItems.push(item);
     });
 
-    setGdParsedList(parsedItems);
+    // Deduplicate Ganti Data by userId
+    const seenUsers = new Set<string>();
+    const uniqueItems: ParsedGantiDataItem[] = [];
+    parsedItems.forEach(item => {
+      const key = item.userId.toLowerCase();
+      if (!seenUsers.has(key)) {
+        seenUsers.add(key);
+        uniqueItems.push(item);
+      }
+    });
+
+    setGdParsedList(uniqueItems);
   }, [gdRawText]);
 
   // Re-generate Ganti Data text whenever parsed items or staff alias changes
@@ -228,10 +330,10 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
       return;
     }
 
-    const todayDate = getTodayDateStr();
     const blocks = gdParsedList.map((item) => {
-      return `Staff : ${staffAlias || 'kode alias'}
-Tanggal : ${item.date || todayDate}
+      const formattedDate = formatIndonesianDate(item.date, false);
+      return `Staff : ${staffAlias ? staffAlias.trim() : ''}
+Tanggal : ${formattedDate}
 Info Ko / Ci
 Ket : Update Rekening PL, Terlampir Dibawah :
 
@@ -255,45 +357,71 @@ NB : Pergantian Dilakukan Pada Jenis Bank ${item.oldBank} To ${item.newBank}`;
 
     const lines = lockRawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const parsedItems: ParsedLockedItem[] = [];
-    const todayDate = getTodayDateStr();
+    let detectedRawDate = '';
 
     lines.forEach((line, index) => {
-      const isLocked = /locked/i.test(line);
-      const isUnlocked = /unlocked/i.test(line);
-
-      let date = todayDate;
-      let time = new Date().toLocaleTimeString('id-ID');
-      const dtMatch = line.match(/(\d{2}[-/]\d{2}[-/]\d{4})\s+(\d{2}:\d{2}:\d{2})/);
+      // Date and Time
+      let date = '';
+      let time = new Date().toLocaleTimeString('id-ID', { hour12: false });
+      const dtMatch = line.match(/(\d{1,2}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{4})\s+(\d{2}:\d{2}:\d{2})/)
+        || line.match(/(\d{1,2}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{4})/)
+        || line.match(/(\d{4}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{1,2})\s+(\d{2}:\d{2}:\d{2})/)
+        || line.match(/(\d{4}\s*[-/]\s*\d{1,2}\s*[-/]\s*\d{1,2})/);
       if (dtMatch) {
-        date = dtMatch[1].replace(/\//g, '-');
-        time = dtMatch[2];
+        date = dtMatch[1].replace(/\s+/g, '').replace(/\//g, '-');
+        if (!detectedRawDate) detectedRawDate = date;
+        const tmMatch = line.match(/(\d{2}:\d{2}:\d{2})/);
+        if (tmMatch) time = tmMatch[1];
       }
 
-      let staff = staffAlias || 'kode alias';
-      const staffMatch = line.match(/jvsaacs\d+|jvsaaks\d+|staff\w+/i);
-      if (staffMatch) {
-        staff = staffMatch[0];
-      }
-
-      const tokens = line.split(/\s+|\t/);
-      const userId = tokens[tokens.length - 1] || `member${index + 1}`;
+      // Check action: Locked or Unlocked
+      const isLocked = /\blocked\b/i.test(line);
+      const isUnlocked = /\bunlocked\b/i.test(line);
+      const action: 'Locked' | 'Unlocked' = isLocked ? 'Locked' : 'Unlocked';
 
       let kendala = 'Kendala Akun';
-      const reasonMatch = line.match(/(?:locked|unlocked)\s*\(([^)]*)\)/i);
-      if (reasonMatch && reasonMatch[1].trim()) {
-        kendala = cleanReason(reasonMatch[1].trim());
-      } else if (isUnlocked) {
-        kendala = 'Buka Kunci Akun';
+      let userId = '';
+
+      // Pattern: Action (reason) username
+      // e.g.: Locked (nomor rekening tidak valid ) rubicon
+      // or: Unlocked () rubicon
+      const detailedMatch = line.match(/(?:locked|unlocked)\s*\(([^)]*)\)\s+([^\s\t\r\n]+)$/i);
+      if (detailedMatch) {
+        const rawReason = detailedMatch[1].trim();
+        userId = detailedMatch[2].trim();
+        if (rawReason) {
+          kendala = cleanReason(rawReason);
+        } else if (isUnlocked) {
+          kendala = 'Buka Kunci Akun';
+        } else {
+          kendala = 'Kendala Akun';
+        }
+      } else {
+        const tokens = line.split(/\s+|\t/);
+        userId = tokens[tokens.length - 1] || `member${index + 1}`;
+        const reasonMatch = line.match(/(?:locked|unlocked)\s*\(([^)]*)\)/i);
+        if (reasonMatch && reasonMatch[1].trim()) {
+          kendala = cleanReason(reasonMatch[1].trim());
+        } else if (isUnlocked) {
+          kendala = 'Buka Kunci Akun';
+        }
+      }
+
+      // Staff match
+      let staff = staffAlias ? staffAlias.trim() : '';
+      const staffMatch = line.match(/\b(jvsaacs\d+|jvsaaks\d+|staff\w+)\b/i);
+      if (staffMatch) {
+        staff = staffMatch[0];
       }
 
       const item: ParsedLockedItem = {
         id: `lock-${index}-${Date.now()}`,
         no: index + 1,
-        date: todayDate,
+        date: date || detectedRawDate || new Date().toISOString().slice(0, 10),
         time,
         staff,
         csName: currentUser?.name || 'CS On Duty',
-        action: isLocked ? 'Locked' : 'Unlocked',
+        action,
         kendala,
         userId
       };
@@ -311,14 +439,34 @@ NB : Pergantian Dilakukan Pada Jenis Bank ${item.oldBank} To ${item.newBank}`;
       return;
     }
 
-    const todayDate = getTodayDateStr();
-    const lockedListLines = lockParsedList
-      .filter(l => l.action === 'Locked')
+    const firstDate = lockParsedList.find(l => l.date)?.date;
+    const reportDate = formatIndonesianDate(firstDate, false); // e.g. "03 Agustus 2026"
+
+    // Deduplicate locked items by userId (case-insensitive) in chronological order
+    const uniqueLocked = new Map<string, ParsedLockedItem>();
+    const lockedOnly = lockParsedList.filter(l => l.action === 'Locked');
+
+    // Sort chronologically (earliest to latest in shift)
+    const sortedLocked = [...lockedOnly].sort((a, b) => {
+      if (a.date && b.date && a.date !== b.date) {
+        return a.date.localeCompare(b.date);
+      }
+      return (a.time || '').localeCompare(b.time || '');
+    });
+
+    sortedLocked.forEach(item => {
+      const key = item.userId.toLowerCase();
+      if (!uniqueLocked.has(key)) {
+        uniqueLocked.set(key, item);
+      }
+    });
+
+    const lockedListLines = Array.from(uniqueLocked.values())
       .map(item => `* ${item.userId} - ${item.kendala}`);
 
     const reportOutput = 
-`Staff : ${staffAlias || 'kode alias'}
-Tanggal : ${todayDate}
+`Staff : ${staffAlias ? staffAlias.trim() : ''}
+Tanggal : ${reportDate}
 Info Ko / Ci
 Ket : Locked ID PL, Terlampir Dibawah :
 
@@ -382,7 +530,7 @@ NB : Untuk PL Diatas Sudah Di Locked Yaa Ko/Ci ..`;
   const handleCopyDetail = () => {
     if (activeTab === 'GANTI_DATA') {
       const rows = gdParsedList.map(item => 
-        `${item.no}\t${item.date} ${item.time}\t${item.userId}\t${item.staff}\t${item.oldBank} - ${item.oldRek} (${item.oldAcc})\t${item.newBank} - ${item.newRek} (${item.newAcc})\t${item.changeType}`
+        `${item.no}\t${formatIndonesianDate(item.date, false)} ${item.time}\t${item.userId}\t${item.staff}\t${item.oldBank} - ${item.oldRek} (${item.oldAcc})\t${item.newBank} - ${item.newRek} (${item.newAcc})\t${item.changeType}`
       ).join('\n');
       const header = 'NO\tTANGGAL & JAM\tUSER ID\tSTAFF\tDATA SEBELUMNYA\tDATA TERBARU\tJENIS PERGANTIAN\n';
       navigator.clipboard.writeText(header + rows);
@@ -464,8 +612,8 @@ NB : Untuk PL Diatas Sudah Di Locked Yaa Ko/Ci ..`;
                 type="text"
                 value={staffAlias}
                 onChange={(e) => setStaffAlias(e.target.value)}
-                placeholder="Isi kode alias..."
-                className="bg-transparent text-xs text-cyan-300 font-mono font-bold outline-none w-32 border-b border-cyan-500/50 pb-0.5 focus:border-cyan-300 transition-colors"
+                placeholder="(Kosongkan saja)"
+                className="bg-transparent text-xs text-cyan-300 font-mono font-bold outline-none w-36 border-b border-cyan-500/50 pb-0.5 focus:border-cyan-300 transition-colors placeholder:text-gray-600"
               />
             </div>
           </div>
@@ -674,7 +822,7 @@ NB : Untuk PL Diatas Sudah Di Locked Yaa Ko/Ci ..`;
                 </span>
               </div>
               <span className="text-[11px] text-gray-400">
-                Staff: <strong className="text-cyan-300">{staffAlias || 'kode alias'}</strong>
+                Staff: <strong className="text-cyan-300">{staffAlias.trim() || '(Kosong)'}</strong>
               </span>
             </div>
           </div>
@@ -742,7 +890,7 @@ NB : Untuk PL Diatas Sudah Di Locked Yaa Ko/Ci ..`;
                   gdParsedList.map((item) => (
                     <tr key={item.id} className="hover:bg-white/5 transition-colors">
                       <td className="py-3 px-3.5 text-gray-400">{item.no}</td>
-                      <td className="py-3 px-3.5 text-gray-300 whitespace-nowrap">{item.date} {item.time}</td>
+                      <td className="py-3 px-3.5 text-gray-300 whitespace-nowrap">{formatIndonesianDate(item.date, false)} {item.time}</td>
                       <td className="py-3 px-3.5">
                         <span className="font-bold text-amber-300 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
                           {item.userId}
