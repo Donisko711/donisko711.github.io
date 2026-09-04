@@ -33,6 +33,35 @@ import {
   Flame,
   Info
 } from 'lucide-react';
+import { 
+  scanDocumentForBrands, 
+  HS_BRAND_DEFINITIONS, 
+  DetectedBrandMatch 
+} from '../../utils/brandAnalysis';
+
+interface SitemapPageInfo {
+  url: string;
+  title: string;
+  status: number;
+  detectedBrands: string[];
+}
+
+interface GoogleConsoleCloakingInfo {
+  detected: boolean;
+  originalTargetUrl: string;
+  activeScriptUrl: string;
+  cloakedPageTitle: string;
+  detectedBrands: string[];
+  decoyHtml: string;
+}
+
+interface UserAgentCloakingInfo {
+  detected: boolean;
+  botBrands: string[];
+  desktopBrands: string[];
+  botTitle: string;
+  desktopTitle: string;
+}
 
 interface DomainCheckResponse {
   success: boolean;
@@ -46,24 +75,30 @@ interface DomainCheckResponse {
   headers: Record<string, string>;
   html: string;
   isHttps: boolean;
+  usedUA?: string;
+  sitemapDiscovery?: {
+    found: boolean;
+    sitemapUrl?: string;
+    pages: SitemapPageInfo[];
+  } | null;
+  googleConsoleCloaking?: GoogleConsoleCloakingInfo | null;
+  userAgentCloaking?: UserAgentCloakingInfo | null;
   error?: string;
 }
 
 // 28 Automatic Phishing Monitored Keywords requested by user
-export const DEFAULT_MONITORED_KEYWORDS = [
-  'Haes4d', 'siritogel', 'tema4d', 'hantogel', 'ayutogel', 'bigo4d', 
-  'tayo4d', 'djarum4d', 'jepe711', 'hoki711', 'slot711', 'zeus711', 
-  'ceri711', 'qris711', 'horas711', 'agung711', 'sempoa4d', 'djarum365', 
-  'xiutoto', 'trana4d', 'heng4d', 'ronde4d', 'ragnaroktogel', 'lumos4d', 
-  'senna4d', 'nium889', 'redana88', 'blacktogel'
-];
+export const DEFAULT_MONITORED_KEYWORDS = HS_BRAND_DEFINITIONS.map(b => b.displayName);
 
 export const PhisingChecker: React.FC = () => {
-  const [urlInput, setUrlInput] = useState<string>('https://www.circuit-mornay.fr/mornay-festival/');
+  const [inputMode, setInputMode] = useState<'url' | 'raw_console'>('url');
+  const [urlInput, setUrlInput] = useState<string>('');
+  const [rawConsoleHtml, setRawConsoleHtml] = useState<string>('');
   const [manualKeyword, setManualKeyword] = useState<string>('');
   const [activeKeywords, setActiveKeywords] = useState<string[]>(DEFAULT_MONITORED_KEYWORDS);
   const [newCustomTag, setNewCustomTag] = useState<string>('');
-  const [userAgentMode, setUserAgentMode] = useState<'desktop' | 'googlebot' | 'mobile'>('desktop');
+  // Default to Googlebot Search Console emulation
+  const [userAgentMode, setUserAgentMode] = useState<'desktop' | 'googlebot' | 'mobile'>('googlebot');
+  const [showingDecoyScript, setShowingDecoyScript] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [result, setResult] = useState<DomainCheckResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -82,23 +117,28 @@ export const PhisingChecker: React.FC = () => {
   // Quick preset domains
   const PRESET_DOMAINS = [
     { 
-      name: '🔥 circuit-mornay.fr (Target: Zeus711)', 
+      name: '🚨 coletivomission.com (Bigo 4D Spacing)', 
+      url: 'https://coletivomission.com', 
+      hint: 'Varian: bigo 4d, bigo 4 d, bigo 4d login' 
+    },
+    { 
+      name: '🚨 curacaoexport/gallery/ (ZEUS711)', 
+      url: 'https://curacaoexport.vladesigns.com/gallery/index.html', 
+      hint: 'Index Google: Phising Zeus711' 
+    },
+    { 
+      name: '🌐 curacaoexport (Root Domain)', 
+      url: 'https://curacaoexport.vladesigns.com', 
+      hint: 'Deteksi Sitemap Cloaking Google' 
+    },
+    { 
+      name: '🔥 circuit-mornay.fr (Zeus711)', 
       url: 'https://www.circuit-mornay.fr/mornay-festival/', 
-      hint: 'Contoh Phising Nyata' 
+      hint: 'Target Zeus711' 
     },
     { 
       name: 'Google.com', 
       url: 'https://google.com', 
-      hint: 'Contoh Bersih' 
-    },
-    { 
-      name: 'Cloudflare.com', 
-      url: 'https://cloudflare.com', 
-      hint: 'Contoh Bersih' 
-    },
-    { 
-      name: 'Wikipedia.org', 
-      url: 'https://wikipedia.org', 
       hint: 'Contoh Bersih' 
     }
   ];
@@ -110,6 +150,7 @@ export const PhisingChecker: React.FC = () => {
     setIsLoading(true);
     setErrorMsg(null);
     setSelectedHighlightLine(null);
+    setShowingDecoyScript(false);
 
     try {
       const res = await fetch('/api/check-domain', {
@@ -135,10 +176,38 @@ export const PhisingChecker: React.FC = () => {
     }
   };
 
-  // Run initial check on mount with the user's example domain
-  useEffect(() => {
-    handleInspect('https://www.circuit-mornay.fr/mornay-festival/');
-  }, []);
+  // Handler for analyzing pasted raw HTML from Google Search Console / DevTools
+  const handleAnalyzeRawConsole = () => {
+    const raw = rawConsoleHtml.trim();
+    if (!raw) {
+      setErrorMsg('Harap tempelkan script HTML dari Google Search Console terlebih dahulu.');
+      return;
+    }
+
+    setErrorMsg(null);
+    setSelectedHighlightLine(null);
+
+    const syntheticResponse: DomainCheckResponse = {
+      success: true,
+      targetUrl: 'Google Search Console (Raw DOM / Tested Page)',
+      finalUrl: 'Google Search Console URL Inspection',
+      status: 200,
+      statusText: 'Console Rendered Output',
+      responseTimeMs: 0,
+      contentType: 'text/html; charset=UTF-8',
+      contentLength: raw.length,
+      headers: {
+        'source': 'Google Search Console Tested Page HTML',
+        'rendered-by': 'Googlebot Headless Chromium',
+      },
+      html: raw,
+      isHttps: true,
+      usedUA: 'Googlebot Smartphone (Search Console Live Inspection)'
+    };
+
+    setResult(syntheticResponse);
+    setActiveTab('script');
+  };
 
   // Add a new custom keyword to the monitored list
   const handleAddKeyword = () => {
@@ -161,59 +230,50 @@ export const PhisingChecker: React.FC = () => {
     setManualKeyword('');
   };
 
+  // Calculate active HTML (Google Console Script vs Decoy Root Script)
+  const activeHtml = useMemo(() => {
+    if (!result) return '';
+    if (showingDecoyScript && result.googleConsoleCloaking?.decoyHtml) {
+      return result.googleConsoleCloaking.decoyHtml;
+    }
+    return result.html || '';
+  }, [result, showingDecoyScript]);
+
   // Comprehensive Parsing of HTML: Phishing detection, keywords scanner, JSON-LD, Meta, Forms
   const parsedData = useMemo(() => {
-    if (!result?.html) return null;
+    if (!activeHtml) return null;
 
-    const html = result.html;
+    const html = activeHtml;
     const htmlLower = html.toLowerCase();
     const lines = html.split('\n');
 
-    // 1. Scan for Monitored & Manual Keywords
-    const allKeywordsToScan = [...activeKeywords];
-    if (manualKeyword.trim() && !allKeywordsToScan.some(k => k.toLowerCase() === manualKeyword.trim().toLowerCase())) {
-      allKeywordsToScan.unshift(manualKeyword.trim());
-    }
-
+    // 1. Scan for 28 HS Group Brands & Variations (Non-monotonous: Spacing, affixes, root context)
+    const scanResult = scanDocumentForBrands(html, activeKeywords, manualKeyword);
     const detectedKeywords: { 
       keyword: string; 
+      canonical: string;
+      root: string;
+      suffix: string;
       count: number; 
+      variants: string[];
       lines: number[]; 
-      snippets: { lineNum: number; text: string }[];
-      isManual: boolean;
-    }[] = [];
-
-    allKeywordsToScan.forEach(kw => {
-      const kwLower = kw.toLowerCase();
-      if (htmlLower.includes(kwLower)) {
-        let count = 0;
-        const matchingLines: number[] = [];
-        const snippets: { lineNum: number; text: string }[] = [];
-
-        lines.forEach((line, idx) => {
-          if (line.toLowerCase().includes(kwLower)) {
-            count++;
-            const lineNum = idx + 1;
-            matchingLines.push(lineNum);
-            if (snippets.length < 8) {
-              snippets.push({ lineNum, text: line.trim() });
-            }
-          }
-        });
-
-        detectedKeywords.push({
-          keyword: kw,
-          count,
-          lines: matchingLines,
-          snippets,
-          isManual: manualKeyword.trim().toLowerCase() === kwLower
-        });
-      }
-    });
+      snippets: { lineNum: number; text: string; matchedVariant: string }[];
+      isManual?: boolean;
+    }[] = scanResult.detectedBrands.map(b => ({
+      keyword: b.brand,
+      canonical: b.canonical,
+      root: b.root,
+      suffix: b.suffix,
+      count: b.count,
+      variants: b.variants,
+      lines: b.lines,
+      snippets: b.snippets,
+      isManual: b.isManual
+    }));
 
     // Check if any manual keyword has match
     const manualKeywordMatch = manualKeyword.trim() 
-      ? detectedKeywords.find(d => d.keyword.toLowerCase() === manualKeyword.trim().toLowerCase()) 
+      ? detectedKeywords.find(d => d.isManual || d.keyword.toLowerCase() === manualKeyword.trim().toLowerCase()) 
       : null;
 
     // 2. Extract Title
@@ -298,11 +358,14 @@ export const PhisingChecker: React.FC = () => {
     // Prioritized Brand Phishing Alert
     if (detectedKeywords.length > 0) {
       const brandNames = detectedKeywords.map(k => k.keyword.toUpperCase()).join(', ');
-      const totalMatches = detectedKeywords.reduce((acc, curr) => acc + curr.count, 0);
+      const brandNamesWithVariants = detectedKeywords.map(k => 
+        `${k.keyword.toUpperCase()} [Varian: ${k.variants.slice(0, 3).map(v => `"${v}"`).join(', ')}]`
+      ).join('; ');
+      const totalMatches = scanResult.totalMatches;
       phishingIndicators.push({
         severity: 'CRITICAL',
         title: `🚨 TERDETEKSI PHISING BRAND: ${brandNames}`,
-        desc: `Domain ini menyisipkan ${totalMatches}x kata kunci brand terlarang (${brandNames}) di dalam script HTML. Ini adalah indikasi kuat pembajakan / web phising terhadap situs ${brandNames}.`
+        desc: `Domain ini menyisipkan ${totalMatches}x kata kunci brand HS Group (${brandNamesWithVariants}) di dalam script HTML. Ini adalah indikasi kuat pembajakan / web phising terhadap situs ${brandNames}.`
       });
     }
 
@@ -357,17 +420,8 @@ export const PhisingChecker: React.FC = () => {
       });
     }
 
-    // Create line lookup map for highlights in the viewer
-    const lineHighlightMap = new Map<number, { keywords: string[]; isCritical: boolean }>();
-    detectedKeywords.forEach(dk => {
-      dk.lines.forEach(ln => {
-        const existing = lineHighlightMap.get(ln) || { keywords: [], isCritical: true };
-        if (!existing.keywords.includes(dk.keyword)) {
-          existing.keywords.push(dk.keyword);
-        }
-        lineHighlightMap.set(ln, existing);
-      });
-    });
+    // Line lookup map for highlights in the viewer (with brand names and matched variants)
+    const lineHighlightMap = scanResult.highlightMap;
 
     return {
       pageTitle,
@@ -384,7 +438,7 @@ export const PhisingChecker: React.FC = () => {
       totalLines: lines.length,
       lines
     };
-  }, [result, activeKeywords, manualKeyword]);
+  }, [result, activeHtml, activeKeywords, manualKeyword]);
 
   // Jump to specific line in script viewer
   const scrollToLine = (lineNum: number) => {
@@ -400,8 +454,8 @@ export const PhisingChecker: React.FC = () => {
   };
 
   const handleCopyScript = () => {
-    if (!result?.html) return;
-    navigator.clipboard.writeText(result.html);
+    if (!activeHtml) return;
+    navigator.clipboard.writeText(activeHtml);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
@@ -416,7 +470,7 @@ HTTP Status    : ${result.status} ${result.statusText}
 Response Time  : ${result.responseTimeMs} ms
 Keamanan SSL   : ${result.isHttps ? 'SECURE (HTTPS)' : 'UNSECURE (HTTP)'}
 Judul Halaman  : ${parsedData.pageTitle}
-Total Baris    : ${parsedData.totalLines} baris (${(result.contentLength / 1024).toFixed(2)} KB)
+Total Baris    : ${parsedData.totalLines} baris (${(activeHtml.length / 1024).toFixed(2)} KB)
 
 STATUS AUDIT PHISING:
 ${isPhishing 
@@ -433,14 +487,14 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
   };
 
   const handleDownloadHtml = () => {
-    if (!result?.html) return;
+    if (!activeHtml) return;
     let safeHost = 'page-source';
     try {
       safeHost = new URL(result.finalUrl).hostname.replace(/[^a-zA-Z0-9]/g, '_');
     } catch {
       // ignore
     }
-    const blob = new Blob([result.html], { type: 'text/html;charset=utf-8' });
+    const blob = new Blob([activeHtml], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -489,98 +543,169 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
 
       {/* Main Dual Input Card: URL Domain & Keyword Search */}
       <div className="p-5 rounded-2xl bg-[#141418]/90 border border-white/10 backdrop-blur-md shadow-xl space-y-4">
-        {/* Row 1: URL Domain Bar */}
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleInspect();
-          }}
-          className="space-y-3"
-        >
-          <div className="flex flex-col lg:flex-row items-stretch gap-2.5">
-            {/* Domain input */}
-            <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                <Globe className="w-4 h-4 text-[#00F3FF]" />
+        {/* Mode Selector: Direct URL vs Raw Google Search Console Script */}
+        <div className="flex items-center gap-2 p-1 bg-[#0A0A0C] rounded-xl border border-white/15 w-fit flex-wrap">
+          <button
+            type="button"
+            onClick={() => setInputMode('url')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              inputMode === 'url'
+                ? 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40 shadow-[0_0_10px_rgba(0,243,255,0.2)]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            <span>1. Inspeksi URL Domain & Google Index</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setInputMode('raw_console')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              inputMode === 'raw_console'
+                ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 shadow-[0_0_10px_rgba(250,204,21,0.2)]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Code2 className="w-4 h-4" />
+            <span>2. Paste Script Google Search Console (Raw HTML)</span>
+          </button>
+        </div>
+
+        {inputMode === 'url' ? (
+          /* Mode 1: URL Domain Bar */
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleInspect();
+            }}
+            className="space-y-3"
+          >
+            <div className="flex flex-col lg:flex-row items-stretch gap-2.5">
+              {/* Domain input */}
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                  <Globe className="w-4 h-4 text-[#00F3FF]" />
+                </div>
+                <input
+                  type="text"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="Tempel URL atau domain yang mau dicek (contoh: https://curacaoexport.vladesigns.com)..."
+                  className="w-full pl-10 pr-10 py-3 bg-[#0A0A0C] border border-white/15 rounded-xl text-white placeholder-gray-500 font-mono text-xs sm:text-sm focus:outline-none focus:border-[#00F3FF] focus:ring-1 focus:ring-[#00F3FF] transition-all"
+                />
+                {urlInput && (
+                  <button
+                    type="button"
+                    onClick={() => setUrlInput('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-              <input
-                type="text"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Tempel URL atau domain yang mau dicek (contoh: https://www.circuit-mornay.fr/mornay-festival/)..."
-                className="w-full pl-10 pr-10 py-3 bg-[#0A0A0C] border border-white/15 rounded-xl text-white placeholder-gray-500 font-mono text-xs sm:text-sm focus:outline-none focus:border-[#00F3FF] focus:ring-1 focus:ring-[#00F3FF] transition-all"
-              />
-              {urlInput && (
+
+              {/* User Agent Selector */}
+              <div className="flex items-center gap-1 bg-[#0A0A0C] p-1 rounded-xl border border-white/15">
                 <button
                   type="button"
-                  onClick={() => setUrlInput('')}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-white"
+                  onClick={() => setUserAgentMode('googlebot')}
+                  className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    userAgentMode === 'googlebot'
+                      ? 'bg-yellow-400 text-black font-extrabold shadow-[0_0_15px_rgba(250,204,21,0.4)]'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Mode Google Search Console (Googlebot Mobile + Emulasi Google Headers)"
                 >
-                  <X className="w-4 h-4" />
+                  🤖 Google Search Console (Bot)
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setUserAgentMode('desktop')}
+                  className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    userAgentMode === 'desktop'
+                      ? 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Browser Desktop Chrome Standar"
+                >
+                  💻 Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserAgentMode('mobile')}
+                  className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    userAgentMode === 'mobile'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="User-Agent Mobile iPhone / Safari"
+                >
+                  📱 Mobile
+                </button>
+              </div>
+
+              {/* Submit Inspect Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#00F3FF] via-[#00c8e6] to-[#0096c7] hover:from-[#38f8ff] hover:to-[#00b4d8] text-black font-extrabold text-xs tracking-wider uppercase font-mono flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                    <span>MEMBACA SCRIPT...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 text-black" />
+                    <span>INSPEKSI SCRIPT DOMAIN</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        ) : (
+          /* Mode 2: Paste Raw Script Google Console */
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs font-mono text-gray-400">
+              <span className="flex items-center gap-1.5 text-yellow-400 font-bold">
+                <Code2 className="w-4 h-4" />
+                <span>TEMPEL HASIL SCRIPT DARI GOOGLE SEARCH CONSOLE / GOOGLE RICH RESULTS:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setRawConsoleHtml('')}
+                className="text-gray-500 hover:text-white underline cursor-pointer"
+              >
+                Bersihkan
+              </button>
             </div>
 
-            {/* User Agent Selector */}
-            <div className="flex items-center gap-1 bg-[#0A0A0C] p-1 rounded-xl border border-white/15">
+            <textarea
+              rows={6}
+              value={rawConsoleHtml}
+              onChange={(e) => setRawConsoleHtml(e.target.value)}
+              placeholder="Paste kode HTML lengkap yang diambil dari Google Search Console (Halaman yang Diuji / URL Inspection > View Tested Page)..."
+              className="w-full p-3 bg-[#0A0A0C] border border-yellow-500/30 rounded-xl text-yellow-200 placeholder-gray-600 font-mono text-xs focus:outline-none focus:border-yellow-400 transition-all font-mono leading-relaxed"
+            />
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] font-mono text-gray-400">
+                {rawConsoleHtml.length > 0 ? `${rawConsoleHtml.length.toLocaleString()} karakter script siap dianalisa` : 'Tempel kode HTML untuk langsung mengaudit baris phising'}
+              </span>
+
               <button
                 type="button"
-                onClick={() => setUserAgentMode('desktop')}
-                className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                  userAgentMode === 'desktop'
-                    ? 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="Browser Desktop Chrome Standar"
+                onClick={handleAnalyzeRawConsole}
+                disabled={!rawConsoleHtml.trim()}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-black font-extrabold text-xs tracking-wider uppercase font-mono flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all cursor-pointer disabled:opacity-40"
               >
-                Desktop
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserAgentMode('googlebot')}
-                className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                  userAgentMode === 'googlebot'
-                    ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="User-Agent Googlebot (Mendeteksi Cloaking Khusus Bot)"
-              >
-                Googlebot
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserAgentMode('mobile')}
-                className={`px-3 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                  userAgentMode === 'mobile'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="User-Agent Mobile iPhone / Safari"
-              >
-                Mobile
+                <Sparkles className="w-4 h-4 text-black" />
+                <span>ANALISA SCRIPT GOOGLE CONSOLE</span>
               </button>
             </div>
-
-            {/* Submit Inspect Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#00F3FF] via-[#00c8e6] to-[#0096c7] hover:from-[#38f8ff] hover:to-[#00b4d8] text-black font-extrabold text-xs tracking-wider uppercase font-mono flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all cursor-pointer disabled:opacity-50"
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                  <span>MEMBACA SCRIPT...</span>
-                </>
-              ) : (
-                <>
-                  <Search className="w-4 h-4 text-black" />
-                  <span>INSPEKSI SCRIPT DOMAIN</span>
-                </>
-              )}
-            </button>
           </div>
-        </form>
+        )}
 
         {/* Row 2: Dedicated Manual Keyword Search & Live Filter */}
         <div className="p-3.5 rounded-xl bg-[#0D0D10] border border-white/10 space-y-3">
@@ -749,6 +874,99 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
       {/* PRIMARY PHISHING DANGER / SAFETY BANNER ALERT (Triggered by user's exact specification) */}
       {result && parsedData && (
         <div className="space-y-4">
+          {/* ⚡ GOOGLE SEARCH CONSOLE CLOAKING BUSTER ALERT CARD */}
+          {result.googleConsoleCloaking && result.googleConsoleCloaking.detected && (
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-950/90 via-[#191306]/95 to-amber-950/90 border-2 border-yellow-400 shadow-[0_0_35px_rgba(250,204,21,0.3)] space-y-4 animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="p-3 rounded-xl bg-yellow-400/20 border border-yellow-400 text-yellow-300 flex-shrink-0 shadow-md">
+                    <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-yellow-400 text-black font-black uppercase tracking-wider">
+                        HASIL GOOGLE SEARCH CONSOLE CLOAKING
+                      </span>
+                      <span className="text-xs text-yellow-300 font-mono font-bold">
+                        Trik Penyamaran Halaman Sukses Ditembus
+                      </span>
+                    </div>
+                    <h2 className="text-base sm:text-lg font-black text-white font-['Rajdhani'] uppercase tracking-wider mt-1">
+                      GOOGLE SEARCH CONSOLE MEMBACA SCRIPT PADA:{' '}
+                      <span className="text-yellow-300 underline font-mono text-sm break-all">
+                        {result.googleConsoleCloaking.activeScriptUrl}
+                      </span>
+                    </h2>
+                    <p className="text-xs text-gray-300 font-mono mt-1 leading-relaxed">
+                      Halaman utama (<span className="text-gray-400 underline">{result.targetUrl}</span>) sengaja dibuat bersih sebagai umpan. Namun Google Search Console membaca dan meng-index subhalaman phising dengan judul 
+                      <span className="text-yellow-200 font-bold"> &quot;{result.googleConsoleCloaking.cloakedPageTitle}&quot;</span> yang membajak brand 
+                      <span className="text-rose-400 font-black uppercase"> {result.googleConsoleCloaking.detectedBrands.join(', ')}</span>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Toggle between Google Console script and Decoy script */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-mono text-gray-300 font-bold">Tampilan Script:</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowingDecoyScript(false)}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      !showingDecoyScript
+                        ? 'bg-yellow-400 text-black font-black shadow-[0_0_15px_rgba(250,204,21,0.4)]'
+                        : 'bg-white/10 text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <Code2 className="w-3.5 h-3.5" />
+                    <span>🚨 Script Hasil Google Search Console ({result.googleConsoleCloaking.detectedBrands[0]?.toUpperCase()})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowingDecoyScript(true)}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      showingDecoyScript
+                        ? 'bg-[#00F3FF] text-black font-black shadow-[0_0_15px_rgba(0,243,255,0.4)]'
+                        : 'bg-white/10 text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>🌐 Script Decoy (Halaman Depan Umpan)</span>
+                  </button>
+                </div>
+
+                <div className="text-[11px] font-mono text-yellow-300/80">
+                  {!showingDecoyScript ? '✓ Menampilkan script yang dibaca Google Search Console' : 'Menampilkan script halaman depan'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ⚡ USER-AGENT CLOAKING BUSTER ALERT CARD */}
+          {result.userAgentCloaking && result.userAgentCloaking.detected && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-950/90 via-[#1a0f05]/95 to-orange-950/90 border-2 border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.3)] space-y-3 animate-in fade-in">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-orange-500/20 border border-orange-500 text-orange-400 flex-shrink-0">
+                  <Flame className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-500 text-black font-black uppercase tracking-wider">
+                      USER-AGENT CLOAKING TERDETEKSI
+                    </span>
+                    <span className="text-xs text-orange-300 font-mono font-bold">
+                      Respon Server Berbeda Antara Googlebot vs Browser Biasa
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300 font-mono leading-relaxed">
+                    Sistem mendeteksi situs ini menerapkan penyamaran berbasis User-Agent: Script yang disajikan kepada <span className="text-yellow-300 font-bold">Googlebot (Google Search Console)</span> mengandung pembajakan brand <span className="text-rose-400 font-black uppercase">{result.userAgentCloaking.botBrands.join(', ') || 'PHISING'}</span>, sementara browser umum disajikan halaman berbeda.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {hasPhishingAlert ? (
             /* 🚨 PHISHING DETECTED CRITICAL ALERT BANNER */
             <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-950/80 via-rose-900/60 to-rose-950/80 border-2 border-rose-500/90 shadow-[0_0_35px_rgba(244,63,94,0.35)] animate-in fade-in space-y-3">
@@ -767,9 +985,9 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
                       </span>
                     </div>
                     <h2 className="text-lg sm:text-xl font-black text-white font-['Rajdhani'] uppercase tracking-wider mt-0.5">
-                      DOMAIN <span className="text-yellow-300 underline">{result.finalUrl}</span> MELAKUKAN PHISING KEPADA SITUS{' '}
+                      DOMAIN <span className="text-yellow-300 underline">{result.googleConsoleCloaking && !showingDecoyScript ? result.googleConsoleCloaking.activeScriptUrl : result.finalUrl}</span> MELAKUKAN PHISING KEPADA SITUS{' '}
                       <span className="text-rose-300 underline font-black">
-                        {parsedData.detectedKeywords.map(k => k.keyword.toUpperCase()).join(', ')}
+                        {parsedData.detectedKeywords.map(k => `${k.keyword.toUpperCase()} (Varian: ${k.variants.slice(0, 3).map(v => `"${v}"`).join(', ')})`).join(' & ')}
                       </span>
                     </h2>
                   </div>
@@ -790,30 +1008,57 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
                 </div>
               </div>
 
-              {/* Keyword match breakdown badges */}
-              <div className="p-3 rounded-xl bg-black/50 border border-rose-500/30 space-y-2">
-                <div className="text-xs text-rose-200 font-mono font-bold flex items-center gap-1.5">
-                  <Flame className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Rincian Kata Kunci yang Ditemukan di dalam Script HTML Domain:</span>
+              {/* Keyword & Variant match breakdown badges */}
+              <div className="p-3 rounded-xl bg-black/50 border border-rose-500/30 space-y-2.5">
+                <div className="text-xs text-rose-200 font-mono font-bold flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Rincian Kata Kunci & Variasi Penulisan yang Ditemukan di dalam Script:</span>
+                  </div>
+                  <span className="text-[10px] text-yellow-400 font-bold bg-yellow-950/40 border border-yellow-500/30 px-2 py-0.5 rounded">
+                    ⚡ Mode Analisis Multi-Varian Aktif
+                  </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {parsedData.detectedKeywords.map((dk) => (
                     <div 
                       key={dk.keyword}
-                      className="px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/50 text-xs font-mono flex items-center gap-2 text-rose-200"
+                      className="p-2.5 rounded-lg bg-rose-500/20 border border-rose-500/50 text-xs font-mono space-y-1.5 text-rose-200"
                     >
-                      <span className="font-extrabold text-white">{dk.keyword.toUpperCase()}</span>
-                      <span className="px-1.5 py-0.2 rounded bg-rose-500/40 text-rose-300 font-black text-[10px]">
-                        {dk.count}x kemunculan
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => scrollToLine(dk.lines[0])}
-                        className="text-[10px] text-yellow-300 hover:text-white underline cursor-pointer"
-                        title="Langsung lompat ke baris kemunculan di script"
-                      >
-                        (Baris #{dk.lines.slice(0, 3).join(', ')}{dk.lines.length > 3 ? '...' : ''})
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-white text-sm font-['Rajdhani']">{dk.keyword.toUpperCase()}</span>
+                        <span className="px-1.5 py-0.2 rounded bg-rose-500/40 text-rose-300 font-black text-[10px]">
+                          {dk.count}x kemunculan
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => scrollToLine(dk.lines[0])}
+                          className="text-[10px] text-yellow-300 hover:text-white underline cursor-pointer font-bold"
+                          title="Langsung lompat ke baris kemunculan di script"
+                        >
+                          (Baris #{dk.lines.slice(0, 3).join(', ')}{dk.lines.length > 3 ? '...' : ''})
+                        </button>
+                      </div>
+
+                      {/* Display individual detected variants */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[9px] text-gray-400 font-bold">Varian:</span>
+                        {dk.variants.map((v, vIdx) => (
+                          <button
+                            key={vIdx}
+                            type="button"
+                            onClick={() => {
+                              const snip = dk.snippets.find(s => s.matchedVariant.toLowerCase() === v.toLowerCase());
+                              if (snip) scrollToLine(snip.lineNum);
+                              else scrollToLine(dk.lines[0]);
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-black/60 border border-rose-400/40 text-yellow-300 text-[10px] font-bold hover:bg-rose-500 hover:text-white cursor-pointer transition-colors"
+                            title={`Lompat ke kode baris varian "${v}"`}
+                          >
+                            "{v}"
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -832,6 +1077,107 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
                 <p className="text-[11px] text-emerald-300/80 mt-0.5">
                   Tidak terdapat kata kunci dari {activeKeywords.length} brand yang dimonitor pada kode sumber domain ini.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* SITEMAP DISCOVERY / GOOGLE SEARCH CONSOLE INDEXED SUBPAGES */}
+          {result.sitemapDiscovery && result.sitemapDiscovery.found && result.sitemapDiscovery.pages && result.sitemapDiscovery.pages.length > 0 && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-amber-900/25 to-amber-950/40 border-2 border-amber-500/50 shadow-xl space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500 text-black font-black uppercase">
+                        GOOGLE CONSOLE & SITEMAP CLOAKING
+                      </span>
+                      <span className="text-xs text-amber-300 font-mono font-bold">
+                        Ditemukan {result.sitemapDiscovery.pages.length} Halaman Ter-index Google
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-300 font-mono mt-0.5">
+                      Target mengelabui crawler dengan menyembunyikan konten phising di subhalaman sitemap (<span className="text-amber-300 underline font-bold">{result.sitemapDiscovery.sitemapUrl}</span>) yang dibaca oleh Google:
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+                {result.sitemapDiscovery.pages.map((page, idx) => {
+                  const isCurrent = result.targetUrl === page.url || result.finalUrl === page.url || (result.finalUrl && page.url.includes(result.finalUrl.replace(/\/$/, '')));
+                  const hasZeus = page.detectedBrands.some(b => b.toLowerCase().includes('zeus711'));
+
+                  return (
+                    <div 
+                      key={idx}
+                      className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-2.5 ${
+                        isCurrent
+                          ? 'bg-[#00F3FF]/15 border-[#00F3FF]/60 shadow-[0_0_15px_rgba(0,243,255,0.25)] ring-1 ring-[#00F3FF]'
+                          : hasZeus
+                            ? 'bg-rose-950/50 border-rose-500/70 shadow-[0_0_15px_rgba(244,63,94,0.25)]'
+                            : 'bg-black/50 border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/10 text-gray-300 font-bold">
+                            HTTP {page.status} OK
+                          </span>
+                          {hasZeus && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500 text-white font-black animate-pulse">
+                              🚨 TARGET PHISING: ZEUS711
+                            </span>
+                          )}
+                          {isCurrent && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#00F3FF] text-black font-black">
+                              SEDANG DIPERIKSA
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xs sm:text-sm font-mono font-bold text-white line-clamp-1" title={page.title}>
+                          {page.title || page.url}
+                        </div>
+                        <div className="text-[11px] font-mono text-gray-400 break-all mt-0.5">
+                          {page.url}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+                        <div className="flex flex-wrap gap-1">
+                          {page.detectedBrands.map(b => (
+                            <span 
+                              key={b} 
+                              className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold uppercase ${
+                                b.toLowerCase() === 'zeus711' 
+                                  ? 'bg-rose-500 text-white font-black shadow-sm' 
+                                  : 'bg-white/10 text-gray-300'
+                              }`}
+                            >
+                              {b}
+                            </span>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUrlInput(page.url);
+                            setInputMode('url');
+                            handleInspect(page.url);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#00F3FF]/20 hover:bg-[#00F3FF]/30 text-[#00F3FF] border border-[#00F3FF]/40 text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                        >
+                          <Code2 className="w-3.5 h-3.5" />
+                          <span>{isCurrent ? 'Muat Ulang' : 'Buka Script Halaman Ini'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -866,7 +1212,7 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
             <div className="p-3 rounded-xl bg-[#0D0D10] border border-white/5">
               <span className="text-[10px] font-mono text-gray-400 block uppercase">Ukuran Script HTML</span>
               <div className="text-sm font-bold font-mono text-yellow-400 mt-1">
-                {(result.contentLength / 1024).toFixed(1)} KB ({parsedData.totalLines} Baris)
+                {(activeHtml.length / 1024).toFixed(1)} KB ({parsedData.totalLines} Baris)
               </div>
             </div>
 
@@ -1042,8 +1388,11 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
                         {/* Code line content */}
                         <div className="flex-1 whitespace-pre-wrap break-all overflow-x-auto">
                           {highlightInfo && (
-                            <span className="mr-2 inline-block px-1.5 py-0.2 rounded bg-rose-500 text-white font-black text-[9px] uppercase tracking-wider">
-                              ⚠️ PHISING [{highlightInfo.keywords.join(', ').toUpperCase()}]
+                            <span className="mr-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500 text-white font-black text-[9px] uppercase tracking-wider">
+                              <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+                              <span>
+                                PHISING [{highlightInfo.brandNames.join(', ')}: {highlightInfo.variants.slice(0, 2).map(v => `"${v}"`).join(', ')}]
+                              </span>
                             </span>
                           )}
                           <code>{line}</code>
@@ -1078,9 +1427,9 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
                     {parsedData.detectedKeywords.map((dk) => (
                       <div 
                         key={dk.keyword}
-                        className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/40 font-mono text-xs space-y-2"
+                        className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/40 font-mono text-xs space-y-2.5"
                       >
-                        <div className="flex items-center justify-between text-rose-200 border-b border-rose-500/20 pb-2">
+                        <div className="flex items-center justify-between text-rose-200 border-b border-rose-500/20 pb-2 flex-wrap gap-2">
                           <div className="flex items-center gap-2">
                             <span className="text-base font-black text-white font-['Rajdhani']">
                               BRAND: {dk.keyword.toUpperCase()}
@@ -1097,8 +1446,21 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
                           </button>
                         </div>
 
+                        {/* Detected Variants Tag List */}
+                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase">Varian Penulisan Terdeteksi:</span>
+                          {dk.variants.map((v, vIdx) => (
+                            <span 
+                              key={vIdx} 
+                              className="px-2 py-0.5 rounded bg-rose-500/30 border border-rose-500/50 text-yellow-300 font-bold text-[11px]"
+                            >
+                              "{v}"
+                            </span>
+                          ))}
+                        </div>
+
                         {/* Snippets of the offending lines */}
-                        <div className="space-y-1.5 pt-1">
+                        <div className="space-y-1.5 pt-1 border-t border-rose-500/10">
                           <span className="text-[10px] text-gray-400 uppercase font-bold block">
                             Cuplikan Baris Kode yang Terinjeksi:
                           </span>
@@ -1108,8 +1470,9 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
                               onClick={() => scrollToLine(snip.lineNum)}
                               className="p-2 rounded-lg bg-black/60 border border-white/5 hover:border-rose-400 cursor-pointer transition-all"
                             >
-                              <div className="text-[10px] text-yellow-400 font-bold mb-0.5">
-                                Baris #{snip.lineNum}:
+                              <div className="text-[10px] text-yellow-400 font-bold mb-0.5 flex items-center justify-between">
+                                <span>Baris #{snip.lineNum}:</span>
+                                <span className="text-[9px] text-rose-300 font-normal">Cocok: "{snip.matchedVariant}"</span>
                               </div>
                               <code className="text-rose-200 break-all text-[11px] block">
                                 {snip.text}
@@ -1254,6 +1617,21 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Initial Empty State before any inspection */}
+      {!result && !isLoading && !errorMsg && (
+        <div className="p-8 sm:p-12 rounded-2xl bg-[#141418]/60 border border-white/10 text-center space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-[#00F3FF]/10 border border-[#00F3FF]/30 flex items-center justify-center mx-auto text-[#00F3FF] shadow-[0_0_20px_rgba(0,243,255,0.15)]">
+            <Globe className="w-7 h-7" />
+          </div>
+          <h3 className="text-lg font-bold text-white font-['Rajdhani'] uppercase tracking-wider">
+            Siap Melakukan Inspeksi Phising & Script
+          </h3>
+          <p className="text-xs text-gray-400 font-mono max-w-md mx-auto leading-relaxed">
+            Tempelkan URL domain target pada kolom di atas atau gunakan mode Paste Script Google Search Console untuk memulai audit.
+          </p>
         </div>
       )}
     </div>
