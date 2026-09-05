@@ -37,9 +37,11 @@ export interface ParsedTransactionItem {
 }
 
 export const KETERANGAN_OPTIONS = [
+  'GG FLOP | Saldo Sudah Refund',
+  'GG FLOP | Saldo Belum Refund',
   'WD Diatas 500.000',
   'WD Diatas 1.000.000',
-  'GG FLOP | Saldo Belum Refund',
+  'Bantu Cek WD BARU',
   'GG Akun PL Limit',
   'GG No Rek Tidak Valid',
   'GG Nama Rek Beda',
@@ -47,8 +49,6 @@ export const KETERANGAN_OPTIONS = [
   'Spam Form Kosong',
   'Salah Nominal Deposit',
   'Deposit Two In One',
-  'Bantu Cek WD BARU',
-  'GG FLOP | Saldo Sudah Refund',
   '(Kosongkan / Isi Sendiri)'
 ];
 
@@ -620,8 +620,14 @@ NB : Tolong Bantu Check Yaa Ko/ Ci`
       const isFlop = item.rawType === 'FLOP' || (item.keterangan && item.keterangan.includes('FLOP'));
       const formattedDate = formatIndonesianDate(item.dateTime, false);
 
-      // Check if item qualifies for WD Bantu Check NB
-      if (item.nominal >= 500000 || item.keterangan === 'WD Diatas 500.000' || item.keterangan === 'WD Diatas 1.000.000') {
+      // Check if item qualifies for WD Bantu Check NB (only for non-FLOP / non-deposit items)
+      if (
+        !isFlop &&
+        item.keterangan !== 'Salah Nominal Depo' &&
+        item.keterangan !== 'Salah Nominal Deposit' &&
+        item.keterangan !== 'Spam Form Kosong' &&
+        (item.nominal >= 500000 || item.keterangan === 'WD Diatas 500.000' || item.keterangan === 'WD Diatas 1.000.000')
+      ) {
         hasWdHighNominal = true;
       }
 
@@ -632,9 +638,12 @@ NB : Tolong Bantu Check Yaa Ko/ Ci`
 Tanggal : ${formattedDate}
 User ID : ${item.userId}
 Nominal : ${item.nominalFormatted}
-Bank : Bank ${item.bank.replace(/^Bank\s+/i, '')}
+Bank : ${item.bank.replace(/^Bank\s+/i, '')}
 Keterangan : GG FLOP | Saldo Sudah Refund
-Status : ${item.status || 'Done Proses Manual BK / Docs'}`;
+Status : ${item.status || 'Done Proses Manual BK / Docs'}
+
+SS GG FLOP + Refund : 
+SS Bukti TF : `;
         blocks.push(block);
       } 
       else if (isFlop) {
@@ -643,7 +652,7 @@ Status : ${item.status || 'Done Proses Manual BK / Docs'}`;
 Tanggal : ${formattedDate}
 User ID : ${item.userId}
 Nominal : ${item.nominalFormatted}
-Bank : Bank ${item.bank.replace(/^Bank\s+/i, '')}
+Bank : ${item.bank.replace(/^Bank\s+/i, '')}
 Keterangan : ${item.keterangan || 'GG FLOP | Saldo Belum Refund'}
 Status : ${item.status || 'Tunggu Saldo Flop Refund Baru Proses Manual'}`;
         blocks.push(block);
@@ -693,13 +702,15 @@ ${ketLine}`;
 
     // Tambahkan NB jika ada nominal >= 500k/1jt, ket WD Diatas 500k/1jt, atau toggle includeNb aktif
     if (includeNb || hasWdHighNominal) {
-      // Pastikan tidak menduplikasi jika hanya berisi item yang sudah punya NB sendiri
+      // Pastikan tidak menduplikasi jika hanya berisi item yang sudah punya format khusus (FLOP / Deposit / Spam)
       const onlyHasDedicatedNb = displayList.every(it => 
+        it.rawType === 'FLOP' ||
+        it.keterangan.includes('FLOP') ||
         it.keterangan === 'Salah Nominal Depo' || 
         it.keterangan === 'Salah Nominal Deposit' || 
         it.keterangan === 'Spam Form Kosong'
       );
-      if (!onlyHasDedicatedNb) {
+      if (!onlyHasDedicatedNb || includeNb) {
         fullOutput += `\n\nNB : Tolong Bantu Check Yaa Ko/ Ci`;
       }
     }
@@ -1133,6 +1144,22 @@ ${ketLine}`;
                 title="Kosongkan semua keterangan"
               >
                 Kosongkan Ket
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyAllKet('GG FLOP | Saldo Sudah Refund')}
+                className="px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[11px] font-mono border border-emerald-500/40 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm"
+                title="Terapkan GG FLOP | Saldo Sudah Refund ke semua transaksi"
+              >
+                + GG FLOP Sudah Refund
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyAllKet('GG FLOP | Saldo Belum Refund')}
+                className="px-2 py-1 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 text-[11px] font-mono border border-purple-500/30 transition-all cursor-pointer whitespace-nowrap"
+                title="Terapkan GG FLOP | Saldo Belum Refund ke semua transaksi"
+              >
+                + GG FLOP Belum Refund
               </button>
               <button
                 type="button"

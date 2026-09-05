@@ -454,40 +454,21 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 borderRadius: '24px',
                 boxShadow: '0 16px 45px rgba(0, 0, 0, 0.45)',
                 boxSizing: 'border-box',
-                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                fontFamily: "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif"
               }}
             >
-              {/* 1. STATUS HEADER: TRANSAKSI BERHASIL */}
+              {/* 1. TANGGAL & JAM TRANSAKSI (DI BAWAH TRANSAKSI BERHASIL BAWAAN TEMPLATE) */}
               <div
                 style={{
                   position: 'absolute',
-                  top: '127px',
-                  left: '10px',
-                  right: '10px',
-                  textAlign: 'center',
-                  color: '#ffffff',
-                  fontSize: '17px',
-                  fontWeight: 800,
-                  letterSpacing: '-0.2px',
-                  lineHeight: '1.2',
-                  zIndex: 10
-                }}
-              >
-                Transaksi Berhasil
-              </div>
-
-              {/* 2. TANGGAL & JAM TRANSAKSI (DI BAWAH TRANSAKSI BERHASIL) */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '151px',
+                  top: '152px',
                   left: '10px',
                   right: '10px',
                   textAlign: 'center',
                   color: 'rgba(255, 255, 255, 0.95)',
                   fontSize: '11px',
                   fontWeight: 400,
-                  letterSpacing: '0.1px',
+                  letterSpacing: '0.15px',
                   lineHeight: '1.2',
                   zIndex: 10
                 }}
@@ -495,18 +476,18 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 {tanggalJam}
               </div>
 
-              {/* 3. TOTAL TRANSAKSI (NOMINAL Rp) */}
+              {/* 2. TOTAL TRANSAKSI (NOMINAL Rp) */}
               <div
                 style={{
                   position: 'absolute',
-                  top: '235px',
+                  top: '233px',
                   left: '15px',
                   right: '15px',
                   textAlign: 'center',
-                  color: '#00529C',
-                  fontSize: '23px',
-                  fontWeight: 900,
-                  letterSpacing: '-0.5px',
+                  color: '#1070b8',
+                  fontSize: '21.5px',
+                  fontWeight: 700,
+                  letterSpacing: '-0.3px',
                   lineHeight: '1.2',
                   zIndex: 10
                 }}
@@ -514,16 +495,16 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 {nominalDisplay}
               </div>
 
-              {/* 4. NOMOR REFERENSI (NO. REF) */}
+              {/* 3. NOMOR REFERENSI (NO. REF) */}
               <div
                 style={{
                   position: 'absolute',
-                  top: '277px',
+                  top: '278px',
                   right: '25px',
                   textAlign: 'right',
-                  color: '#1e293b',
-                  fontSize: '12.5px',
-                  fontWeight: 800,
+                  color: '#3a3a3a',
+                  fontSize: '11px',
+                  fontWeight: 600,
                   letterSpacing: '0.2px',
                   lineHeight: '1.2',
                   zIndex: 10
@@ -532,19 +513,19 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 {refNumber}
               </div>
 
-              {/* 5. SUMBER DANA (PENGIRIM) - AVATAR INITIAL LINGKARAN BIRU */}
+              {/* 4. SUMBER DANA (PENGIRIM) - AVATAR INITIAL LINGKARAN BIRU */}
               <div
                 style={{
                   position: 'absolute',
-                  top: '344px',
+                  top: '343px',
                   left: '30px',
-                  width: '34px',
-                  height: '34px',
+                  width: '33px',
+                  height: '33px',
                   borderRadius: '50%',
-                  backgroundColor: '#0074e0',
+                  backgroundColor: '#0070ba',
                   color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: 800,
+                  fontSize: '13px',
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -554,12 +535,12 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 {getInitials(namaPengirim, 1)}
               </div>
 
-              {/* 5. SUMBER DANA (PENGIRIM) - NAMA, BANK BRI & NO REKENING */}
+              {/* 4. SUMBER DANA (PENGIRIM) - NAMA, BANK BRI & NO REKENING */}
               <div
                 style={{
                   position: 'absolute',
-                  top: '341px',
-                  left: '74px',
+                  top: '340px',
+                  left: '73px',
                   right: '25px',
                   lineHeight: '1.25',
                   zIndex: 10
@@ -567,9 +548,9 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
               >
                 <div 
                   style={{
-                    fontSize: '12.5px',
-                    fontWeight: 800,
-                    color: '#0f172a',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#333333',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
@@ -580,9 +561,9 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 <div 
                   style={{
                     fontSize: '9.5px',
-                    color: '#64748b',
-                    marginTop: '1px',
-                    fontWeight: 500
+                    color: '#757575',
+                    marginTop: '2px',
+                    fontWeight: 400
                   }}
                 >
                   BANK BRI
@@ -590,28 +571,29 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 <div 
                   style={{
                     fontSize: '9.5px',
-                    color: '#64748b',
+                    color: '#757575',
                     marginTop: '1px',
-                    fontWeight: 500
+                    fontWeight: 400,
+                    letterSpacing: '0.2px'
                   }}
                 >
                   {norekPengirim}
                 </div>
               </div>
 
-              {/* 6. TUJUAN (PENERIMA) - AVATAR INITIAL LINGKARAN BIRU MUDA */}
+              {/* 5. TUJUAN (PENERIMA) - AVATAR INITIAL LINGKARAN BIRU MUDA */}
               <div
                 style={{
                   position: 'absolute',
-                  top: '456px',
+                  top: '455px',
                   left: '30px',
-                  width: '34px',
-                  height: '34px',
+                  width: '33px',
+                  height: '33px',
                   borderRadius: '50%',
-                  backgroundColor: '#e0f2fe',
-                  color: '#0074e0',
-                  fontSize: '12.5px',
-                  fontWeight: 800,
+                  backgroundColor: '#e6f2fb',
+                  color: '#0070ba',
+                  fontSize: '12px',
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -621,12 +603,12 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 {getInitials(namaTujuan, 2)}
               </div>
 
-              {/* 6. TUJUAN (PENERIMA) - NAMA, BANK BRI & NO REKENING */}
+              {/* 5. TUJUAN (PENERIMA) - NAMA, BANK BRI & NO REKENING */}
               <div
                 style={{
                   position: 'absolute',
-                  top: '453px',
-                  left: '74px',
+                  top: '452px',
+                  left: '73px',
                   right: '25px',
                   lineHeight: '1.25',
                   zIndex: 10
@@ -634,9 +616,9 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
               >
                 <div 
                   style={{
-                    fontSize: '12.5px',
-                    fontWeight: 800,
-                    color: '#0f172a',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#333333',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
@@ -647,9 +629,9 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 <div 
                   style={{
                     fontSize: '9.5px',
-                    color: '#64748b',
-                    marginTop: '1px',
-                    fontWeight: 500
+                    color: '#757575',
+                    marginTop: '2px',
+                    fontWeight: 400
                   }}
                 >
                   BANK BRI
@@ -657,9 +639,10 @@ export const BriStrukEditor: React.FC<BriStrukEditorProps> = ({ onBackToGeneral 
                 <div 
                   style={{
                     fontSize: '9.5px',
-                    color: '#64748b',
+                    color: '#757575',
                     marginTop: '1px',
-                    fontWeight: 500
+                    fontWeight: 400,
+                    letterSpacing: '0.2px'
                   }}
                 >
                   {norekTujuan}
