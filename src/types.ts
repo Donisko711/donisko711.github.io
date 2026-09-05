@@ -121,3 +121,61 @@ export interface DashboardModuleCard {
   icon: string;
   actionMenuId: string;
 }
+
+export type SportType = 'all' | 'soccer' | 'basketball' | 'badminton' | 'tennis' | 'other';
+export type MatchStatusFilter = 'ALL' | 'LIVE' | 'FINISHED' | 'SCHEDULED';
+
+export interface CompetitorTeam {
+  id?: string;
+  name: string;
+  shortName: string;
+  logo?: string;
+  score?: number | string;
+  periodScores?: (number | string)[];
+  record?: string;
+  form?: string[];
+  ranking?: number | string;
+}
+
+export interface MatchEventItem {
+  type: 'goal' | 'card' | 'sub' | 'point';
+  minute?: string;
+  team: 'home' | 'away';
+  player: string;
+  detail?: string;
+}
+
+export interface LiveMatch {
+  id: string;
+  sport: SportType;
+  sportLabel: string;
+  league: string;
+  leagueCode?: string;
+  leagueLogo?: string;
+  country?: string;
+  season?: string;
+  homeTeam: CompetitorTeam;
+  awayTeam: CompetitorTeam;
+  status: 'LIVE' | 'FINISHED' | 'SCHEDULED' | 'POSTPONED';
+  statusDetail: string;
+  period?: number | string;
+  displayClock?: string;
+  rawUtcDate: string;
+  wibTime: string;
+  wibDate: string;
+  venue?: string;
+  events?: MatchEventItem[];
+  h2h?: {
+    totalMeetings?: number;
+    homeWins?: number;
+    draws?: number;
+    awayWins?: number;
+    recentMatches?: {
+      date: string;
+      homeTeam: string;
+      awayTeam: string;
+      score: string;
+      winner: 'home' | 'away' | 'draw';
+    }[];
+  };
+}

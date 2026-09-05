@@ -30,7 +30,8 @@ import {
   Flame, 
   SearchCheck, 
   FileBadge,
-  Code2 
+  Code2,
+  Radio
 } from 'lucide-react';
 import { DASHBOARD_MODULE_CARDS } from '../data/initialData';
 import { ActiveView } from './Sidebar';
@@ -59,6 +60,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
     { label: 'PHISING CHECKER', view: 'phising-checker' as ActiveView },
     { label: 'BBFS & ANGKA TARUNG', view: 'bbfs-angka-tarung' as ActiveView },
     { label: 'KALKULATOR PARLAY', view: 'kalkulator-parlay' as ActiveView },
+    { label: 'LIVESCORE (WIB)', view: 'livescore' as ActiveView },
     { label: 'HITUNG TOP-UP', view: 'wd-auto-flop' as ActiveView },
     { label: 'HITUNG WD', view: 'wd-auto-flop' as ActiveView },
     { label: 'AUTO WD FLOP', view: 'wd-auto-flop' as ActiveView },
@@ -107,6 +109,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
       case 'SearchCheck': return <SearchCheck {...props} className="w-5 h-5 text-amber-400" />;
       case 'FileBadge': return <FileBadge {...props} className="w-5 h-5 text-cyan-400" />;
       case 'Code2': return <Code2 {...props} className="w-5 h-5 text-emerald-400" />;
+      case 'Radio': return <Radio {...props} className="w-5 h-5 text-rose-400 animate-pulse" />;
       default: return <Sparkles {...props} />;
     }
   };

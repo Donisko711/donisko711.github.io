@@ -14,6 +14,7 @@ import { NawalaChecker } from './components/tools/NawalaChecker';
 import { ArticleGenerator } from './components/tools/ArticleGenerator';
 import { PhisingChecker } from './components/tools/PhisingChecker';
 import { ParlayCalculator } from './components/tools/ParlayCalculator';
+import { LiveScore } from './components/tools/LiveScore';
 import { BonusCalculator } from './components/tools/BonusCalculator';
 import { BonusParlayCalculator } from './components/tools/BonusParlayCalculator';
 import { BbfsGenerator } from './components/tools/BbfsGenerator';
@@ -239,6 +240,7 @@ export default function App() {
       case 'phising-checker': return { category: 'MENU UTAMA', title: 'Phising & Script Page Checker' };
       case 'bbfs-angka-tarung': return { category: 'MENU UTAMA', title: 'BBFS & Angka Tarung' };
       case 'kalkulator-parlay': return { category: 'MENU UTAMA', title: 'Kalkulator Hitung Parlay' };
+      case 'livescore': return { category: 'MENU UTAMA', title: 'Live Score & Jadwal Pertandingan (WIB)' };
       case 'jobdesk-cs': return { category: 'TOOLS KERJA CS', title: `Jobdesk CS (${activeShift})` };
       case 'bagi-bonus-slot': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Slot & Harian' };
       case 'bagi-bonus-parlay': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Mix Parlay Win Full' };
@@ -417,6 +419,8 @@ export default function App() {
             {activeView === 'phising-checker' && <PhisingChecker />}
 
             {activeView === 'kalkulator-parlay' && <ParlayCalculator />}
+
+            {activeView === 'livescore' && <LiveScore />}
 
             {activeView === 'bagi-bonus-slot' && (
               <BonusCalculator />

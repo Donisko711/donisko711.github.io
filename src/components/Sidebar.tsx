@@ -28,7 +28,9 @@ import {
   Zap,
   Globe,
   Code2,
-  Table
+  Table,
+  Radio,
+  Activity
 } from 'lucide-react';
 import { ShiftType, UserProfile } from '../types';
 
@@ -42,6 +44,7 @@ export type ActiveView =
   | 'phising-checker'
   | 'bbfs-angka-tarung'
   | 'kalkulator-parlay'
+  | 'livescore'
   | 'jobdesk-cs'
   | 'bagi-bonus-slot'
   | 'bagi-bonus-parlay'
@@ -95,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Single-open Category Accordion (Minimize Otomatis):
   // Ketika kategori lain diklik, kategori sebelumnya otomatis tertutup dan hanya kategori baru yang terbuka.
   const [openCategory, setOpenCategory] = useState<string | null>(() => {
-    if (['ai-intelegency', 'nawala-checker', 'generate-artikel', 'phising-checker', 'bbfs-angka-tarung', 'kalkulator-parlay'].includes(activeView)) {
+    if (['ai-intelegency', 'nawala-checker', 'generate-artikel', 'phising-checker', 'bbfs-angka-tarung', 'kalkulator-parlay', 'livescore'].includes(activeView)) {
       return 'menu-utama';
     }
     if (['jobdesk-cs', 'bagi-bonus-slot', 'bagi-bonus-parlay', 'edit-pembayaran', 'laporan-cs-ganti-data', 'laporan-cs-locked', 'sc-memo', 'sc-lc'].includes(activeView)) {
@@ -395,6 +398,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   {isOpen && (
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-mono">HOT</span>
+                  )}
+                </button>
+
+                {/* 7. LIVESCORE (NEW!) */}
+                <button
+                  onClick={() => handleSelectView('livescore', undefined, 'menu-utama')}
+                  id="menu-livescore"
+                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
+                    activeView === 'livescore'
+                      ? 'bg-gradient-to-r from-rose-500/25 to-cyan-500/20 border border-rose-400 text-white shadow-[0_0_15px_rgba(244,63,94,0.3)] font-bold'
+                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-rose-400/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/40 group-hover:scale-105 transition-transform">
+                      <Radio className="w-4 h-4 text-rose-400 animate-pulse" />
+                    </div>
+                    {isOpen && (
+                      <div className="text-left">
+                        <span className="block text-xs font-bold tracking-wide flex items-center gap-1.5">
+                          <span className="text-white">LIVESCORE</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-extrabold font-mono animate-pulse">
+                            LIVE
+                          </span>
+                        </span>
+                        <span className="text-[9px] text-[#00F3FF] font-mono">Skor & Jadwal (WIB)</span>
+                      </div>
+                    )}
+                  </div>
+                  {isOpen && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                      WIB
+                    </span>
                   )}
                 </button>
               </div>

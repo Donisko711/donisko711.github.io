@@ -537,6 +537,16 @@ export const DASHBOARD_MODULE_CARDS: DashboardModuleCard[] = [
     icon: 'Code2',
     actionMenuId: 'phising-checker'
   },
+  {
+    id: 'mod-livescore',
+    title: 'LIVESCORE & JADWAL (WIB)',
+    category: 'SISTEM',
+    categoryLabel: 'SKOR & OLAHRAGA',
+    description: 'Jadwal resmi, skor realtime (LIVE), dan riwayat pertandingan sepakbola, basket, bulutangkis, tenis & eSports disesuaikan dengan WIB.',
+    badge: 'BARU',
+    icon: 'Radio',
+    actionMenuId: 'livescore'
+  },
   // Kasir & Rekap Transaksi
   {
     id: 'mod-1',
