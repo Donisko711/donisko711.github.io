@@ -234,13 +234,13 @@ export default function App() {
   const getViewBreadcrumb = () => {
     switch (activeView) {
       case 'home': return { category: 'BERANDA', title: 'Dashboard Ringkasan' };
-      case 'ai-intelegency': return { category: 'MENU UTAMA', title: 'AI Intelegency Workstation' };
-      case 'nawala-checker': return { category: 'MENU UTAMA', title: 'Nawala & Link Checker' };
-      case 'generate-artikel': return { category: 'MENU UTAMA', title: 'Generate Artikel & Promo SEO' };
-      case 'phising-checker': return { category: 'MENU UTAMA', title: 'Phising & Script Page Checker' };
-      case 'bbfs-angka-tarung': return { category: 'MENU UTAMA', title: 'BBFS & Angka Tarung' };
-      case 'kalkulator-parlay': return { category: 'MENU UTAMA', title: 'Kalkulator Hitung Parlay' };
-      case 'livescore': return { category: 'MENU UTAMA', title: 'Live Score & Jadwal Pertandingan (WIB)' };
+      case 'ai-intelegency': return { category: 'MENU HIGHLIGHT', title: 'AI Intelegency Workstation' };
+      case 'livescore': return { category: 'MENU HIGHLIGHT', title: 'Live Score & Jadwal Pertandingan (WIB)' };
+      case 'phising-checker': return { category: 'MENU HIGHLIGHT', title: 'Phising & Script Page Checker' };
+      case 'nawala-checker': return { category: 'MENU HIGHLIGHT', title: 'Nawala & Link Checker' };
+      case 'generate-artikel': return { category: 'ALAT GENERATE', title: 'Generate Artikel & Promo SEO' };
+      case 'bbfs-angka-tarung': return { category: 'ALAT GENERATE', title: 'BBFS & Angka Tarung' };
+      case 'kalkulator-parlay': return { category: 'ALAT GENERATE', title: 'Kalkulator Hitung Parlay' };
       case 'jobdesk-cs': return { category: 'TOOLS KERJA CS', title: `Jobdesk CS (${activeShift})` };
       case 'bagi-bonus-slot': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Slot & Harian' };
       case 'bagi-bonus-parlay': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Mix Parlay Win Full' };

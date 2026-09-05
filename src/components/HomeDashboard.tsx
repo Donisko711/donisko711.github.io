@@ -55,12 +55,12 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
 
   const quickPills = [
     { label: 'AI INTELEGENCY', view: 'ai-intelegency' as ActiveView },
+    { label: 'LIVESCORE (WIB)', view: 'livescore' as ActiveView },
+    { label: 'PHISING CHECKER', view: 'phising-checker' as ActiveView },
     { label: 'CEK STATUS NAWALA', view: 'nawala-checker' as ActiveView },
     { label: 'GENERATE ARTIKEL', view: 'generate-artikel' as ActiveView },
-    { label: 'PHISING CHECKER', view: 'phising-checker' as ActiveView },
     { label: 'BBFS & ANGKA TARUNG', view: 'bbfs-angka-tarung' as ActiveView },
     { label: 'KALKULATOR PARLAY', view: 'kalkulator-parlay' as ActiveView },
-    { label: 'LIVESCORE (WIB)', view: 'livescore' as ActiveView },
     { label: 'HITUNG TOP-UP', view: 'wd-auto-flop' as ActiveView },
     { label: 'HITUNG WD', view: 'wd-auto-flop' as ActiveView },
     { label: 'AUTO WD FLOP', view: 'wd-auto-flop' as ActiveView },

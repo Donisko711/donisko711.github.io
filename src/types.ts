@@ -165,6 +165,7 @@ export interface LiveMatch {
   wibDate: string;
   venue?: string;
   events?: MatchEventItem[];
+  isBigMatch?: boolean;
   h2h?: {
     totalMeetings?: number;
     homeWins?: number;
@@ -178,4 +179,86 @@ export interface LiveMatch {
       winner: 'home' | 'away' | 'draw';
     }[];
   };
+}
+
+export type LiveScoreAlertType = 'KICKOFF' | 'GOAL' | 'FULLTIME' | 'INFO';
+
+export interface LiveScoreAlertItem {
+  id: string;
+  type: LiveScoreAlertType;
+  matchId: string;
+  matchTitle: string;
+  league: string;
+  timeWib: string;
+  title: string;
+  message: string;
+  scoringTeam?: string;
+  scorerName?: string;
+  minute?: string;
+  currentScore?: string;
+  winner?: string;
+  timestamp: number;
+}
+
+export interface SeasonArchiveMatch {
+  id: string;
+  leagueId: string;
+  leagueName: string;
+  leagueLogo?: string;
+  season: string; // e.g. '2026/2027', '2025/2026', '2024/2025', '2023/2024'
+  matchweek: number;
+  matchweekLabel: string; // e.g. 'Pekan 1', 'Pekan 2'
+  dateIso: string;
+  wibDate: string; // e.g. 'Selasa, 01 September 2026'
+  wibTime: string; // e.g. '02:30 WIB'
+  homeTeam: {
+    name: string;
+    shortName: string;
+    logo?: string;
+    score: number;
+  };
+  awayTeam: {
+    name: string;
+    shortName: string;
+    logo?: string;
+    score: number;
+  };
+  halftimeScore?: string;
+  status: 'FINISHED' | 'POSTPONED';
+  venue?: string;
+  scorers?: {
+    player: string;
+    minute: string;
+    team: 'home' | 'away';
+  }[];
+  referee?: string;
+}
+
+export interface LeagueStandingItem {
+  position: number;
+  teamId?: string;
+  teamName: string;
+  shortName: string;
+  logo?: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+  form: ('W' | 'D' | 'L')[];
+  zoneType?: 'ucl' | 'ucl_qual' | 'uel' | 'uecl' | 'relegation' | 'normal';
+  zoneDescription?: string;
+}
+
+export interface LeagueSeasonInfo {
+  id: string;
+  name: string;
+  country: string;
+  logo: string;
+  currentSeason: string;
+  seasons: string[];
+  startDate2026: string; // '22 Agustus 2026'
 }

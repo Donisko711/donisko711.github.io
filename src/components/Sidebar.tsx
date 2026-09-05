@@ -98,8 +98,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Single-open Category Accordion (Minimize Otomatis):
   // Ketika kategori lain diklik, kategori sebelumnya otomatis tertutup dan hanya kategori baru yang terbuka.
   const [openCategory, setOpenCategory] = useState<string | null>(() => {
-    if (['ai-intelegency', 'nawala-checker', 'generate-artikel', 'phising-checker', 'bbfs-angka-tarung', 'kalkulator-parlay', 'livescore'].includes(activeView)) {
-      return 'menu-utama';
+    if (['generate-artikel', 'bbfs-angka-tarung', 'kalkulator-parlay'].includes(activeView)) {
+      return 'alat-generate';
     }
     if (['jobdesk-cs', 'bagi-bonus-slot', 'bagi-bonus-parlay', 'edit-pembayaran', 'laporan-cs-ganti-data', 'laporan-cs-locked', 'sc-memo', 'sc-lc'].includes(activeView)) {
       return 'tools-cs';
@@ -194,113 +194,218 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <nav className="flex-1 overflow-y-auto overflow-x-hidden p-2.5 space-y-2 text-xs select-none">
         
         {/* ========================================================= */}
-        {/* CATEGORY: MENU UTAMA (Collapsible Accordion)               */}
+        {/* MENU HIGHLIGHT (Berada di Atas Kategori / Bawah Dashboard) */}
+        {/* 1. AI INTELEGENCY                                         */}
+        {/* 2. LIVESCORE                                              */}
+        {/* 3. PHISING CHECKER                                        */}
+        {/* 4. CEK STATUS NAWALA                                      */}
         {/* Disembunyikan khusus untuk akun staf LEO                   */}
         {/* ========================================================= */}
         {currentUser?.username?.toLowerCase() !== 'leo' && (
-          <div className="rounded-2xl bg-[#141414]/75 backdrop-blur-md border border-white/10 p-1.5 overflow-hidden transition-all shadow-md">
+          <div className="rounded-2xl bg-gradient-to-b from-[#131622] to-[#0A0C14] border-2 border-[#00F3FF]/40 shadow-[0_0_20px_rgba(0,243,255,0.18)] p-1.5 space-y-1.5 overflow-hidden transition-all">
+            {isOpen ? (
+              <div className="px-2 pt-1 pb-0.5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#00F3FF] animate-pulse"></span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-white font-sans flex items-center gap-1">
+                    <span>MENU HIGHLIGHT</span>
+                    <span className="text-yellow-400 font-mono text-[9px]">(TOP 4)</span>
+                  </span>
+                </div>
+                <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded-full bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.5)]">
+                  PRIORITAS
+                </span>
+              </div>
+            ) : (
+              <div className="w-full text-center text-[9px] font-mono text-yellow-400 py-0.5 font-black uppercase tracking-tighter" title="Menu Highlight">
+                TOP
+              </div>
+            )}
+
+            {/* 1. AI INTELEGENCY */}
+            <button
+              onClick={() => handleSelectView('ai-intelegency')}
+              id="menu-ai-intelegency"
+              title="AI Intelegency - Asisten CS & Kasir 711"
+              className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
+                activeView === 'ai-intelegency'
+                  ? 'bg-gradient-to-r from-[#00F3FF]/30 via-yellow-400/20 to-[#00F3FF]/20 border-2 border-[#00F3FF] text-white shadow-[0_0_18px_rgba(0,243,255,0.4)] font-bold'
+                  : 'bg-[#141724]/90 hover:bg-[#1E2235] text-gray-200 hover:text-white border border-[#00F3FF]/30 hover:border-[#00F3FF] shadow-[0_0_8px_rgba(0,243,255,0.1)]'
+              }`}
+            >
+              <div className={`flex items-center ${isOpen ? 'gap-2.5' : 'justify-center'}`}>
+                <div className="p-1.5 rounded-xl bg-gradient-to-br from-[#00F3FF]/25 to-yellow-400/25 text-[#00F3FF] border border-[#00F3FF]/50 group-hover:scale-105 transition-transform shadow-[0_0_8px_rgba(0,243,255,0.3)] flex-shrink-0">
+                  <Bot className="w-4 h-4 text-[#00F3FF]" />
+                </div>
+                {isOpen && (
+                  <div className="text-left min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-black tracking-wide text-white">AI INTELEGENCY</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-yellow-400 text-black font-black font-mono animate-pulse">
+                        NEW
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-[#00F3FF] font-mono block truncate">Asisten CS & Kasir 711</span>
+                  </div>
+                )}
+              </div>
+              {isOpen && <Sparkles className="w-3.5 h-3.5 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)] flex-shrink-0" />}
+            </button>
+
+            {/* 2. LIVESCORE */}
+            <button
+              onClick={() => handleSelectView('livescore')}
+              id="menu-livescore"
+              title="LiveScore - Skor & Jadwal (WIB)"
+              className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
+                activeView === 'livescore'
+                  ? 'bg-gradient-to-r from-rose-500/30 via-cyan-500/20 to-rose-500/20 border-2 border-rose-400 text-white shadow-[0_0_18px_rgba(244,63,94,0.4)] font-bold'
+                  : 'bg-[#141724]/90 hover:bg-[#1E2235] text-gray-200 hover:text-white border border-rose-500/30 hover:border-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.1)]'
+              }`}
+            >
+              <div className={`flex items-center ${isOpen ? 'gap-2.5' : 'justify-center'}`}>
+                <div className="p-1.5 rounded-xl bg-rose-500/25 text-rose-400 border border-rose-500/50 group-hover:scale-105 transition-transform shadow-[0_0_8px_rgba(244,63,94,0.3)] flex-shrink-0">
+                  <Radio className="w-4 h-4 text-rose-400 animate-pulse" />
+                </div>
+                {isOpen && (
+                  <div className="text-left min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-black tracking-wide text-white">LIVESCORE</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-black font-mono animate-pulse">
+                        LIVE
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-rose-300 font-mono block truncate">Skor & Jadwal (WIB)</span>
+                  </div>
+                )}
+              </div>
+              {isOpen && (
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold flex-shrink-0">
+                  WIB
+                </span>
+              )}
+            </button>
+
+            {/* 3. PHISING CHECKER */}
+            <button
+              onClick={() => handleSelectView('phising-checker')}
+              id="menu-phising-checker"
+              title="Phising Checker - Baca Script Page Domain"
+              className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
+                activeView === 'phising-checker'
+                  ? 'bg-gradient-to-r from-emerald-500/30 via-cyan-500/20 to-emerald-500/20 border-2 border-emerald-400 text-white shadow-[0_0_18px_rgba(16,185,129,0.4)] font-bold'
+                  : 'bg-[#141724]/90 hover:bg-[#1E2235] text-gray-200 hover:text-white border border-emerald-500/30 hover:border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+              }`}
+            >
+              <div className={`flex items-center ${isOpen ? 'gap-2.5' : 'justify-center'}`}>
+                <div className="p-1.5 rounded-xl bg-emerald-500/25 text-emerald-400 border border-emerald-500/50 group-hover:scale-105 transition-transform shadow-[0_0_8px_rgba(16,185,129,0.3)] flex-shrink-0">
+                  <Code2 className="w-4 h-4 text-emerald-400" />
+                </div>
+                {isOpen && (
+                  <div className="text-left min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-black tracking-wide text-white">PHISING CHECKER</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-400 text-black font-black font-mono">
+                        NEW
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-emerald-300 font-mono block truncate">Baca Script Page Domain</span>
+                  </div>
+                )}
+              </div>
+              {isOpen && (
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold flex-shrink-0">
+                  HTML
+                </span>
+              )}
+            </button>
+
+            {/* 4. CEK STATUS NAWALA */}
+            <button
+              onClick={() => handleSelectView('nawala-checker')}
+              id="menu-nawala-checker"
+              title="Cek Status Nawala - Link & Domain Checker"
+              className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
+                activeView === 'nawala-checker'
+                  ? 'bg-gradient-to-r from-amber-500/30 via-rose-500/20 to-amber-500/20 border-2 border-amber-400 text-white shadow-[0_0_18px_rgba(245,158,11,0.4)] font-bold'
+                  : 'bg-[#141724]/90 hover:bg-[#1E2235] text-gray-200 hover:text-white border border-amber-500/30 hover:border-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.1)]'
+              }`}
+            >
+              <div className={`flex items-center ${isOpen ? 'gap-2.5' : 'justify-center'}`}>
+                <div className="p-1.5 rounded-xl bg-amber-500/25 text-amber-400 border border-amber-500/50 group-hover:scale-105 transition-transform shadow-[0_0_8px_rgba(245,158,11,0.3)] flex-shrink-0">
+                  <ShieldAlert className="w-4 h-4 text-amber-400" />
+                </div>
+                {isOpen && (
+                  <div className="text-left min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-black tracking-wide text-white">CEK STATUS NAWALA</span>
+                    </div>
+                    <span className="text-[9px] text-amber-300 font-mono block truncate">Link & Domain Checker</span>
+                  </div>
+                )}
+              </div>
+              {isOpen && (
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex-shrink-0">
+                  DNS
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* CATEGORY: ALAT GENERATE (Collapsible Accordion)            */}
+        {/* Disembunyikan khusus untuk akun staf LEO                   */}
+        {/* ========================================================= */}
+        {currentUser?.username?.toLowerCase() !== 'leo' && (
+          <div className="rounded-2xl bg-gradient-to-b from-[#211905]/85 to-[#120D02]/90 border border-amber-400/50 p-1.5 overflow-hidden transition-all shadow-[0_0_15px_rgba(245,158,11,0.15)]">
             {isOpen ? (
               <button
-                onClick={() => toggleCategory('menu-utama')}
+                onClick={() => toggleCategory('alat-generate')}
                 type="button"
-                id="btn-toggle-menu-utama"
-                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-gradient-to-r from-[#1E1E24]/90 to-[#18181F]/90 hover:bg-[#25252F]/90 border border-yellow-400/30 text-left transition-all cursor-pointer group mb-1.5 shadow-sm"
+                id="btn-toggle-alat-generate"
+                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-gradient-to-r from-amber-500/25 via-yellow-500/15 to-[#1E1605]/95 hover:from-amber-500/35 hover:to-yellow-500/25 border border-amber-400/70 hover:border-amber-300 text-left transition-all cursor-pointer group mb-1.5 shadow-[0_0_10px_rgba(245,158,11,0.18)]"
               >
                 <div className="flex items-center gap-2">
-                  <div className="p-1 rounded-lg bg-yellow-400/15 text-yellow-400 border border-yellow-400/30">
-                    <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                  <div className="p-1 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 text-black shadow-[0_0_8px_rgba(250,204,21,0.5)] flex-shrink-0">
+                    <Sparkles className="w-3.5 h-3.5 text-black" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-white font-sans group-hover:text-yellow-400 transition-colors">
-                      MENU UTAMA
+                    <span className="text-[11px] font-black uppercase tracking-wider text-yellow-300 font-sans group-hover:text-yellow-200 transition-colors">
+                      ALAT GENERATE
                     </span>
-                    <span className="text-[9px] text-gray-400 font-mono">
-                      6 Fitur Utama
+                    <span className="text-[9px] text-amber-200/70 font-mono">
+                      3 Alat Generator
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-yellow-400/15 text-yellow-300 border border-yellow-400/30 font-bold">
-                    6 UTAMA
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-yellow-400 text-black border border-yellow-300 font-black shadow-[0_0_8px_rgba(250,204,21,0.4)]">
+                    3 ALAT
                   </span>
-                  {openCategory === 'menu-utama' ? (
+                  {openCategory === 'alat-generate' ? (
                     <ChevronDown className="w-3.5 h-3.5 text-yellow-400" />
                   ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-white" />
+                    <ChevronRight className="w-3.5 h-3.5 text-amber-300/80 group-hover:text-white" />
                   )}
                 </div>
               </button>
             ) : (
               <div 
-                onClick={() => toggleCategory('menu-utama')} 
-                className="w-full text-center text-[10px] font-mono text-yellow-400 py-1 cursor-pointer font-bold"
-                title="Menu Utama"
+                onClick={() => toggleCategory('alat-generate')} 
+                className="w-full text-center text-[9px] font-mono text-yellow-400 py-1 cursor-pointer font-bold uppercase"
+                title="Alat Generate"
               >
-                UTAMA
+                GENERATE
               </div>
             )}
 
-            {/* Collapsible Children of MENU UTAMA */}
-            {openCategory === 'menu-utama' && (
+            {/* Collapsible Children of ALAT GENERATE */}
+            {openCategory === 'alat-generate' && (
               <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
-                {/* 1. AI INTELEGENCY */}
+                {/* 1. GENERATE ARTIKEL */}
                 <button
-                  onClick={() => handleSelectView('ai-intelegency', undefined, 'menu-utama')}
-                  id="menu-ai-intelegency"
-                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                    activeView === 'ai-intelegency'
-                      ? 'bg-gradient-to-r from-[#00F3FF]/25 to-yellow-400/20 border border-[#00F3FF] text-white shadow-[0_0_15px_rgba(0,243,255,0.3)] font-bold'
-                      : 'bg-[#1A1A1A]/80 hover:bg-[#252525]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/40'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1 rounded-lg bg-gradient-to-br from-[#00F3FF]/20 to-yellow-400/20 text-[#00F3FF] border border-[#00F3FF]/40 group-hover:scale-105 transition-transform">
-                      <Bot className="w-4 h-4 text-[#00F3FF]" />
-                    </div>
-                    {isOpen && (
-                      <div className="text-left">
-                        <span className="block text-xs font-bold tracking-wide flex items-center gap-1.5">
-                          <span className="text-white">AI INTELEGENCY</span>
-                          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-yellow-400 text-black font-extrabold font-mono animate-pulse">
-                            NEW
-                          </span>
-                        </span>
-                        <span className="text-[9px] text-gray-400 font-mono">Asisten CS & Kasir 711</span>
-                      </div>
-                    )}
-                  </div>
-                  {isOpen && <Sparkles className="w-3.5 h-3.5 text-yellow-400" />}
-                </button>
-
-                {/* 2. CEK STATUS NAWALA */}
-                <button
-                  onClick={() => handleSelectView('nawala-checker', undefined, 'menu-utama')}
-                  id="menu-nawala-checker"
-                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                    activeView === 'nawala-checker'
-                      ? 'bg-[#1F1F1F]/90 border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] font-bold'
-                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-[#00F3FF]/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1 rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                      <ShieldAlert className="w-4 h-4 text-rose-400" />
-                    </div>
-                    {isOpen && (
-                      <div className="text-left">
-                        <span className="block text-xs font-semibold">CEK STATUS NAWALA</span>
-                        <span className="text-[9px] text-gray-400 font-mono">Link & Domain Checker</span>
-                      </div>
-                    )}
-                  </div>
-                  {isOpen && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-400">DNS</span>
-                  )}
-                </button>
-
-                {/* 3. GENERATE ARTIKEL */}
-                <button
-                  onClick={() => handleSelectView('generate-artikel', undefined, 'menu-utama')}
+                  onClick={() => handleSelectView('generate-artikel', undefined, 'alat-generate')}
                   id="menu-generate-artikel"
                   className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
                     activeView === 'generate-artikel'
@@ -321,40 +426,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 </button>
 
-                {/* 4. PHISING CHECKER (NEW!) */}
+                {/* 2. BBFS & ANGKA TARUNG */}
                 <button
-                  onClick={() => handleSelectView('phising-checker', undefined, 'menu-utama')}
-                  id="menu-phising-checker"
-                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                    activeView === 'phising-checker'
-                      ? 'bg-gradient-to-r from-emerald-500/25 to-cyan-500/20 border border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] font-bold'
-                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-emerald-400/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                      <Code2 className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    {isOpen && (
-                      <div className="text-left">
-                        <span className="block text-xs font-bold tracking-wide flex items-center gap-1.5">
-                          <span className="text-white">PHISING CHECKER</span>
-                          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-400 text-black font-extrabold font-mono">
-                            NEW
-                          </span>
-                        </span>
-                        <span className="text-[9px] text-gray-400 font-mono">Baca Script Page Domain</span>
-                      </div>
-                    )}
-                  </div>
-                  {isOpen && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">HTML</span>
-                  )}
-                </button>
-
-                {/* 5. BBFS & ANGKA TARUNG */}
-                <button
-                  onClick={() => handleSelectView('bbfs-angka-tarung', undefined, 'menu-utama')}
+                  onClick={() => handleSelectView('bbfs-angka-tarung', undefined, 'alat-generate')}
                   id="menu-bbfs-tarung"
                   className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
                     activeView === 'bbfs-angka-tarung'
@@ -375,9 +449,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 </button>
 
-                {/* 6. KALKULATOR PARLAY */}
+                {/* 3. KALKULATOR PARLAY */}
                 <button
-                  onClick={() => handleSelectView('kalkulator-parlay', undefined, 'menu-utama')}
+                  onClick={() => handleSelectView('kalkulator-parlay', undefined, 'alat-generate')}
                   id="menu-kalkulator-parlay"
                   className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
                     activeView === 'kalkulator-parlay'
@@ -400,39 +474,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-mono">HOT</span>
                   )}
                 </button>
-
-                {/* 7. LIVESCORE (NEW!) */}
-                <button
-                  onClick={() => handleSelectView('livescore', undefined, 'menu-utama')}
-                  id="menu-livescore"
-                  className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                    activeView === 'livescore'
-                      ? 'bg-gradient-to-r from-rose-500/25 to-cyan-500/20 border border-rose-400 text-white shadow-[0_0_15px_rgba(244,63,94,0.3)] font-bold'
-                      : 'bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-gray-200 hover:text-white border border-white/5 hover:border-rose-400/40'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/40 group-hover:scale-105 transition-transform">
-                      <Radio className="w-4 h-4 text-rose-400 animate-pulse" />
-                    </div>
-                    {isOpen && (
-                      <div className="text-left">
-                        <span className="block text-xs font-bold tracking-wide flex items-center gap-1.5">
-                          <span className="text-white">LIVESCORE</span>
-                          <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-extrabold font-mono animate-pulse">
-                            LIVE
-                          </span>
-                        </span>
-                        <span className="text-[9px] text-[#00F3FF] font-mono">Skor & Jadwal (WIB)</span>
-                      </div>
-                    )}
-                  </div>
-                  {isOpen && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                      WIB
-                    </span>
-                  )}
-                </button>
               </div>
             )}
           </div>
@@ -443,34 +484,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Disembunyikan khusus untuk akun staf LEO                   */}
         {/* ========================================================= */}
         {currentUser?.username?.toLowerCase() !== 'leo' && (
-          <div className="rounded-2xl bg-[#141414]/70 backdrop-blur-md border border-white/10 p-1.5 overflow-hidden transition-all shadow-md">
+          <div className="rounded-2xl bg-gradient-to-b from-[#081C26]/85 to-[#040E14]/90 border border-[#00F3FF]/50 p-1.5 overflow-hidden transition-all shadow-[0_0_15px_rgba(0,243,255,0.15)]">
             {isOpen ? (
               <button
                 onClick={() => toggleCategory('tools-cs')}
                 type="button"
-                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1C1C1C]/80 hover:bg-[#252525]/90 border border-white/10 text-left transition-all cursor-pointer group mb-1.5"
+                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-gradient-to-r from-[#00F3FF]/25 via-cyan-900/40 to-[#081824]/95 hover:from-[#00F3FF]/35 hover:to-cyan-800/40 border border-[#00F3FF]/70 hover:border-[#00F3FF] text-left transition-all cursor-pointer group mb-1.5 shadow-[0_0_10px_rgba(0,243,255,0.18)]"
               >
                 <div className="flex items-center gap-2">
-                  <div className="p-1 rounded-lg bg-[#00F3FF]/15 text-[#00F3FF] border border-[#00F3FF]/30">
-                    <Laptop className="w-3.5 h-3.5" />
+                  <div className="p-1 rounded-lg bg-gradient-to-br from-[#00F3FF] to-cyan-500 text-black shadow-[0_0_8px_rgba(0,243,255,0.5)] flex-shrink-0">
+                    <Laptop className="w-3.5 h-3.5 text-black" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-white font-sans group-hover:text-[#00F3FF] transition-colors">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-[#00F3FF] font-sans group-hover:text-cyan-200 transition-colors">
                       TOOLS KERJA CS
                     </span>
-                    <span className="text-[9px] text-gray-400 font-mono">
+                    <span className="text-[9px] text-cyan-200/70 font-mono">
                       6 Modul Operasional
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#121212]/80 text-[#00F3FF] border border-[#00F3FF]/30">
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#00F3FF] text-black border border-cyan-300 font-black shadow-[0_0_8px_rgba(0,243,255,0.4)]">
                     CS
                   </span>
                   {openCategory === 'tools-cs' ? (
                     <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" />
                   ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-white" />
+                    <ChevronRight className="w-3.5 h-3.5 text-cyan-300/80 group-hover:text-white" />
                   )}
                 </div>
               </button>
@@ -723,27 +764,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => handleSelectView('wd-auto-flop')}
           id="menu-wd-auto-flop-standalone"
-          className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all duration-200 cursor-pointer flex items-center justify-between group shadow-sm ${
+          className={`w-full px-3.5 py-2 rounded-[24px] transition-all duration-200 cursor-pointer flex items-center justify-between group shadow-sm ${
             activeView === 'wd-auto-flop'
-              ? 'bg-gradient-to-r from-emerald-500/25 to-green-500/20 border border-emerald-400 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)] font-bold'
-              : 'bg-[#141414]/85 hover:bg-[#18261e] text-gray-200 hover:text-white border border-white/10 hover:border-emerald-400/50'
+              ? 'bg-gradient-to-r from-emerald-500/30 via-green-600/25 to-[#061C10]/95 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_18px_rgba(16,185,129,0.35)] font-bold'
+              : 'bg-gradient-to-r from-emerald-500/20 via-green-900/30 to-[#06180E]/90 hover:from-emerald-500/30 hover:to-green-800/35 text-gray-200 hover:text-white border border-emerald-400/60 hover:border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.18)]'
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <div className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 group-hover:scale-105 transition-transform">
-              <Bot className="w-4 h-4 text-emerald-400" />
+            <div className="p-1 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 text-black shadow-[0_0_8px_rgba(16,185,129,0.5)] group-hover:scale-105 transition-transform flex-shrink-0">
+              <Bot className="w-3.5 h-3.5 text-black" />
             </div>
             {isOpen && (
               <div className="text-left">
-                <span className="block text-xs font-bold tracking-wide text-white group-hover:text-emerald-400 transition-colors whitespace-nowrap">
+                <span className="block text-[11px] font-black tracking-wide text-emerald-300 group-hover:text-emerald-200 transition-colors whitespace-nowrap">
                   WD AUTO FLOP
                 </span>
-                <span className="text-[9px] text-gray-400 font-mono">Auto Withdraw Parser</span>
+                <span className="text-[9px] text-emerald-200/70 font-mono">Auto Withdraw Parser</span>
               </div>
             )}
           </div>
           {isOpen && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30">
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-400 text-black font-mono border border-emerald-300 font-black shadow-[0_0_8px_rgba(16,185,129,0.4)]">
               PARSING
             </span>
           )}
@@ -752,41 +793,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* ========================================================= */}
         {/* CATEGORY 2: TOOLS KERJA KASIR (Collapsible Single Accordion) */}
         {/* ========================================================= */}
-        <div className="rounded-2xl bg-[#141414]/70 backdrop-blur-md border border-white/10 p-1.5 overflow-hidden transition-all shadow-md">
+        <div className="rounded-2xl bg-gradient-to-b from-[#1C0F2E]/85 to-[#0E0617]/90 border border-purple-500/50 p-1.5 overflow-hidden transition-all shadow-[0_0_15px_rgba(168,85,247,0.15)]">
           {isOpen ? (
             <button
               onClick={() => toggleCategory('kasir')}
               type="button"
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1C1C1C]/80 hover:bg-[#252525]/90 border border-white/10 text-left transition-all cursor-pointer group mb-1.5"
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-gradient-to-r from-purple-600/25 via-indigo-950/40 to-[#180C28]/95 hover:from-purple-600/35 hover:to-indigo-900/45 border border-purple-400/70 hover:border-purple-300 text-left transition-all cursor-pointer group mb-1.5 shadow-[0_0_10px_rgba(168,85,247,0.18)]"
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-lg bg-yellow-400/15 text-yellow-400 border border-yellow-400/30">
-                  <Coins className="w-3.5 h-3.5" />
+                <div className="p-1 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 text-black shadow-[0_0_8px_rgba(168,85,247,0.5)] flex-shrink-0">
+                  <Coins className="w-3.5 h-3.5 text-black" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-white font-sans group-hover:text-yellow-400 transition-colors">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-purple-300 font-sans group-hover:text-purple-200 transition-colors">
                     TOOLS KERJA KASIR
                   </span>
-                  <span className="text-[9px] text-gray-400 font-mono">
+                  <span className="text-[9px] text-purple-200/70 font-mono">
                     3 Modul Kasir
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#121212]/80 text-yellow-400 border border-yellow-400/30">
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-purple-400 text-black border border-purple-300 font-black shadow-[0_0_8px_rgba(168,85,247,0.4)]">
                   KASIR
                 </span>
                 {openCategory === 'kasir' ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-yellow-400" />
+                  <ChevronDown className="w-3.5 h-3.5 text-purple-300" />
                 ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-white" />
+                  <ChevronRight className="w-3.5 h-3.5 text-purple-300/80 group-hover:text-white" />
                 )}
               </div>
             </button>
           ) : (
             <div 
               onClick={() => toggleCategory('kasir')} 
-              className="w-full text-center text-[10px] font-mono text-yellow-400 py-1 cursor-pointer font-bold"
+              className="w-full text-center text-[10px] font-mono text-purple-300 py-1 cursor-pointer font-bold"
               title="Tools Kerja Kasir"
             >
               KASIR
@@ -893,41 +934,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* ========================================================= */}
         {/* CATEGORY 3: MODUL BELAJAR (Collapsible Single Accordion)   */}
         {/* ========================================================= */}
-        <div className="rounded-2xl bg-[#141414]/70 backdrop-blur-md border border-white/10 p-1.5 overflow-hidden transition-all shadow-md">
+        <div className="rounded-2xl bg-gradient-to-b from-[#280C1A]/85 to-[#14050D]/90 border border-rose-500/50 p-1.5 overflow-hidden transition-all shadow-[0_0_15px_rgba(244,63,94,0.15)]">
           {isOpen ? (
             <button
               onClick={() => toggleCategory('modul-sop')}
               type="button"
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-[#1C1C1C]/80 hover:bg-[#252525]/90 border border-white/10 text-left transition-all cursor-pointer group mb-1.5"
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-gradient-to-r from-rose-600/25 via-pink-950/40 to-[#220B16]/95 hover:from-rose-600/35 hover:to-pink-900/45 border border-rose-400/70 hover:border-rose-300 text-left transition-all cursor-pointer group mb-1.5 shadow-[0_0_10px_rgba(244,63,94,0.18)]"
             >
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <GraduationCap className="w-3.5 h-3.5" />
+                <div className="p-1 rounded-lg bg-gradient-to-br from-rose-400 to-pink-500 text-black shadow-[0_0_8px_rgba(244,63,94,0.5)] flex-shrink-0">
+                  <GraduationCap className="w-3.5 h-3.5 text-black" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-white font-sans group-hover:text-emerald-400 transition-colors">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-rose-300 font-sans group-hover:text-rose-200 transition-colors">
                     MODUL BELAJAR
                   </span>
-                  <span className="text-[9px] text-gray-400 font-mono">
+                  <span className="text-[9px] text-rose-200/70 font-mono">
                     6 Materi & Training
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#121212]/80 text-emerald-400 border border-emerald-500/30">
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-rose-400 text-black border border-rose-300 font-black shadow-[0_0_8px_rgba(244,63,94,0.4)]">
                   SOP
                 </span>
                 {openCategory === 'modul-sop' ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-emerald-400" />
+                  <ChevronDown className="w-3.5 h-3.5 text-rose-300" />
                 ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-white" />
+                  <ChevronRight className="w-3.5 h-3.5 text-rose-300/80 group-hover:text-white" />
                 )}
               </div>
             </button>
           ) : (
             <div 
               onClick={() => toggleCategory('modul-sop')} 
-              className="w-full text-center text-[10px] font-mono text-emerald-400 py-1 cursor-pointer font-bold"
+              className="w-full text-center text-[10px] font-mono text-rose-300 py-1 cursor-pointer font-bold"
               title="Modul Belajar"
             >
               SOP

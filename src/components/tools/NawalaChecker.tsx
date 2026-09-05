@@ -33,10 +33,8 @@ export interface NawalaResultItem {
 }
 
 export const NawalaChecker: React.FC = () => {
-  // Input domain (bisa 1 - 30 domain)
-  const [inputText, setInputText] = useState<string>(
-    'https://horas711.com\nhttp://www.jepe711.net\nhttps://hoki711.org/daftar\nhttps://zeus711.vip\nhttps://slot711.live'
-  );
+  // Input domain (bisa 1 - 30 domain) - Default kosong saat dibuka agar tidak double input
+  const [inputText, setInputText] = useState<string>('');
   const [filterMode, setFilterMode] = useState<'ALL' | 'SAFE' | 'BLOCKED'>('ALL');
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [results, setResults] = useState<NawalaResultItem[]>([]);

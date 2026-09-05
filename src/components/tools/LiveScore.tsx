@@ -21,15 +21,26 @@ import {
   SlidersHorizontal,
   ChevronRight,
   TrendingUp,
-  Award
+  Award,
+  History
 } from 'lucide-react';
-import { LiveMatch, SportType, MatchStatusFilter } from '../../types';
+import { LiveMatch, SportType, MatchStatusFilter, LiveScoreAlertItem } from '../../types';
 import { 
   fetchAllLiveScores, 
   getWibDateString, 
   formatWibDate, 
-  formatWibTime 
+  formatWibTime,
+  isBigMatchGame
 } from '../../services/liveScoreService';
+import { LiveScoreTicker } from './livescore/LiveScoreTicker';
+import { BigMatchAlertPopup } from './livescore/BigMatchAlertPopup';
+import { NotificationDrawer } from './livescore/NotificationDrawer';
+import { SeasonMatchArchiveView } from './livescore/SeasonMatchArchiveView';
+import { LeagueStandingsView } from './livescore/LeagueStandingsView';
+import { ClubScheduleVerifier } from './livescore/ClubScheduleVerifier';
+import { playRefereeWhistle, playGoalCelebration } from '../../utils/audioAlert';
+
+const INITIAL_ALERTS: LiveScoreAlertItem[] = [];
 
 export const LiveScore: React.FC = () => {
   // State
@@ -48,6 +59,69 @@ export const LiveScore: React.FC = () => {
   const [countdown, setCountdown] = useState<number>(30);
   const [currentWibTime, setCurrentWibTime] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // View Navigation Mode (Hari Ini Live, Arsip Hasil Sejak Awal Musim, Klasemen Liga Per Musim)
+  const [activeMainTab, setActiveMainTab] = useState<'today' | 'season_archive' | 'standings'>('today');
+
+  // Bigmatch Alert & Notification States
+  const [alerts, setAlerts] = useState<LiveScoreAlertItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('livescore_alerts');
+      if (saved) {
+        const parsed: LiveScoreAlertItem[] = JSON.parse(saved);
+        // Purge any stale fake test matches from old sessions
+        return parsed.filter(a => a.matchId !== 'soccer-el-clasico-live');
+      }
+      return INITIAL_ALERTS;
+    } catch {
+      return INITIAL_ALERTS;
+    }
+  });
+  const [activePopupAlert, setActivePopupAlert] = useState<LiveScoreAlertItem | null>(null);
+  const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState<boolean>(false);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('livescore_sound') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const prevMatchesMapRef = React.useRef<Map<string, { homeScore: string | number; awayScore: string | number; status: string }>>(new Map());
+
+  // Toggle sound
+  const toggleSound = useCallback(() => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('livescore_sound', String(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  // Trigger alert helper
+  const triggerAlert = useCallback((newAlert: LiveScoreAlertItem, playSound = true) => {
+    setActivePopupAlert(newAlert);
+    setAlerts((prev) => {
+      const updated = [newAlert, ...prev.filter((a) => a.id !== newAlert.id)].slice(0, 35);
+      try {
+        localStorage.setItem('livescore_alerts', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    setUnreadCount((prev) => prev + 1);
+
+    if (soundEnabled && playSound) {
+      if (newAlert.type === 'GOAL') {
+        playGoalCelebration();
+      } else if (newAlert.type === 'KICKOFF') {
+        playRefereeWhistle('kickoff');
+      } else if (newAlert.type === 'FULLTIME') {
+        playRefereeWhistle('fulltime');
+      }
+    }
+  }, [soundEnabled]);
 
   // Live WIB Clock ticker
   useEffect(() => {
@@ -83,6 +157,104 @@ export const LiveScore: React.FC = () => {
         sport: selectedSport,
         dateStr: dateQueryStr
       });
+
+      // Check for bigmatch/soccer live events between loads
+      data.forEach((m) => {
+        const isBig = isBigMatchGame(m);
+        const prev = prevMatchesMapRef.current.get(m.id);
+
+        if (prev && isBig) {
+          const prevHScore = Number(prev.homeScore) || 0;
+          const currHScore = Number(m.homeTeam.score) || 0;
+          const prevAScore = Number(prev.awayScore) || 0;
+          const currAScore = Number(m.awayTeam.score) || 0;
+
+          // Kickoff alert
+          if (prev.status === 'SCHEDULED' && m.status === 'LIVE') {
+            triggerAlert({
+              id: `alert-kickoff-${m.id}-${Date.now()}`,
+              type: 'KICKOFF',
+              matchId: m.id,
+              matchTitle: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+              league: m.league,
+              timeWib: m.wibTime,
+              title: `📢 KICK-OFF DIMULAI!`,
+              message: `Pertandingan Bigmatch ${m.homeTeam.shortName} vs ${m.awayTeam.shortName} resmi dimulai!`,
+              timestamp: Date.now()
+            });
+          }
+          // Home goal
+          else if (m.status === 'LIVE' && currHScore > prevHScore) {
+            const lastGoalEvent = m.events?.filter(e => e.team === 'home' && e.type === 'goal').slice(-1)[0];
+            const scorer = lastGoalEvent?.player || m.homeTeam.name;
+            const min = lastGoalEvent?.minute || m.displayClock || '';
+            triggerAlert({
+              id: `alert-goal-home-${m.id}-${Date.now()}`,
+              type: 'GOAL',
+              matchId: m.id,
+              matchTitle: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+              league: m.league,
+              timeWib: m.wibTime,
+              title: `⚽ GOOOL! ${m.homeTeam.name}`,
+              message: `Gol dicetak oleh ${scorer} (${min})! Skor sekarang: ${currHScore} - ${currAScore}`,
+              scoringTeam: m.homeTeam.name,
+              scorerName: scorer,
+              minute: min,
+              currentScore: `${currHScore} - ${currAScore}`,
+              timestamp: Date.now()
+            });
+          }
+          // Away goal
+          else if (m.status === 'LIVE' && currAScore > prevAScore) {
+            const lastGoalEvent = m.events?.filter(e => e.team === 'away' && e.type === 'goal').slice(-1)[0];
+            const scorer = lastGoalEvent?.player || m.awayTeam.name;
+            const min = lastGoalEvent?.minute || m.displayClock || '';
+            triggerAlert({
+              id: `alert-goal-away-${m.id}-${Date.now()}`,
+              type: 'GOAL',
+              matchId: m.id,
+              matchTitle: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+              league: m.league,
+              timeWib: m.wibTime,
+              title: `⚽ GOOOL! ${m.awayTeam.name}`,
+              message: `Gol dicetak oleh ${scorer} (${min})! Skor sekarang: ${currHScore} - ${currAScore}`,
+              scoringTeam: m.awayTeam.name,
+              scorerName: scorer,
+              minute: min,
+              currentScore: `${currHScore} - ${currAScore}`,
+              timestamp: Date.now()
+            });
+          }
+          // Full-time finish
+          else if (prev.status === 'LIVE' && m.status === 'FINISHED') {
+            const winner = currHScore > currAScore 
+              ? m.homeTeam.name 
+              : currAScore > currHScore 
+                ? m.awayTeam.name 
+                : 'Hasil Imbang (Draw)';
+            triggerAlert({
+              id: `alert-ft-${m.id}-${Date.now()}`,
+              type: 'FULLTIME',
+              matchId: m.id,
+              matchTitle: `${m.homeTeam.name} vs ${m.awayTeam.name}`,
+              league: m.league,
+              timeWib: m.wibTime,
+              title: `🏆 PERTANDINGAN SELESAI (FT)`,
+              message: `Pertandingan selesai! Skor akhir: ${currHScore} - ${currAScore}. Pemenang: ${winner}`,
+              currentScore: `${currHScore} - ${currAScore}`,
+              winner,
+              timestamp: Date.now()
+            });
+          }
+        }
+
+        prevMatchesMapRef.current.set(m.id, {
+          homeScore: m.homeTeam.score ?? 0,
+          awayScore: m.awayTeam.score ?? 0,
+          status: m.status
+        });
+      });
+
       setMatches(data);
     } catch (err) {
       console.error('Error loading live scores:', err);
@@ -91,7 +263,68 @@ export const LiveScore: React.FC = () => {
       setIsRefreshing(false);
       setCountdown(30);
     }
-  }, [selectedSport, selectedDateOffset, customDate]);
+  }, [selectedSport, selectedDateOffset, customDate, triggerAlert]);
+
+  // Handler for audio check and notification test without altering real matches
+  const handleTriggerSimulation = (type: 'whistle' | 'cheer' | 'kickoff_demo' | 'goal_demo') => {
+    const nowTime = currentWibTime || '21:15 WIB';
+
+    if (type === 'whistle') {
+      playRefereeWhistle();
+      setToastMessage('🔊 Audio Peluit Wasit Berhasil Dites');
+      setTimeout(() => setToastMessage(null), 3000);
+    } else if (type === 'cheer') {
+      playGoalCelebration();
+      setToastMessage('⚽ Audio Selebrasi Gol Berhasil Dites');
+      setTimeout(() => setToastMessage(null), 3000);
+    } else if (type === 'kickoff_demo') {
+      const item: LiveScoreAlertItem = {
+        id: `demo-kickoff-${Date.now()}`,
+        type: 'KICKOFF',
+        matchId: 'demo-today-match',
+        matchTitle: 'Manchester City vs Coventry City',
+        league: 'English Premier League',
+        timeWib: nowTime,
+        title: '📢 KICK-OFF DIMULAI! PREMIER LEAGUE',
+        message: 'Laga Manchester City vs Coventry City resmi dimulai! Pantau live skor sekarang!',
+        timestamp: Date.now()
+      };
+      triggerAlert(item);
+      setToastMessage('📢 Notifikasi Popup Kick-off berhasil diuji');
+      setTimeout(() => setToastMessage(null), 3000);
+    } else if (type === 'goal_demo') {
+      const item: LiveScoreAlertItem = {
+        id: `demo-goal-${Date.now()}`,
+        type: 'GOAL',
+        matchId: 'demo-today-match',
+        matchTitle: 'Athletic Club vs Atlético Madrid',
+        league: 'Spanish LALIGA',
+        timeWib: nowTime,
+        title: "⚽ GOOOL! Spanish LALIGA",
+        message: 'Gol dicetak di laga Athletic Club vs Atlético Madrid!',
+        scoringTeam: 'Atlético Madrid',
+        scorerName: 'Antoine Griezmann',
+        minute: "38'",
+        currentScore: '0 - 1',
+        timestamp: Date.now()
+      };
+      triggerAlert(item);
+      setToastMessage('⚽ Notifikasi Popup Gol berhasil diuji');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  // Handler to filter matches when staff clicks "Lihat Laga di Tabel LiveScore" from ClubScheduleVerifier
+  const handleFilterClubFromVerifier = (clubName: string, dateOffset?: number) => {
+    setActiveMainTab('today');
+    if (typeof dateOffset === 'number' && dateOffset <= 1 && dateOffset >= -1) {
+      setSelectedDateOffset(dateOffset);
+      setCustomDate('');
+    }
+    setSearchQuery(clubName);
+    setToastMessage(`🔍 Menampilkan jadwal & tiket ${clubName}`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Initial load and reload when date or sport changes
   useEffect(() => {
@@ -227,6 +460,34 @@ export const LiveScore: React.FC = () => {
 
   return (
     <div className="space-y-5 animate-fade-in text-gray-100">
+      {/* Big Match Alert Pop-Up Notification Modal */}
+      <BigMatchAlertPopup
+        alert={activePopupAlert}
+        onClose={() => setActivePopupAlert(null)}
+        soundEnabled={soundEnabled}
+        onToggleSound={toggleSound}
+      />
+
+      {/* Notification Drawer & Simulation Hub */}
+      <NotificationDrawer
+        isOpen={isNotificationDrawerOpen}
+        onClose={() => {
+          setIsNotificationDrawerOpen(false);
+          setUnreadCount(0);
+        }}
+        alerts={alerts}
+        onClearAlerts={() => {
+          setAlerts([]);
+          try {
+            localStorage.removeItem('livescore_alerts');
+          } catch {}
+          setUnreadCount(0);
+        }}
+        soundEnabled={soundEnabled}
+        onToggleSound={toggleSound}
+        onTriggerSimulation={handleTriggerSimulation}
+      />
+
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 bg-[#16A34A] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 border border-white/20 animate-bounce">
@@ -234,6 +495,18 @@ export const LiveScore: React.FC = () => {
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* 1. Bigmatch Running Text (Text Berjalan) */}
+      <LiveScoreTicker
+        alerts={alerts}
+        soundEnabled={soundEnabled}
+        onToggleSound={toggleSound}
+        onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
+        unreadCount={unreadCount}
+        onSelectAlert={(alert) => {
+          setActivePopupAlert(alert);
+        }}
+      />
 
       {/* Top Banner & WIB Server Clock */}
       <div className="rounded-2xl bg-[#06070B] p-5 sm:p-6 border-2 border-[#00F3FF] shadow-[0_0_25px_rgba(0,243,255,0.25)] relative overflow-hidden">
@@ -307,6 +580,16 @@ export const LiveScore: React.FC = () => {
           </div>
         </div>
 
+        {/* Verification Guide & CS Ticket Verifier Tool */}
+        <ClubScheduleVerifier 
+          onFilterClub={handleFilterClubFromVerifier}
+          onOpenNotificationCenter={() => setIsNotificationDrawerOpen(true)}
+          onShowToast={(msg) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 3500);
+          }}
+        />
+
         {/* Quick Summary Neon Box Badges */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-5 pt-4 border-t-2 border-[#00F3FF]/30">
           <div 
@@ -371,7 +654,101 @@ export const LiveScore: React.FC = () => {
         </div>
       </div>
 
-      {/* Sports Filter Tabs (Neon Box Style) */}
+      {/* 3 Main Navigation Mode Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Tab 1: Live & Jadwal Hari Ini */}
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('today')}
+          className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3.5 text-left ${
+            activeMainTab === 'today'
+              ? 'bg-black border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.45)] scale-[1.01]'
+              : 'bg-[#090A12] border-white/10 hover:border-rose-500/50 text-gray-400 hover:text-white'
+          }`}
+        >
+          <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/40 flex-shrink-0">
+            <Radio className="w-5 h-5 text-rose-400 animate-pulse" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
+              <span className={activeMainTab === 'today' ? 'text-rose-400' : 'text-white'}>
+                LIVESCORE &amp; JADWAL HARI INI
+              </span>
+              {activeMainTab === 'today' && <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />}
+            </div>
+            <p className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">
+              Skor langsung, jadwal WIB, Bigmatch alert &amp; multi olahraga
+            </p>
+          </div>
+        </button>
+
+        {/* Tab 2: Hasil Pertandingan Sejak Awal Musim */}
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('season_archive')}
+          className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3.5 text-left ${
+            activeMainTab === 'season_archive'
+              ? 'bg-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.45)] scale-[1.01]'
+              : 'bg-[#090A12] border-white/10 hover:border-yellow-400/50 text-gray-400 hover:text-white'
+          }`}
+        >
+          <div className="p-2.5 rounded-xl bg-yellow-400/15 border border-yellow-400/40 flex-shrink-0">
+            <History className="w-5 h-5 text-yellow-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
+              <span className={activeMainTab === 'season_archive' ? 'text-yellow-400' : 'text-white'}>
+                HASIL LIGA SEJAK AWAL MUSIM
+              </span>
+              {activeMainTab === 'season_archive' && <span className="w-2 h-2 rounded-full bg-yellow-400" />}
+            </div>
+            <p className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">
+              Rekap skor sejak kickoff (Mulai 22 Agu 2026), jam WIB &amp; pencetak gol
+            </p>
+          </div>
+        </button>
+
+        {/* Tab 3: Tabel Klasemen Per Musim */}
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('standings')}
+          className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3.5 text-left ${
+            activeMainTab === 'standings'
+              ? 'bg-black border-[#00F3FF] shadow-[0_0_20px_rgba(0,243,255,0.45)] scale-[1.01]'
+              : 'bg-[#090A12] border-white/10 hover:border-[#00F3FF]/50 text-gray-400 hover:text-white'
+          }`}
+        >
+          <div className="p-2.5 rounded-xl bg-[#00F3FF]/15 border border-[#00F3FF]/40 flex-shrink-0">
+            <Trophy className="w-5 h-5 text-[#00F3FF]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
+              <span className={activeMainTab === 'standings' ? 'text-[#00F3FF]' : 'text-white'}>
+                TABEL KLASEMEN PER MUSIM
+              </span>
+              {activeMainTab === 'standings' && <span className="w-2 h-2 rounded-full bg-[#00F3FF]" />}
+            </div>
+            <p className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">
+              Klasemen Musim 2026/2027 s/d 2023 - 2024, poin &amp; selisih gol
+            </p>
+          </div>
+        </button>
+      </div>
+
+      {/* View 1: Season Match Archive */}
+      {activeMainTab === 'season_archive' && (
+        <SeasonMatchArchiveView />
+      )}
+
+      {/* View 2: League Standings by Season */}
+      {activeMainTab === 'standings' && (
+        <LeagueStandingsView />
+      )}
+
+      {/* View 3: Today Livescore & Schedules */}
+      {activeMainTab === 'today' && (
+        <>
+          {/* Sports Filter Tabs (Neon Box Style) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
         {sportsTabs.map((tab) => {
           const isActive = selectedSport === tab.id;
@@ -747,6 +1124,12 @@ export const LiveScore: React.FC = () => {
                       <div className="hidden md:flex items-center justify-between gap-3">
                         {/* 1. Time / Status Column */}
                         <div className="w-48 flex-shrink-0 flex flex-col justify-center">
+                          {isBigMatchGame(match) && (
+                            <span className="mb-1.5 px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-[9px] font-mono font-black tracking-wider uppercase flex items-center gap-1 w-fit shadow-[0_0_8px_rgba(250,204,21,0.5)]">
+                              <Flame className="w-2.5 h-2.5 text-black" />
+                              BIGMATCH
+                            </span>
+                          )}
                           {isLive ? (
                             <div className="px-3 py-1.5 rounded-xl bg-black border-2 border-rose-500 text-rose-300 text-xs font-mono font-black flex items-center gap-2 shadow-[0_0_12px_rgba(244,63,94,0.45)] w-fit">
                               <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
@@ -919,22 +1302,30 @@ export const LiveScore: React.FC = () => {
                       {/* Mobile Card Layout (< md) */}
                       <div className="md:hidden space-y-3">
                         {/* Mobile Top Bar: Status & Venue */}
-                        <div className="flex items-center justify-between gap-2">
-                          {isLive ? (
-                            <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-rose-500 text-rose-300 text-[10px] font-mono font-black flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.4)]">
-                              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                              LIVE {match.statusDetail}
-                            </span>
-                          ) : isFinished ? (
-                            <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-emerald-400 text-emerald-300 text-[10px] font-mono font-black flex items-center gap-1 shadow-[0_0_10px_rgba(52,211,153,0.3)]">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                              {match.statusDetail}
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-[#00F3FF] text-yellow-300 text-[10px] font-mono font-black shadow-[0_0_10px_rgba(0,243,255,0.25)]">
-                              ⏰ {match.wibTime} | {match.wibDate.split(',')[1] || match.wibDate}
-                            </span>
-                          )}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {isBigMatchGame(match) && (
+                              <span className="px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-[9px] font-mono font-black tracking-wider uppercase flex items-center gap-1 shadow-[0_0_8px_rgba(250,204,21,0.5)]">
+                                <Flame className="w-2.5 h-2.5 text-black" />
+                                BIGMATCH
+                              </span>
+                            )}
+                            {isLive ? (
+                              <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-rose-500 text-rose-300 text-[10px] font-mono font-black flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.4)]">
+                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                                LIVE {match.statusDetail}
+                              </span>
+                            ) : isFinished ? (
+                              <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-emerald-400 text-emerald-300 text-[10px] font-mono font-black flex items-center gap-1 shadow-[0_0_10px_rgba(52,211,153,0.3)]">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                {match.statusDetail}
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-[#00F3FF] text-yellow-300 text-[10px] font-mono font-black shadow-[0_0_10px_rgba(0,243,255,0.25)]">
+                                ⏰ {match.wibTime} | {match.wibDate.split(',')[1] || match.wibDate}
+                              </span>
+                            )}
+                          </div>
 
                           {match.venue && (
                             <span className="flex items-center gap-1 text-[10px] text-gray-300 truncate max-w-[150px]">
@@ -1096,6 +1487,8 @@ export const LiveScore: React.FC = () => {
       );
     })}
         </div>
+      )}
+        </>
       )}
 
       {/* Footer Info / Guidance for CS & Kasir (Neon Box Style) */}
