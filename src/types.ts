@@ -13,6 +13,8 @@ export interface UserProfile {
   token?: string;
 }
 
+export type JobdeskTaskType = 'UTAMA' | 'SAMBILAN';
+
 export interface JobdeskTask {
   id: string;
   title: string;
@@ -22,6 +24,7 @@ export interface JobdeskTask {
   order: number;
   timeNote?: string;
   description?: string;
+  taskType?: JobdeskTaskType;
   createdAt?: string;
 }
 

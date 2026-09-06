@@ -235,6 +235,52 @@ export function isBigMatchGame(match: LiveMatch): boolean {
 
 // Curated official fixtures for Big Match (Soccer), Badminton, Tennis, and eSports
 const SUPPLEMENTAL_OFFICIAL_MATCHES: LiveMatch[] = [
+  // Hasil Laga Resmi English Premier League: Ipswich Town vs Liverpool (FT 0 - 2 / Selesai)
+  {
+    id: 'soccer-ipswich-liverpool-finished-05sep',
+    sport: 'soccer',
+    sportLabel: 'Sepak Bola',
+    league: 'English Premier League',
+    leagueLogo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png',
+    homeTeam: {
+      id: '373',
+      name: 'Ipswich Town',
+      shortName: 'Ipswich',
+      logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/373.png',
+      score: '0',
+      record: 'Peringkat #18 Premier League',
+      form: ['L', 'D', 'L', 'L']
+    },
+    awayTeam: {
+      id: '364',
+      name: 'Liverpool',
+      shortName: 'Liverpool',
+      logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/364.png',
+      score: '2',
+      record: 'Peringkat #1 Premier League (Menang 2-0)',
+      form: ['W', 'W', 'W', 'W', 'W']
+    },
+    status: 'FINISHED',
+    statusDetail: 'FT (Selesai 0 - 2)',
+    rawUtcDate: '2026-09-05T11:30:00Z',
+    wibTime: '18:30 WIB',
+    wibDate: 'Sabtu, 05 September 2026',
+    venue: 'Portman Road, Ipswich',
+    isBigMatch: true,
+    events: [
+      { type: 'goal', minute: "60'", team: 'away', player: 'Diogo Jota', detail: 'Assist: Mohamed Salah' },
+      { type: 'goal', minute: "65'", team: 'away', player: 'Mohamed Salah', detail: 'Assist: Dominik Szoboszlai' }
+    ],
+    h2h: {
+      totalMeetings: 16,
+      homeWins: 3,
+      draws: 4,
+      awayWins: 9,
+      recentMatches: [
+        { date: '05 Sep 2026', homeTeam: 'Ipswich Town', awayTeam: 'Liverpool', score: '0 - 2', winner: 'away' }
+      ]
+    }
+  },
   // Jadwal Resmi FC Barcelona Berikutnya (Laga Resmi: Pekan 4 LALIGA)
   {
     id: 'soccer-valencia-barca-upcoming',

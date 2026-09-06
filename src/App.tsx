@@ -75,10 +75,74 @@ export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('home');
   const [soundEnabled, setSoundEnabled] = useState(true);
   
-  // Jobdesk tasks state for dynamic counts and task completions
+  // Jobdesk tasks state with multi-tier persistence (LocalStorage + Server API Storage)
   const [tasks, setTasks] = useState<JobdeskTask[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('don_isko_jobdesk_tasks_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map((t: JobdeskTask) => ({
+              ...t,
+              taskType: t.taskType || 'UTAMA'
+            }));
+          }
+        }
+      } catch (e) {
+        console.warn('Gagal membaca cache jobdesk lokal:', e);
+      }
+    }
     return [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
   });
+
+  // Fetch canonical jobdesk from server on mount
+  useEffect(() => {
+    let isMounted = true;
+    const loadServerJobdesk = async () => {
+      try {
+        const res = await fetch('/api/jobdesk');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.tasks) && data.tasks.length > 0) {
+            const normalized = data.tasks.map((t: JobdeskTask) => ({
+              ...t,
+              taskType: t.taskType || 'UTAMA'
+            }));
+            if (isMounted) {
+              setTasks(normalized);
+              try {
+                localStorage.setItem('don_isko_jobdesk_tasks_v1', JSON.stringify(normalized));
+              } catch {}
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Gagal memuat jobdesk dari server API:', err);
+      }
+    };
+    loadServerJobdesk();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Handler to update tasks, syncing both to localStorage and server API
+  const handleUpdateTasks = (updatedTasks: JobdeskTask[]) => {
+    setTasks(updatedTasks);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('don_isko_jobdesk_tasks_v1', JSON.stringify(updatedTasks));
+      } catch (err) {
+        console.warn('Gagal menyimpan jobdesk ke localStorage:', err);
+      }
+    }
+    fetch('/api/jobdesk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tasks: updatedTasks })
+    }).catch(err => {
+      console.warn('Gagal menyimpan jobdesk ke server:', err);
+    });
+  };
 
   // Modals & Dynamic Image Customization with LocalStorage persistence
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -211,12 +275,19 @@ export default function App() {
     setIsLoginModalOpen(true);
   };
 
-  // Synchronize logout across tabs
+  // Synchronize logout and jobdesk state across tabs
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'don_isko_force_logout' || e.key === 'don_isko_publish_version') {
         setCurrentUser(null);
         setIsLoginModalOpen(true);
+      } else if (e.key === 'don_isko_jobdesk_tasks_v1' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTasks(parsed);
+          }
+        } catch {}
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -395,7 +466,7 @@ export default function App() {
             {activeView === 'jobdesk-cs' && (
               <JobdeskManager
                 tasks={tasks}
-                onUpdateTasks={setTasks}
+                onUpdateTasks={handleUpdateTasks}
                 category="CS"
                 activeShift={activeShift}
                 onShiftChange={handleShiftChange}
@@ -405,7 +476,7 @@ export default function App() {
             {activeView === 'jobdesk-kasir' && (
               <JobdeskManager
                 tasks={tasks}
-                onUpdateTasks={setTasks}
+                onUpdateTasks={handleUpdateTasks}
                 category="KASIR"
                 activeShift={activeShift}
                 onShiftChange={handleShiftChange}

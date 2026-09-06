@@ -105,6 +105,13 @@ Sumber: CS & Kasir DON ISKO 711 HS GROUP (WIB Official)`;
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
+                onClick={() => applyPresetExample('Liverpool', '05 September', '2026/2027', 'epl')}
+                className="px-2.5 py-1.5 rounded-xl bg-black hover:bg-emerald-400 text-emerald-300 hover:text-black border border-emerald-400/60 text-[11px] font-mono font-bold transition-all cursor-pointer shadow-[0_0_10px_rgba(52,211,153,0.25)]"
+              >
+                ⚽ Ipswich Town 0-2 Liverpool (05 Sep 2026, 18:30 WIB)
+              </button>
+              <button
+                type="button"
                 onClick={() => applyPresetExample('Barcelona', '01 September', '2026/2027', 'laliga')}
                 className="px-2.5 py-1.5 rounded-xl bg-black hover:bg-yellow-400 text-yellow-300 hover:text-black border border-yellow-400/60 text-[11px] font-mono font-bold transition-all cursor-pointer shadow-[0_0_10px_rgba(250,204,21,0.2)]"
               >
@@ -115,7 +122,7 @@ Sumber: CS & Kasir DON ISKO 711 HS GROUP (WIB Official)`;
                 onClick={() => applyPresetExample('Man City', '22 Agustus', '2026/2027', 'epl')}
                 className="px-2.5 py-1.5 rounded-xl bg-black hover:bg-[#00F3FF] text-[#00F3FF] hover:text-black border border-[#00F3FF]/60 text-[11px] font-mono font-bold transition-all cursor-pointer shadow-[0_0_10px_rgba(0,243,255,0.2)]"
               >
-                ⚽ Kickoff EPL 22 Agu 2026 (Chelsea vs Man City)
+                ⚽ Chelsea vs Man City (22 Agu 2026)
               </button>
             </div>
           </div>

@@ -22,7 +22,8 @@ import {
   ChevronRight,
   TrendingUp,
   Award,
-  History
+  History,
+  Bell
 } from 'lucide-react';
 import { LiveMatch, SportType, MatchStatusFilter, LiveScoreAlertItem } from '../../types';
 import { 
@@ -37,7 +38,6 @@ import { BigMatchAlertPopup } from './livescore/BigMatchAlertPopup';
 import { NotificationDrawer } from './livescore/NotificationDrawer';
 import { SeasonMatchArchiveView } from './livescore/SeasonMatchArchiveView';
 import { LeagueStandingsView } from './livescore/LeagueStandingsView';
-import { ClubScheduleVerifier } from './livescore/ClubScheduleVerifier';
 import { playRefereeWhistle, playGoalCelebration } from '../../utils/audioAlert';
 
 const INITIAL_ALERTS: LiveScoreAlertItem[] = [];
@@ -53,7 +53,7 @@ export const LiveScore: React.FC = () => {
   const [selectedDateOffset, setSelectedDateOffset] = useState<number>(0); // 0 = Hari ini, -1 = Kemarin, 1 = Besok
   const [customDate, setCustomDate] = useState<string>('');
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
-  const [expandedLeague, setExpandedLeague] = useState<string | null>(null);
+  const [expandedLeague, setExpandedLeague] = useState<string | null>('ALL_OPEN');
   const [copiedMatchId, setCopiedMatchId] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [countdown, setCountdown] = useState<number>(30);
@@ -314,18 +314,6 @@ export const LiveScore: React.FC = () => {
     }
   };
 
-  // Handler to filter matches when staff clicks "Lihat Laga di Tabel LiveScore" from ClubScheduleVerifier
-  const handleFilterClubFromVerifier = (clubName: string, dateOffset?: number) => {
-    setActiveMainTab('today');
-    if (typeof dateOffset === 'number' && dateOffset <= 1 && dateOffset >= -1) {
-      setSelectedDateOffset(dateOffset);
-      setCustomDate('');
-    }
-    setSearchQuery(clubName);
-    setToastMessage(`🔍 Menampilkan jadwal & tiket ${clubName}`);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   // Initial load and reload when date or sport changes
   useEffect(() => {
     loadMatches(true);
@@ -552,7 +540,17 @@ export const LiveScore: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsNotificationDrawerOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-black hover:bg-yellow-400 text-yellow-300 hover:text-black border-2 border-yellow-400 text-[11px] font-mono font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_12px_rgba(250,204,21,0.3)] active:scale-95"
+                title="Buka Pusat Audio & Notifikasi Gol"
+              >
+                <Bell className="w-3.5 h-3.5" />
+                <span>Audio &amp; Notif</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setAutoRefresh(!autoRefresh)}
@@ -579,16 +577,6 @@ export const LiveScore: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Verification Guide & CS Ticket Verifier Tool */}
-        <ClubScheduleVerifier 
-          onFilterClub={handleFilterClubFromVerifier}
-          onOpenNotificationCenter={() => setIsNotificationDrawerOpen(true)}
-          onShowToast={(msg) => {
-            setToastMessage(msg);
-            setTimeout(() => setToastMessage(null), 3500);
-          }}
-        />
 
         {/* Quick Summary Neon Box Badges */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-5 pt-4 border-t-2 border-[#00F3FF]/30">

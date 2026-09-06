@@ -1,9 +1,12 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { fastCheckBrands, HS_BRAND_DEFINITIONS } from "./src/utils/brandAnalysis";
+import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from "./src/data/initialData";
+import { JobdeskTask } from "./src/types";
 
 dotenv.config();
 
@@ -47,6 +50,108 @@ async function startServer() {
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", aiReady: Boolean(process.env.GEMINI_API_KEY) });
+  });
+
+  // ==========================================
+  // JOBDESK CS & KASIR PERSISTENT STORAGE
+  // ==========================================
+  const DATA_DIR = path.join(process.cwd(), "data");
+  const JOBDESK_FILE = path.join(DATA_DIR, "jobdesk_storage.json");
+
+  function ensureJobdeskStorage(): JobdeskTask[] {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      if (fs.existsSync(JOBDESK_FILE)) {
+        const raw = fs.readFileSync(JOBDESK_FILE, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const defaultTasks = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+          const defaultMap = new Map(defaultTasks.map(d => [d.id, d.taskType]));
+          let modified = false;
+          const normalized = parsed.map((t: JobdeskTask) => {
+            if (!t.taskType) {
+              modified = true;
+              return { ...t, taskType: defaultMap.get(t.id) || 'UTAMA' };
+            }
+            return t;
+          });
+          if (modified) {
+            fs.writeFileSync(JOBDESK_FILE, JSON.stringify(normalized, null, 2), "utf-8");
+          }
+          return normalized;
+        }
+      }
+      // If not exists or empty, seed with initial default tasks
+      const initialTasks: JobdeskTask[] = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+      fs.writeFileSync(JOBDESK_FILE, JSON.stringify(initialTasks, null, 2), "utf-8");
+      return initialTasks;
+    } catch (err) {
+      console.error("Error ensuring jobdesk storage:", err);
+      return [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+    }
+  }
+
+  function saveJobdeskStorage(tasks: JobdeskTask[]): boolean {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      fs.writeFileSync(JOBDESK_FILE, JSON.stringify(tasks, null, 2), "utf-8");
+      return true;
+    } catch (err) {
+      console.error("Error saving jobdesk storage:", err);
+      return false;
+    }
+  }
+
+  // GET all jobdesk tasks
+  app.get("/api/jobdesk", (_req, res) => {
+    const tasks = ensureJobdeskStorage();
+    res.json({ success: true, tasks });
+  });
+
+  // POST replace/save full jobdesk tasks list
+  app.post("/api/jobdesk", (req, res) => {
+    const { tasks } = req.body;
+    if (!Array.isArray(tasks)) {
+      res.status(400).json({ error: "Invalid tasks payload" });
+      return;
+    }
+    const saved = saveJobdeskStorage(tasks);
+    if (saved) {
+      res.json({ success: true, count: tasks.length });
+    } else {
+      res.status(500).json({ error: "Failed to write jobdesk storage" });
+    }
+  });
+
+  // POST add or update a single task
+  app.post("/api/jobdesk/task", (req, res) => {
+    const { task } = req.body;
+    if (!task || !task.id || !task.title) {
+      res.status(400).json({ error: "Task with id and title required" });
+      return;
+    }
+    const tasks = ensureJobdeskStorage();
+    const existingIndex = tasks.findIndex(t => t.id === task.id);
+    if (existingIndex >= 0) {
+      tasks[existingIndex] = { ...tasks[existingIndex], ...task };
+    } else {
+      tasks.push(task);
+    }
+    saveJobdeskStorage(tasks);
+    res.json({ success: true, task });
+  });
+
+  // DELETE a task
+  app.delete("/api/jobdesk/task/:id", (req, res) => {
+    const { id } = req.params;
+    const tasks = ensureJobdeskStorage();
+    const filtered = tasks.filter(t => t.id !== id);
+    saveJobdeskStorage(filtered);
+    res.json({ success: true, deletedId: id });
   });
 
   // Phising / Domain Script Inspector Endpoint (similar to Google Rich Results / Page Source Inspector)

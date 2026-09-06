@@ -322,15 +322,15 @@ export const SEASON_MATCHES_ARCHIVE: SeasonArchiveMatch[] = [
     ]
   },
   {
-    id: 'epl-2026-w1-ips-liv',
+    id: 'epl-2026-w4-ips-liv-sep5',
     leagueId: 'epl',
     leagueName: 'Premier League (Inggris)',
     leagueLogo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png',
     season: '2026/2027',
-    matchweek: 1,
-    matchweekLabel: 'Pekan 1 (Kickoff Musim)',
-    dateIso: '2026-08-22T18:30:00+07:00',
-    wibDate: 'Sabtu, 22 Agustus 2026',
+    matchweek: 4,
+    matchweekLabel: 'Pekan 4 (05 September 2026)',
+    dateIso: '2026-09-05T18:30:00+07:00',
+    wibDate: 'Sabtu, 05 September 2026',
     wibTime: '18:30 WIB',
     homeTeam: {
       name: 'Ipswich Town',
