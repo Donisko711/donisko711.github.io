@@ -33,6 +33,11 @@ import { JadwalPasaranTogel } from './components/tools/JadwalPasaranTogel';
 import { ModulPromoSitus } from './components/tools/ModulPromoSitus';
 import { ShiftType, UserProfile, JobdeskTask } from './types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from './data/initialData';
+import { 
+  getInitialJobdeskTasks, 
+  mergeJobdeskTasks, 
+  persistJobdeskTasks 
+} from './utils/jobdeskStorage';
 import { ChevronRight, Home, Lock } from 'lucide-react';
 
 export const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
@@ -75,28 +80,12 @@ export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('home');
   const [soundEnabled, setSoundEnabled] = useState(true);
   
-  // Jobdesk tasks state with multi-tier persistence (LocalStorage + Server API Storage)
+  // Jobdesk tasks state with multi-tier persistence (LocalStorage + Custom Backup + Server API Storage)
   const [tasks, setTasks] = useState<JobdeskTask[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('don_isko_jobdesk_tasks_v1');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.map((t: JobdeskTask) => ({
-              ...t,
-              taskType: t.taskType || 'UTAMA'
-            }));
-          }
-        }
-      } catch (e) {
-        console.warn('Gagal membaca cache jobdesk lokal:', e);
-      }
-    }
-    return [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+    return getInitialJobdeskTasks();
   });
 
-  // Fetch canonical jobdesk from server on mount
+  // Fetch canonical jobdesk from server on mount with smart 2-way merge
   useEffect(() => {
     let isMounted = true;
     const loadServerJobdesk = async () => {
@@ -104,42 +93,36 @@ export default function App() {
         const res = await fetch('/api/jobdesk');
         if (res.ok) {
           const data = await res.json();
-          if (data && Array.isArray(data.tasks) && data.tasks.length > 0) {
-            const normalized = data.tasks.map((t: JobdeskTask) => ({
-              ...t,
-              taskType: t.taskType || 'UTAMA'
-            }));
+          if (data && Array.isArray(data.tasks)) {
+            const currentLocal = getInitialJobdeskTasks();
+            const { merged, hasNewLocalTasks } = mergeJobdeskTasks(
+              currentLocal, 
+              data.tasks, 
+              data.deletedIds || []
+            );
+
             if (isMounted) {
-              setTasks(normalized);
-              try {
-                localStorage.setItem('don_isko_jobdesk_tasks_v1', JSON.stringify(normalized));
-              } catch {}
+              setTasks(merged);
+            }
+
+            // If local had new tasks that server lacked, sync back immediately
+            if (hasNewLocalTasks) {
+              persistJobdeskTasks(merged).catch(() => {});
             }
           }
         }
       } catch (err) {
-        console.warn('Gagal memuat jobdesk dari server API:', err);
+        console.warn('Gagal sinkronisasi jobdesk dari server API:', err);
       }
     };
     loadServerJobdesk();
     return () => { isMounted = false; };
   }, []);
 
-  // Handler to update tasks, syncing both to localStorage and server API
+  // Handler to update tasks, syncing reliably to LocalStorage, custom backup, and server API
   const handleUpdateTasks = (updatedTasks: JobdeskTask[]) => {
     setTasks(updatedTasks);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('don_isko_jobdesk_tasks_v1', JSON.stringify(updatedTasks));
-      } catch (err) {
-        console.warn('Gagal menyimpan jobdesk ke localStorage:', err);
-      }
-    }
-    fetch('/api/jobdesk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tasks: updatedTasks })
-    }).catch(err => {
+    persistJobdeskTasks(updatedTasks).catch(err => {
       console.warn('Gagal menyimpan jobdesk ke server:', err);
     });
   };

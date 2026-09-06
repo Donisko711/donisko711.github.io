@@ -57,34 +57,79 @@ async function startServer() {
   // ==========================================
   const DATA_DIR = path.join(process.cwd(), "data");
   const JOBDESK_FILE = path.join(DATA_DIR, "jobdesk_storage.json");
+  const DELETED_TASKS_FILE = path.join(DATA_DIR, "deleted_tasks.json");
+
+  function getDeletedTaskIds(): string[] {
+    try {
+      if (fs.existsSync(DELETED_TASKS_FILE)) {
+        const raw = fs.readFileSync(DELETED_TASKS_FILE, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (err) {
+      console.error("Error reading deleted tasks file:", err);
+    }
+    return [];
+  }
+
+  function recordDeletedTaskId(id: string) {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      const deleted = getDeletedTaskIds();
+      if (!deleted.includes(id)) {
+        deleted.push(id);
+        fs.writeFileSync(DELETED_TASKS_FILE, JSON.stringify(deleted, null, 2), "utf-8");
+      }
+    } catch (err) {
+      console.error("Error recording deleted task:", err);
+    }
+  }
 
   function ensureJobdeskStorage(): JobdeskTask[] {
     try {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
+      const deletedIds = new Set(getDeletedTaskIds());
+      const defaultTasks: JobdeskTask[] = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+      const defaultMap = new Map(defaultTasks.map(d => [d.id, d]));
+
       if (fs.existsSync(JOBDESK_FILE)) {
         const raw = fs.readFileSync(JOBDESK_FILE, "utf-8");
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const defaultTasks = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
-          const defaultMap = new Map(defaultTasks.map(d => [d.id, d.taskType]));
-          let modified = false;
-          const normalized = parsed.map((t: JobdeskTask) => {
-            if (!t.taskType) {
-              modified = true;
-              return { ...t, taskType: defaultMap.get(t.id) || 'UTAMA' };
-            }
-            return t;
+          // Filter out explicitly deleted tasks
+          const activeTasks = parsed.filter((t: JobdeskTask) => !deletedIds.has(t.id));
+
+          // Ensure all active tasks have valid taskType ('UTAMA' or 'SAMBILAN')
+          const normalized = activeTasks.map((t: JobdeskTask) => {
+            const defTask = defaultMap.get(t.id);
+            return {
+              ...t,
+              taskType: t.taskType || (defTask ? defTask.taskType : 'UTAMA')
+            };
           });
-          if (modified) {
-            fs.writeFileSync(JOBDESK_FILE, JSON.stringify(normalized, null, 2), "utf-8");
-          }
+
+          // Ensure any default tasks that were not deleted are present
+          const existingIds = new Set(normalized.map(t => t.id));
+          defaultTasks.forEach(def => {
+            if (!existingIds.has(def.id) && !deletedIds.has(def.id)) {
+              normalized.push({
+                ...def,
+                taskType: def.taskType || 'UTAMA'
+              });
+            }
+          });
+
+          fs.writeFileSync(JOBDESK_FILE, JSON.stringify(normalized, null, 2), "utf-8");
           return normalized;
         }
       }
-      // If not exists or empty, seed with initial default tasks
-      const initialTasks: JobdeskTask[] = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+
+      // Initial seed excluding any recorded deleted tasks
+      const initialTasks: JobdeskTask[] = defaultTasks.filter(t => !deletedIds.has(t.id));
       fs.writeFileSync(JOBDESK_FILE, JSON.stringify(initialTasks, null, 2), "utf-8");
       return initialTasks;
     } catch (err) {
@@ -98,7 +143,9 @@ async function startServer() {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
-      fs.writeFileSync(JOBDESK_FILE, JSON.stringify(tasks, null, 2), "utf-8");
+      const deletedIds = new Set(getDeletedTaskIds());
+      const activeTasks = tasks.filter(t => !deletedIds.has(t.id));
+      fs.writeFileSync(JOBDESK_FILE, JSON.stringify(activeTasks, null, 2), "utf-8");
       return true;
     } catch (err) {
       console.error("Error saving jobdesk storage:", err);
@@ -106,10 +153,11 @@ async function startServer() {
     }
   }
 
-  // GET all jobdesk tasks
+  // GET all jobdesk tasks and deleted IDs
   app.get("/api/jobdesk", (_req, res) => {
     const tasks = ensureJobdeskStorage();
-    res.json({ success: true, tasks });
+    const deletedIds = getDeletedTaskIds();
+    res.json({ success: true, tasks, deletedIds });
   });
 
   // POST replace/save full jobdesk tasks list
@@ -145,9 +193,10 @@ async function startServer() {
     res.json({ success: true, task });
   });
 
-  // DELETE a task
+  // DELETE a task permanently
   app.delete("/api/jobdesk/task/:id", (req, res) => {
     const { id } = req.params;
+    recordDeletedTaskId(id);
     const tasks = ensureJobdeskStorage();
     const filtered = tasks.filter(t => t.id !== id);
     saveJobdeskStorage(filtered);

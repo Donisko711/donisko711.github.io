@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Flame, Bell, Sparkles, Play, Pause } from 'lucide-react';
+import { Volume2, VolumeX, Flame, Bell, Sparkles, Play, Pause, Gauge } from 'lucide-react';
 import { LiveScoreAlertItem } from '../../../types';
 
 interface LiveScoreTickerProps {
@@ -20,6 +20,8 @@ export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = ({
   onSelectAlert
 }) => {
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  // Default speed: 'slow' (80s) so bigmatch alerts are relaxed, easy to read, and not rushing
+  const [speed, setSpeed] = useState<'slow' | 'superslow' | 'normal'>('slow');
 
   // Default ticker items if no alerts yet
   const displayItems = alerts.length > 0 ? alerts : [
@@ -93,9 +95,10 @@ export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = ({
       >
         <div 
           className={`flex items-center gap-8 whitespace-nowrap ${
-            isPaused ? '' : 'animate-marquee'
+            isPaused ? '' : 'animate-marquee-slow'
           }`}
           style={{
+            animationDuration: speed === 'superslow' ? '125s' : speed === 'slow' ? '85s' : '50s',
             animationPlayState: isPaused ? 'paused' : 'running',
             display: 'inline-flex',
             willChange: 'transform'
@@ -189,8 +192,25 @@ export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = ({
         </div>
       </div>
 
-      {/* Controls: Pause, Sound, Bell (Notification center trigger) */}
+      {/* Controls: Speed, Pause, Sound, Bell (Notification center trigger) */}
       <div className="bg-[#0D0E15] px-2.5 py-1.5 border-t sm:border-t-0 sm:border-l border-white/10 flex items-center justify-end gap-2 flex-shrink-0">
+        {/* Speed Adjustment: Slow (Default) / Super Slow / Normal */}
+        <button
+          type="button"
+          onClick={() => {
+            if (speed === 'slow') setSpeed('superslow');
+            else if (speed === 'superslow') setSpeed('normal');
+            else setSpeed('slow');
+          }}
+          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-amber-300 hover:text-white transition-all text-xs flex items-center gap-1 cursor-pointer border border-amber-400/20"
+          title={`Kecepatan Teks Berjalan: ${speed === 'slow' ? '🐢 Pelan (85 dtk - Santai & Terbaca Jelas)' : speed === 'superslow' ? '🦥 Sangat Pelan (125 dtk)' : '⚡ Sedang (50 dtk)'}. Klik untuk ganti.`}
+        >
+          <Gauge className="w-3.5 h-3.5 text-amber-400" />
+          <span className="text-[10px] font-mono font-bold hidden md:inline">
+            {speed === 'slow' ? '🐢 Pelan' : speed === 'superslow' ? '🦥 Sangat Pelan' : '⚡ Sedang'}
+          </span>
+        </button>
+
         <button
           type="button"
           onClick={() => setIsPaused(!isPaused)}

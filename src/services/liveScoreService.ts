@@ -1,4 +1,4 @@
-import { LiveMatch, SportType } from '../types';
+import { LiveMatch, MatchEventItem, SportType } from '../types';
 
 export interface EspnCompetitor {
   id?: string;
@@ -44,10 +44,16 @@ export interface EspnEvent {
     };
     competitors: EspnCompetitor[];
     details?: {
-      type: { text: string };
-      clock: { displayValue: string };
-      team: { id: string };
-      athletesInvolved?: { displayName: string }[];
+      type: { text: string; type?: string };
+      clock?: { value?: number; displayValue?: string };
+      team?: { id: string };
+      athletesInvolved?: { displayName?: string; shortName?: string }[];
+      scoringPlay?: boolean;
+      redCard?: boolean;
+      yellowCard?: boolean;
+      penaltyKick?: boolean;
+      ownGoal?: boolean;
+      period?: { number: number };
     }[];
   }[];
 }
@@ -55,6 +61,7 @@ export interface EspnEvent {
 export interface FetchOptions {
   sport?: SportType;
   dateStr?: string; // YYYYMMDD
+  forceFresh?: boolean;
 }
 
 // Helper to format ISO to WIB Time (HH:mm WIB)
@@ -102,8 +109,91 @@ export function getWibDateString(offsetDays: number = 0): string {
   return `${y}${m}${d}`;
 }
 
+// Helper to detect league region according to SBOBET sports market
+export function detectMatchRegion(
+  league: string, 
+  presetRegion?: 'england' | 'europe' | 'latin_america' | 'asia' | 'other'
+): 'england' | 'europe' | 'latin_america' | 'asia' | 'other' {
+  if (presetRegion) return presetRegion;
+  const l = (league || '').toLowerCase();
+  if (
+    l.includes('premier league') || 
+    l.includes('championship') || 
+    l.includes('fa cup') || 
+    l.includes('carabao') || 
+    l.includes('efl') || 
+    l.includes('england') || 
+    l.includes('english')
+  ) {
+    return 'england';
+  }
+  if (
+    l.includes('argentin') || 
+    l.includes('colombia') || 
+    l.includes('brazil') || 
+    l.includes('brasileir') || 
+    l.includes('mexic') || 
+    l.includes('chile') || 
+    l.includes('libertadores') || 
+    l.includes('sudamericana') || 
+    l.includes('conmebol') || 
+    l.includes('copa america')
+  ) {
+    return 'latin_america';
+  }
+  if (
+    l.includes('laliga') || 
+    l.includes('serie a') || 
+    l.includes('serie b') || 
+    l.includes('bundesliga') || 
+    l.includes('ligue 1') || 
+    l.includes('ligue 2') || 
+    l.includes('eredivisie') || 
+    l.includes('portugal') || 
+    l.includes('turk') || 
+    l.includes('scottish') || 
+    l.includes('belgian') || 
+    l.includes('uefa') || 
+    l.includes('champions league') || 
+    l.includes('europa') || 
+    l.includes('nations league') || 
+    l.includes('copa del rey') || 
+    l.includes('dfb') || 
+    l.includes('coppa italia') || 
+    l.includes('european') || 
+    l.includes('euro')
+  ) {
+    return 'europe';
+  }
+  if (
+    l.includes('indonesia') || 
+    l.includes('liga 1') || 
+    l.includes('j1') || 
+    l.includes('j-league') || 
+    l.includes('jepang') || 
+    l.includes('saudi') || 
+    l.includes('k league') || 
+    l.includes('korea') || 
+    l.includes('australia') || 
+    l.includes('a-league') || 
+    l.includes('china') || 
+    l.includes('chinese') || 
+    l.includes('afc') || 
+    l.includes('asia')
+  ) {
+    return 'asia';
+  }
+  return 'other';
+}
+
 // Map ESPN event to our unified LiveMatch interface
-function mapEspnEvent(ev: EspnEvent, sport: SportType, leagueName: string, leagueLogo?: string): LiveMatch | null {
+function mapEspnEvent(
+  ev: EspnEvent, 
+  sport: SportType, 
+  leagueName: string, 
+  leagueLogo?: string,
+  regionPreset?: 'england' | 'europe' | 'latin_america' | 'asia' | 'other'
+): LiveMatch | null {
   const comp = ev.competitions?.[0];
   if (!comp || !comp.competitors || comp.competitors.length < 2) return null;
 
@@ -113,21 +203,73 @@ function mapEspnEvent(ev: EspnEvent, sport: SportType, leagueName: string, leagu
   const state = ev.status?.type?.state;
   let status: 'LIVE' | 'FINISHED' | 'SCHEDULED' | 'POSTPONED' = 'SCHEDULED';
   let statusDetail = ev.status?.type?.shortDetail || ev.status?.type?.description || 'Jadwal';
+  let elapsedMinutes: number | undefined = undefined;
+  let elapsedDetail: string = '';
+
+  const wibTime = formatWibTime(ev.date);
+  const wibDate = formatWibDate(ev.date);
+
+  const displayClock = ev.status?.displayClock || '';
+  const period = ev.status?.period;
+  const statusDesc = (ev.status?.type?.description || '').toLowerCase();
+  const shortDetail = (ev.status?.type?.shortDetail || '').toLowerCase();
+
+  // Elapsed real-world minutes from kickoff
+  const kickoffMs = new Date(ev.date).getTime();
+  const nowMs = Date.now();
+  const diffMinutes = Math.floor((nowMs - kickoffMs) / 60000);
 
   if (state === 'in') {
     status = 'LIVE';
-    if (ev.status.displayClock) {
-      statusDetail = `${ev.status.displayClock}`;
+    elapsedMinutes = diffMinutes > 0 ? diffMinutes : undefined;
+
+    if (displayClock) {
+      statusDetail = displayClock;
+    }
+
+    if (sport === 'soccer') {
+      if (statusDesc.includes('halftime') || shortDetail.includes('halftime') || displayClock.toUpperCase() === 'HT') {
+        statusDetail = 'HT (Turun Minum)';
+        elapsedDetail = 'Istirahat Babak Pertama (HT ~15 Menit)';
+      } else if (period === 1) {
+        statusDetail = displayClock ? `Menit ${displayClock}` : `Babak 1 (${Math.max(1, diffMinutes)}')`;
+        elapsedDetail = `Babak 1 • Menit ${displayClock || `${diffMinutes}'`} (Berjalan ~${Math.max(1, diffMinutes)} mnt)`;
+      } else if (period === 2) {
+        statusDetail = displayClock ? `Menit ${displayClock}` : `Babak 2 (${Math.max(46, diffMinutes)}')`;
+        elapsedDetail = `Babak 2 • Menit ${displayClock || `${diffMinutes}'`} (Berjalan ~${Math.max(45, diffMinutes)} mnt)`;
+      } else if (displayClock.includes('+')) {
+        statusDetail = `Injury Time ${displayClock}`;
+        elapsedDetail = `Perpanjangan Waktu (Injury Time) • ${displayClock}`;
+      } else {
+        statusDetail = displayClock ? `Menit ${displayClock}` : `LIVE (${Math.max(1, diffMinutes)}')`;
+        elapsedDetail = `Sedang Bertanding • Berjalan ~${Math.max(1, diffMinutes)} mnt`;
+      }
+    } else if (sport === 'basketball') {
+      statusDetail = `Q${period || 1} • ${displayClock || 'LIVE'}`;
+      elapsedDetail = `Quarter ${period || 1} • Sisa Waktu ${displayClock}`;
+    } else {
+      statusDetail = displayClock || 'Sedang Main (LIVE)';
+      elapsedDetail = `Sedang Bermain • Berjalan ~${Math.max(1, diffMinutes)} mnt`;
     }
   } else if (state === 'post') {
     status = 'FINISHED';
     statusDetail = ev.status?.type?.description?.toUpperCase() === 'FINAL' ? 'FT (Selesai)' : (ev.status?.type?.shortDetail || 'FT');
+    elapsedDetail = 'Pertandingan Selesai Penuh (Full Time 90\')';
   } else if (ev.status?.type?.name?.includes('POSTPONED') || ev.status?.type?.name?.includes('CANCEL')) {
     status = 'POSTPONED';
     statusDetail = 'Ditunda';
+    elapsedDetail = 'Pertandingan Ditunda / Dibatalkan';
   } else {
     status = 'SCHEDULED';
-    statusDetail = formatWibTime(ev.date);
+    statusDetail = wibTime;
+    const diffRemaining = kickoffMs - nowMs;
+    if (diffRemaining > 0) {
+      const hours = Math.floor(diffRemaining / 3600000);
+      const mins = Math.floor((diffRemaining % 3600000) / 60000);
+      elapsedDetail = hours > 0 ? `Kickoff dalam ${hours} jam ${mins} mnt` : `Kickoff dalam ${mins} menit`;
+    } else {
+      elapsedDetail = `Segera Dimulai (Menunggu Kick-off)`;
+    }
   }
 
   // Linescores for quarters/halves
@@ -137,14 +279,53 @@ function mapEspnEvent(ev: EspnEvent, sport: SportType, leagueName: string, leagu
   // Venue
   const venue = comp.venue ? `${comp.venue.fullName || ''}${comp.venue.city ? `, ${comp.venue.city}` : ''}`.trim() : undefined;
 
-  // Match events (goals, cards)
-  const events = comp.details?.map(d => ({
-    type: 'goal' as const,
-    minute: d.clock?.displayValue || '',
-    team: (d.team?.id === homeComp.team?.id ? 'home' : 'away') as 'home' | 'away',
-    player: d.athletesInvolved?.[0]?.displayName || d.type?.text || 'Goal',
-    detail: d.type?.text
-  }));
+  // Match events (goals, yellow cards, red cards)
+  const events: MatchEventItem[] = [];
+  const compDetails = comp.details || [];
+
+  for (const d of compDetails) {
+    const isHome = d.team?.id ? d.team.id === homeComp.team?.id : true;
+    const team: 'home' | 'away' = isHome ? 'home' : 'away';
+    const minute = d.clock?.displayValue || (d.clock?.value ? `${Math.floor(d.clock.value / 60)}'` : '');
+    const playerName = d.athletesInvolved?.[0]?.displayName || d.athletesInvolved?.[0]?.shortName || d.type?.text || 'Pemain';
+
+    let eventType: 'goal' | 'yellow_card' | 'red_card' | 'yellow_red_card' | 'sub' | 'point' = 'goal';
+    let detail = d.type?.text || '';
+    let cardType: 'yellow' | 'red' | 'yellow_red' | undefined = undefined;
+
+    const lowerText = (d.type?.text || '').toLowerCase();
+
+    if (d.scoringPlay || lowerText.includes('goal') || d.type?.type === 'goal') {
+      eventType = 'goal';
+      if (d.penaltyKick || lowerText.includes('penalty')) detail = 'Penalti';
+      else if (d.ownGoal || lowerText.includes('own goal')) detail = 'Gol Bunuh Diri (OG)';
+      else detail = 'Gol';
+    } else if (d.redCard || lowerText.includes('red card')) {
+      eventType = 'red_card';
+      cardType = 'red';
+      detail = 'Kartu Merah Langsung';
+    } else if (d.yellowCard || lowerText.includes('yellow card')) {
+      eventType = 'yellow_card';
+      cardType = 'yellow';
+      detail = 'Kartu Kuning';
+    } else if (lowerText.includes('sub')) {
+      eventType = 'sub';
+      detail = 'Pergantian Pemain';
+    } else {
+      continue;
+    }
+
+    events.push({
+      type: eventType,
+      minute,
+      team,
+      teamId: d.team?.id,
+      player: playerName,
+      detail,
+      cardType,
+      period: d.period?.number
+    });
+  }
 
   // Head-to-Head & Record estimation
   const homeSummary = homeComp.records?.[0]?.summary || '';
@@ -179,10 +360,14 @@ function mapEspnEvent(ev: EspnEvent, sport: SportType, leagueName: string, leagu
     status,
     statusDetail,
     displayClock: ev.status?.displayClock,
+    elapsedMinutes,
+    elapsedDetail,
+    kickoffWib: wibTime,
     rawUtcDate: ev.date,
-    wibTime: formatWibTime(ev.date),
-    wibDate: formatWibDate(ev.date),
+    wibTime,
+    wibDate,
     venue,
+    region: detectMatchRegion(leagueName, regionPreset),
     events,
     h2h: {
       totalMeetings: 10,
@@ -216,6 +401,68 @@ function mapEspnEvent(ev: EspnEvent, sport: SportType, leagueName: string, leagu
   };
 }
 
+// Map ESPN Tennis competitions
+function mapEspnTennisEvent(ev: any, comp: any, tournamentName: string): LiveMatch | null {
+  if (!comp || !comp.competitors || comp.competitors.length < 2) return null;
+  const p1 = comp.competitors[0];
+  const p2 = comp.competitors[1];
+
+  const state = comp.status?.type?.state;
+  let status: 'LIVE' | 'FINISHED' | 'SCHEDULED' | 'POSTPONED' = 'SCHEDULED';
+  let statusDetail = comp.status?.type?.shortDetail || comp.status?.type?.description || 'Jadwal';
+
+  if (state === 'in') {
+    status = 'LIVE';
+    statusDetail = comp.status?.type?.shortDetail || 'LIVE';
+  } else if (state === 'post') {
+    status = 'FINISHED';
+    statusDetail = 'Selesai (FT)';
+  } else if (comp.status?.type?.name?.includes('POSTPONED') || comp.status?.type?.name?.includes('CANCEL')) {
+    status = 'POSTPONED';
+    statusDetail = 'Ditunda';
+  } else {
+    status = 'SCHEDULED';
+    statusDetail = formatWibTime(comp.date || ev.date);
+  }
+
+  const p1Name = p1.athlete?.displayName || p1.athlete?.fullName || p1.athlete?.shortName || 'Player 1';
+  const p2Name = p2.athlete?.displayName || p2.athlete?.fullName || p2.athlete?.shortName || 'Player 2';
+  const p1Score = p1.score !== undefined ? String(p1.score) : (status === 'SCHEDULED' ? '-' : '0');
+  const p2Score = p2.score !== undefined ? String(p2.score) : (status === 'SCHEDULED' ? '-' : '0');
+
+  const matchDate = comp.date || ev.date || new Date().toISOString();
+
+  return {
+    id: `espn-tennis-${comp.id || ev.id}`,
+    sport: 'tennis',
+    sportLabel: 'Tenis',
+    league: tournamentName || 'ATP / WTA Tour',
+    leagueLogo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/default-team-logo-500.png',
+    homeTeam: {
+      id: p1.id,
+      name: p1Name,
+      shortName: p1.athlete?.shortName || p1Name,
+      logo: p1.athlete?.headshot?.href || 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/default-team-logo-500.png',
+      score: p1Score,
+      periodScores: p1.linescores?.map((l: any) => String(l.value ?? '')) || []
+    },
+    awayTeam: {
+      id: p2.id,
+      name: p2Name,
+      shortName: p2.athlete?.shortName || p2Name,
+      logo: p2.athlete?.headshot?.href || 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/default-team-logo-500.png',
+      score: p2Score,
+      periodScores: p2.linescores?.map((l: any) => String(l.value ?? '')) || []
+    },
+    status,
+    statusDetail,
+    rawUtcDate: matchDate,
+    wibTime: formatWibTime(matchDate),
+    wibDate: formatWibDate(matchDate),
+    venue: comp.venue?.fullName || ev.venue?.fullName
+  };
+}
+
 // Detection of Big Match teams
 export const BIGMATCH_TEAMS = [
   'barcelona', 'real madrid', 'liverpool', 'manchester city', 'manchester united',
@@ -233,471 +480,116 @@ export function isBigMatchGame(match: LiveMatch): boolean {
   return (hasBigHome && hasBigAway) || league.includes('champions') || league.includes('clasico') || league.includes('derby');
 }
 
-// Curated official fixtures for Big Match (Soccer), Badminton, Tennis, and eSports
-const SUPPLEMENTAL_OFFICIAL_MATCHES: LiveMatch[] = [
-  // Hasil Laga Resmi English Premier League: Ipswich Town vs Liverpool (FT 0 - 2 / Selesai)
-  {
-    id: 'soccer-ipswich-liverpool-finished-05sep',
-    sport: 'soccer',
-    sportLabel: 'Sepak Bola',
-    league: 'English Premier League',
-    leagueLogo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png',
-    homeTeam: {
-      id: '373',
-      name: 'Ipswich Town',
-      shortName: 'Ipswich',
-      logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/373.png',
-      score: '0',
-      record: 'Peringkat #18 Premier League',
-      form: ['L', 'D', 'L', 'L']
-    },
-    awayTeam: {
-      id: '364',
-      name: 'Liverpool',
-      shortName: 'Liverpool',
-      logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/364.png',
-      score: '2',
-      record: 'Peringkat #1 Premier League (Menang 2-0)',
-      form: ['W', 'W', 'W', 'W', 'W']
-    },
-    status: 'FINISHED',
-    statusDetail: 'FT (Selesai 0 - 2)',
-    rawUtcDate: '2026-09-05T11:30:00Z',
-    wibTime: '18:30 WIB',
-    wibDate: 'Sabtu, 05 September 2026',
-    venue: 'Portman Road, Ipswich',
-    isBigMatch: true,
-    events: [
-      { type: 'goal', minute: "60'", team: 'away', player: 'Diogo Jota', detail: 'Assist: Mohamed Salah' },
-      { type: 'goal', minute: "65'", team: 'away', player: 'Mohamed Salah', detail: 'Assist: Dominik Szoboszlai' }
-    ],
-    h2h: {
-      totalMeetings: 16,
-      homeWins: 3,
-      draws: 4,
-      awayWins: 9,
-      recentMatches: [
-        { date: '05 Sep 2026', homeTeam: 'Ipswich Town', awayTeam: 'Liverpool', score: '0 - 2', winner: 'away' }
-      ]
-    }
-  },
-  // Jadwal Resmi FC Barcelona Berikutnya (Laga Resmi: Pekan 4 LALIGA)
-  {
-    id: 'soccer-valencia-barca-upcoming',
-    sport: 'soccer',
-    sportLabel: 'Sepak Bola',
-    league: 'Spanish LALIGA (Pekan 4)',
-    leagueLogo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/15.png',
-    homeTeam: {
-      id: '94',
-      name: 'Valencia CF',
-      shortName: 'Valencia',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/94.png',
-      score: '-',
-      record: 'Peringkat #8 LALIGA',
-      form: ['W', 'D', 'L', 'D', 'W']
-    },
-    awayTeam: {
-      id: '83',
-      name: 'FC Barcelona',
-      shortName: 'FC Barcelona',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/83.png',
-      score: '-',
-      record: 'Peringkat #1 LALIGA (3 Laga, 3 Menang)',
-      form: ['W', 'W', 'W', 'W', 'W']
-    },
-    status: 'SCHEDULED',
-    statusDetail: 'Besok, 21:15 WIB',
-    rawUtcDate: '2026-09-06T14:15:00Z',
-    wibTime: '21:15 WIB',
-    wibDate: 'Minggu, 06 September 2026',
-    venue: 'Estadio de Mestalla, Valencia',
-    isBigMatch: true,
-    h2h: {
-      totalMeetings: 62,
-      homeWins: 14,
-      draws: 18,
-      awayWins: 30,
-      recentMatches: [
-        { date: '17 Agu 2025', homeTeam: 'Valencia', awayTeam: 'Barcelona', score: '1 - 2', winner: 'away' },
-        { date: '29 Apr 2025', homeTeam: 'Barcelona', awayTeam: 'Valencia', score: '4 - 2', winner: 'home' }
-      ]
-    }
-  },
-  // Hasil Laga Terakhir Real Madrid (Selesai Kemarin Dini Hari WIB)
-  {
-    id: 'soccer-betis-madrid-finished',
-    sport: 'soccer',
-    sportLabel: 'Sepak Bola',
-    league: 'Spanish LALIGA (Pekan 4)',
-    leagueLogo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/15.png',
-    homeTeam: {
-      id: '244',
-      name: 'Real Betis',
-      shortName: 'Real Betis',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/244.png',
-      score: '1',
-      record: 'Peringkat #9 LALIGA',
-      form: ['L', 'D', 'W', 'D', 'L']
-    },
-    awayTeam: {
-      id: '86',
-      name: 'Real Madrid',
-      shortName: 'Real Madrid',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/86.png',
-      score: '2',
-      record: 'Peringkat #2 LALIGA',
-      form: ['W', 'W', 'D', 'W', 'W']
-    },
-    status: 'FINISHED',
-    statusDetail: 'FT (Selesai 1 - 2)',
-    rawUtcDate: '2026-09-04T19:00:00Z',
-    wibTime: '02:00 WIB',
-    wibDate: 'Sabtu, 05 September 2026',
-    venue: 'Estadio Benito Villamarín, Sevilla',
-    isBigMatch: true,
-    events: [
-      { type: 'goal', minute: "32'", team: 'away', player: 'Kylian Mbappé', detail: 'Assist: Rodrygo' },
-      { type: 'goal', minute: "57'", team: 'home', player: 'Aitor Ruibal', detail: 'Assist: Isco' },
-      { type: 'goal', minute: "75'", team: 'away', player: 'Kylian Mbappé', detail: 'Penalti' }
-    ]
-  },
-  // Laga Resmi Berikutnya Real Madrid (Pekan 5 LALIGA)
-  {
-    id: 'soccer-madrid-rayo-upcoming',
-    sport: 'soccer',
-    sportLabel: 'Sepak Bola',
-    league: 'Spanish LALIGA (Pekan 5)',
-    leagueLogo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/15.png',
-    homeTeam: {
-      id: '86',
-      name: 'Real Madrid',
-      shortName: 'Real Madrid',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/86.png',
-      score: '-',
-      record: 'Peringkat #2 LALIGA',
-      form: ['W', 'W', 'D', 'W', 'W']
-    },
-    awayTeam: {
-      id: '101',
-      name: 'Rayo Vallecano',
-      shortName: 'Rayo Vallecano',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/101.png',
-      score: '-',
-      record: 'Peringkat #11 LALIGA',
-      form: ['L', 'W', 'D', 'L', 'D']
-    },
-    status: 'SCHEDULED',
-    statusDetail: '12 Sep, 02:00 WIB',
-    rawUtcDate: '2026-09-12T19:00:00Z',
-    wibTime: '02:00 WIB',
-    wibDate: 'Minggu, 13 September 2026',
-    venue: 'Estadio Santiago Bernabéu, Madrid'
-  },
-  // Jadwal Resmi El Clásico (Pekan 10 LALIGA - Tanggal 26 Oktober 2026 WIB)
-  {
-    id: 'soccer-el-clasico-official-october',
-    sport: 'soccer',
-    sportLabel: 'Sepak Bola',
-    league: 'Spanish LALIGA - El Clásico (Pekan 10)',
-    leagueLogo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/15.png',
-    homeTeam: {
-      id: '83',
-      name: 'FC Barcelona',
-      shortName: 'FC Barcelona',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/83.png',
-      score: '-',
-      record: 'Peringkat #1 LALIGA',
-      form: ['W', 'W', 'W', 'W', 'D']
-    },
-    awayTeam: {
-      id: '86',
-      name: 'Real Madrid',
-      shortName: 'Real Madrid',
-      logo: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/86.png',
-      score: '-',
-      record: 'Peringkat #2 LALIGA',
-      form: ['W', 'W', 'D', 'W', 'W']
-    },
-    status: 'SCHEDULED',
-    statusDetail: 'Jadwal Resmi: 26 Okt 2026, 01:00 WIB',
-    rawUtcDate: '2026-10-25T18:00:00Z',
-    wibTime: '01:00 WIB',
-    wibDate: 'Senin, 26 Oktober 2026',
-    venue: 'Spotify Camp Nou, Barcelona',
-    isBigMatch: true
-  },
-  // Badminton BWF World Tour
-  {
-    id: 'bwf-101',
-    sport: 'badminton',
-    sportLabel: 'Bulu Tangkis',
-    league: 'BWF All England Open - Tunggal Putra (Semifinal)',
-    leagueLogo: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=100&auto=format&fit=crop&q=80',
-    homeTeam: {
-      name: 'Jonatan Christie',
-      shortName: 'J. Christie (INA)',
-      logo: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=100&auto=format&fit=crop&q=80',
-      score: '2',
-      periodScores: [21, 18, 21],
-      record: 'Peringkat Dunia #3 BWF',
-      form: ['W', 'W', 'W', 'W', 'W']
-    },
-    awayTeam: {
-      name: 'Viktor Axelsen',
-      shortName: 'V. Axelsen (DEN)',
-      logo: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=100&auto=format&fit=crop&q=80',
-      score: '1',
-      periodScores: [19, 21, 17],
-      record: 'Peringkat Dunia #1 BWF',
-      form: ['W', 'W', 'W', 'W', 'L']
-    },
-    status: 'FINISHED',
-    statusDetail: 'FT (Selesai - Rubber Game)',
-    rawUtcDate: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
-    wibTime: '17:30 WIB',
-    wibDate: 'Sabtu, 05 September 2026',
-    venue: 'Utilita Arena Birmingham, Court 1',
-    h2h: {
-      totalMeetings: 12,
-      homeWins: 4,
-      draws: 0,
-      awayWins: 8,
-      recentMatches: [
-        { date: '18 Jan 2026', homeTeam: 'J. Christie', awayTeam: 'V. Axelsen', score: '2 - 1', winner: 'home' },
-        { date: '14 Des 2025', homeTeam: 'V. Axelsen', awayTeam: 'J. Christie', score: '2 - 0', winner: 'away' }
-      ]
-    }
-  },
-  {
-    id: 'bwf-102',
-    sport: 'badminton',
-    sportLabel: 'Bulu Tangkis',
-    league: 'BWF Indonesia Open - Ganda Putra',
-    leagueLogo: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=100&auto=format&fit=crop&q=80',
-    homeTeam: {
-      name: 'Fajar Alfian / M. Rian Ardianto',
-      shortName: 'Fajar/Rian (INA)',
-      logo: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=100&auto=format&fit=crop&q=80',
-      score: '1',
-      periodScores: [21, 14],
-      record: 'Peringkat Dunia #4 BWF',
-      form: ['W', 'W', 'L', 'W', 'W']
-    },
-    awayTeam: {
-      name: 'Kang Min-hyuk / Seo Seung-jae',
-      shortName: 'Kang/Seo (KOR)',
-      logo: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=100&auto=format&fit=crop&q=80',
-      score: '1',
-      periodScores: [18, 21],
-      record: 'Peringkat Dunia #2 BWF',
-      form: ['W', 'W', 'W', 'W', 'W']
-    },
-    status: 'LIVE',
-    statusDetail: 'Set 3 (16-14)',
-    displayClock: 'Set 3',
-    rawUtcDate: new Date().toISOString(),
-    wibTime: '20:15 WIB',
-    wibDate: 'Sabtu, 05 September 2026',
-    venue: 'Istora Senayan Gelora Bung Karno, Jakarta'
-  },
-  {
-    id: 'bwf-103',
-    sport: 'badminton',
-    sportLabel: 'Bulu Tangkis',
-    league: 'BWF Japan Open - Tunggal Putri',
-    leagueLogo: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=100&auto=format&fit=crop&q=80',
-    homeTeam: {
-      name: 'Gregoria Mariska Tunjung',
-      shortName: 'G. M. Tunjung (INA)',
-      logo: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=100&auto=format&fit=crop&q=80',
-      score: '-',
-      record: 'Peringkat Dunia #7 BWF',
-      form: ['W', 'L', 'W', 'W', 'W']
-    },
-    awayTeam: {
-      name: 'An Se-young',
-      shortName: 'An Se-young (KOR)',
-      logo: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=100&auto=format&fit=crop&q=80',
-      score: '-',
-      record: 'Peringkat Dunia #1 BWF',
-      form: ['W', 'W', 'W', 'W', 'W']
-    },
-    status: 'SCHEDULED',
-    statusDetail: 'Besok, 13:30 WIB',
-    rawUtcDate: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-    wibTime: '13:30 WIB',
-    wibDate: 'Minggu, 06 September 2026',
-    venue: 'Yoyogi National Gymnasium, Tokyo'
-  },
+// Curated official fixtures: pure authentic references (NO fake or fabricated LIVE matches)
+const SUPPLEMENTAL_OFFICIAL_MATCHES: LiveMatch[] = [];
 
-  // Tennis Grand Slam / ATP
-  {
-    id: 'tennis-201',
-    sport: 'tennis',
-    sportLabel: 'Tenis',
-    league: 'US Open Grand Slam - Men Single Round 4',
-    leagueLogo: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=100&auto=format&fit=crop&q=80',
-    homeTeam: {
-      name: 'Carlos Alcaraz',
-      shortName: 'C. Alcaraz (ESP)',
-      logo: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=100&auto=format&fit=crop&q=80',
-      score: '3',
-      periodScores: ['6', '4', '7', '6'],
-      record: 'Seed #2 ATP',
-      form: ['W', 'W', 'W', 'W', 'W']
-    },
-    awayTeam: {
-      name: 'Jannik Sinner',
-      shortName: 'J. Sinner (ITA)',
-      logo: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=100&auto=format&fit=crop&q=80',
-      score: '1',
-      periodScores: ['3', '6', '5', '4'],
-      record: 'Seed #1 ATP',
-      form: ['W', 'W', 'W', 'W', 'L']
-    },
-    status: 'FINISHED',
-    statusDetail: 'FT (Final 3-1 Sets)',
-    rawUtcDate: new Date(Date.now() - 8 * 3600 * 1000).toISOString(),
-    wibTime: '06:00 WIB',
-    wibDate: 'Sabtu, 05 September 2026',
-    venue: 'Arthur Ashe Stadium, New York',
-    h2h: {
-      totalMeetings: 9,
-      homeWins: 5,
-      draws: 0,
-      awayWins: 4,
-      recentMatches: [
-        { date: '12 Jul 2026', homeTeam: 'C. Alcaraz', awayTeam: 'J. Sinner', score: '3 - 2', winner: 'home' },
-        { date: '04 Jun 2026', homeTeam: 'J. Sinner', awayTeam: 'C. Alcaraz', score: '3 - 1', winner: 'away' }
-      ]
-    }
-  },
-  {
-    id: 'tennis-202',
-    sport: 'tennis',
-    sportLabel: 'Tenis',
-    league: 'US Open Grand Slam - Women Single Quarterfinal',
-    leagueLogo: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=100&auto=format&fit=crop&q=80',
-    homeTeam: {
-      name: 'Iga Swiatek',
-      shortName: 'I. Swiatek (POL)',
-      logo: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=100&auto=format&fit=crop&q=80',
-      score: '1',
-      periodScores: ['6', '4'],
-      record: 'Seed #1 WTA'
-    },
-    awayTeam: {
-      name: 'Aryna Sabalenka',
-      shortName: 'A. Sabalenka',
-      logo: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=100&auto=format&fit=crop&q=80',
-      score: '1',
-      periodScores: ['3', '6'],
-      record: 'Seed #2 WTA'
-    },
-    status: 'LIVE',
-    statusDetail: 'Set 3 (3-2)',
-    displayClock: 'Set 3',
-    rawUtcDate: new Date().toISOString(),
-    wibTime: '21:00 WIB',
-    wibDate: 'Sabtu, 05 September 2026',
-    venue: 'Louis Armstrong Stadium, New York'
-  },
-
-  // eSports MPL Indonesia & Valorant
-  {
-    id: 'esports-301',
-    sport: 'other',
-    sportLabel: 'eSports',
-    league: 'MPL Indonesia Season 18 (Mobile Legends Pro League)',
-    leagueLogo: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=100&auto=format&fit=crop&q=80',
-    homeTeam: {
-      name: 'RRQ Hoshi',
-      shortName: 'RRQ',
-      logo: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=100&auto=format&fit=crop&q=80',
-      score: '2',
-      periodScores: ['Game 1: Win', 'Game 2: Win'],
-      record: 'Klasemen #1 MPL'
-    },
-    awayTeam: {
-      name: 'ONIC Esports',
-      shortName: 'ONIC',
-      logo: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=100&auto=format&fit=crop&q=80',
-      score: '0',
-      periodScores: ['Game 1: Lose', 'Game 2: Lose'],
-      record: 'Klasemen #2 MPL'
-    },
-    status: 'FINISHED',
-    statusDetail: 'FT (2-0 Selesai BO3)',
-    rawUtcDate: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
-    wibTime: '18:00 WIB',
-    wibDate: 'Sabtu, 05 September 2026',
-    venue: 'MPL Arena XO Hall Tanjung Duren, Jakarta'
-  },
-  {
-    id: 'esports-302',
-    sport: 'other',
-    sportLabel: 'eSports',
-    league: 'MPL Indonesia Season 18 (Regular Season)',
-    leagueLogo: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=100&auto=format&fit=crop&q=80',
-    homeTeam: {
-      name: 'EVOS Glory',
-      shortName: 'EVOS',
-      logo: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=100&auto=format&fit=crop&q=80',
-      score: '-',
-      record: 'Klasemen #4 MPL'
-    },
-    awayTeam: {
-      name: 'Bigetron Alpha',
-      shortName: 'BTR',
-      logo: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=100&auto=format&fit=crop&q=80',
-      score: '-',
-      record: 'Klasemen #3 MPL'
-    },
-    status: 'SCHEDULED',
-    statusDetail: 'Besok, 15:00 WIB',
-    rawUtcDate: new Date(Date.now() + 18 * 3600 * 1000).toISOString(),
-    wibTime: '15:00 WIB',
-    wibDate: 'Minggu, 06 September 2026',
-    venue: 'MPL Arena XO Hall Tanjung Duren, Jakarta'
-  }
-];
+// In-memory cache to guarantee instant response and avoid request rate issues
+const liveScoreCache = new Map<string, { data: LiveMatch[]; timestamp: number }>();
+const CACHE_TTL_MS = 15000; // 15 seconds cache
 
 export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<LiveMatch[]> {
-  const { dateStr } = options;
+  const { dateStr, sport = 'all', forceFresh = false } = options;
+  const cacheKey = `${sport}_${dateStr || 'today'}`;
+
+  // Serve from cache if fresh and not forced
+  if (!forceFresh) {
+    const cached = liveScoreCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return [...cached.data];
+    }
+  }
+
   const dateQuery = dateStr ? `?dates=${dateStr}` : '';
 
-  const endpoints = [
-    // Soccer
-    { key: 'soccer', league: 'English Premier League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard${dateQuery}` },
-    { key: 'soccer', league: 'UEFA Champions League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard${dateQuery}` },
-    { key: 'soccer', league: 'Spanish LALIGA', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/15.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/scoreboard${dateQuery}` },
-    { key: 'soccer', league: 'Italian Serie A', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/12.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/ita.1/scoreboard${dateQuery}` },
-    { key: 'soccer', league: 'German Bundesliga', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/10.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/ger.1/scoreboard${dateQuery}` },
-    { key: 'soccer', league: 'BRI Liga 1 Indonesia', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2281.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/idn.1/scoreboard${dateQuery}` },
-    { key: 'soccer', league: 'UEFA Europa League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2310.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.europa/scoreboard${dateQuery}` },
-    
-    // Basketball
-    { key: 'basketball', league: 'NBA (National Basketball Association)', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png', url: `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard${dateQuery}` },
-    { key: 'basketball', league: 'NCAA Basketball', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/mens-college-basketball.png', url: `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard${dateQuery}` },
-    { key: 'basketball', league: 'WNBA', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/wnba.png', url: `https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard${dateQuery}` },
+  const endpoints: {
+    key: SportType;
+    code: string;
+    region: 'england' | 'europe' | 'latin_america' | 'asia' | 'other';
+    league: string;
+    logo: string;
+    url: string;
+  }[] = [
+    // --- 1. INGGRIS (ENGLAND - SBOBET MAJOR) ---
+    { key: 'soccer', code: 'eng.1', region: 'england', league: 'English Premier League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'eng.2', region: 'england', league: 'English Championship', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/24.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.2/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'eng.fa', region: 'england', league: 'English FA Cup', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2443.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.fa/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'eng.league_cup', region: 'england', league: 'English Carabao Cup', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2444.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.league_cup/scoreboard${dateQuery}` },
 
-    // Baseball
-    { key: 'other', league: 'Major League Baseball (MLB)', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png', url: `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard${dateQuery}` }
+    // --- 2. AMERIKA LATIN (LATIN AMERICA - SBOBET MAJOR: ARGENTINA, COLOMBIA, BRASIL, MEKSIKO, DLL) ---
+    { key: 'soccer', code: 'arg.1', region: 'latin_america', league: 'Argentine Liga Profesional', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/1.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'col.1', region: 'latin_america', league: 'Colombian Primera A', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2288.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/col.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'bra.1', region: 'latin_america', league: 'Brazilian Serie A', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/85.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'mex.1', region: 'latin_america', league: 'Mexican Liga BBVA MX', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/22.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'chi.1', region: 'latin_america', league: 'Chilean Primera División', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2286.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/chi.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'conmebol.libertadores', region: 'latin_america', league: 'CONMEBOL Libertadores', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2684.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.libertadores/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'conmebol.sudamericana', region: 'latin_america', league: 'CONMEBOL Sudamericana', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2685.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.sudamericana/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'fifa.worldq.conmebol', region: 'latin_america', league: 'FIFA World Cup Qualifying - CONMEBOL', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2320.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.worldq.conmebol/scoreboard${dateQuery}` },
+
+    // --- 3. EROPA UTAMA & SEKUNDER (EUROPE - SBOBET MAJOR) ---
+    { key: 'soccer', code: 'esp.1', region: 'europe', league: 'Spanish LALIGA', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/15.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'esp.2', region: 'europe', league: 'Spanish LALIGA 2', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/17.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/esp.2/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'ita.1', region: 'europe', league: 'Italian Serie A', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/12.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/ita.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'ita.2', region: 'europe', league: 'Italian Serie B', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/13.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/ita.2/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'ger.1', region: 'europe', league: 'German Bundesliga', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/10.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/ger.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'ger.2', region: 'europe', league: 'German 2. Bundesliga', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/27.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/ger.2/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'fra.1', region: 'europe', league: 'French Ligue 1', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/9.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/fra.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'fra.2', region: 'europe', league: 'French Ligue 2', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/18.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/fra.2/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'ned.1', region: 'europe', league: 'Dutch Eredivisie', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/11.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'por.1', region: 'europe', league: 'Liga Portugal', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/14.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/por.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'tur.1', region: 'europe', league: 'Turkish Super Lig', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2283.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/tur.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'sco.1', region: 'europe', league: 'Scottish Premiership', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/45.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/sco.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'bel.1', region: 'europe', league: 'Belgian Pro League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2279.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/bel.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'uefa.champions', region: 'europe', league: 'UEFA Champions League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'uefa.europa', region: 'europe', league: 'UEFA Europa League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2310.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.europa/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'uefa.europa.conf', region: 'europe', league: 'UEFA Conference League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2311.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.europa.conf/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'uefa.nations', region: 'europe', league: 'UEFA Nations League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2744.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'fifa.worldq.uefa', region: 'europe', league: 'FIFA World Cup Qualifying - UEFA', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2320.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.worldq.uefa/scoreboard${dateQuery}` },
+
+    // --- 4. ASIA, OSEANIA & TIMUR TENGAH (ASIA & PACIFIC - SBOBET MAJOR) ---
+    { key: 'soccer', code: 'idn.1', region: 'asia', league: 'BRI Liga 1 Indonesia', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2281.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/idn.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'jpn.1', region: 'asia', league: 'J1 League Jepang', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2253.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/jpn.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'sau.1', region: 'asia', league: 'Saudi Pro League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2347.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/sau.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'aus.1', region: 'asia', league: 'Australian A-League Men', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/1308.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/aus.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'chn.1', region: 'asia', league: 'Chinese Super League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2278.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/chn.1/scoreboard${dateQuery}` },
+    { key: 'soccer', code: 'afc.champions', region: 'asia', league: 'AFC Champions League', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2679.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/afc.champions/scoreboard${dateQuery}` },
+
+    // --- 5. AMERIKA UTARA ---
+    { key: 'soccer', code: 'usa.1', region: 'other', league: 'Major League Soccer (MLS)', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/19.png', url: `https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard${dateQuery}` },
+
+    // --- 6. BASKETBALL (SBOBET MARKET) ---
+    { key: 'basketball', code: 'nba', region: 'other', league: 'NBA (National Basketball Association)', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png', url: `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard${dateQuery}` },
+    { key: 'basketball', code: 'mens-college-basketball', region: 'other', league: 'NCAA Basketball', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/mens-college-basketball.png', url: `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard${dateQuery}` },
+    { key: 'basketball', code: 'wnba', region: 'other', league: 'WNBA', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/wnba.png', url: `https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard${dateQuery}` },
+
+    // --- 7. BASEBALL (SBOBET MARKET) ---
+    { key: 'other', code: 'mlb', region: 'other', league: 'Major League Baseball (MLB)', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png', url: `https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard${dateQuery}` }
   ];
 
   const results: LiveMatch[] = [];
 
   try {
+    // 1. Fetch official scoreboards
     const fetchPromises = endpoints.map(async (ep) => {
+      // Filter out if sport tab is specifically chosen and doesn't match
+      if (options.sport && options.sport !== 'all' && options.sport !== ep.key) {
+        return [];
+      }
+
       try {
         const res = await fetch(ep.url);
         if (!res.ok) return [];
         const data = await res.json();
         const events: EspnEvent[] = data.events || [];
         const mappedList: LiveMatch[] = [];
+        
         for (const ev of events) {
-          const mapped = mapEspnEvent(ev, ep.key as SportType, data.leagues?.[0]?.name || ep.league, ep.logo);
+          const mapped = mapEspnEvent(
+            ev, 
+            ep.key as SportType, 
+            data.leagues?.[0]?.name || ep.league, 
+            ep.logo,
+            ep.region
+          );
           if (mapped) mappedList.push(mapped);
         }
         return mappedList;
@@ -706,51 +598,68 @@ export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<Li
       }
     });
 
-    const settled = await Promise.allSettled(fetchPromises);
+    // 2. Fetch real tennis scoreboards if tennis or all sports requested
+    const tennisPromises: Promise<LiveMatch[]>[] = [];
+    if (!options.sport || options.sport === 'all' || options.sport === 'tennis') {
+      const tennisEndpoints = [
+        { url: `https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard${dateQuery}`, label: 'ATP World Tour' },
+        { url: `https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard${dateQuery}`, label: 'WTA Tour' }
+      ];
+
+      tennisEndpoints.forEach((t) => {
+        tennisPromises.push((async () => {
+          try {
+            const res = await fetch(t.url);
+            if (!res.ok) return [];
+            const data = await res.json();
+            const tennisList: LiveMatch[] = [];
+            for (const ev of data.events || []) {
+              const tourName = ev.name || t.label;
+              for (const group of ev.groupings || []) {
+                for (const comp of group.competitions || []) {
+                  const mapped = mapEspnTennisEvent(ev, comp, tourName);
+                  if (mapped) {
+                    // Only include today's / recent matches
+                    if (!dateStr || mapped.rawUtcDate.startsWith(dateStr.slice(0, 4))) {
+                      tennisList.push(mapped);
+                    }
+                  }
+                }
+              }
+            }
+            return tennisList;
+          } catch {
+            return [];
+          }
+        })());
+      });
+    }
+
+    const settled = await Promise.allSettled([...fetchPromises, ...tennisPromises]);
     settled.forEach((res) => {
       if (res.status === 'fulfilled' && Array.isArray(res.value)) {
         results.push(...res.value);
       }
     });
   } catch (err) {
-    console.error('Failed to fetch ESPN live scores:', err);
+    console.error('Failed to fetch official live scores:', err);
   }
 
-  // Include official supplemental matches (Badminton, Tennis, eSports, etc.)
-  // Filter accurately by exact WIB date and sport
-  const supplemental = SUPPLEMENTAL_OFFICIAL_MATCHES.filter(m => {
-    if (options.sport && options.sport !== 'all') {
-      if (m.sport !== options.sport) return false;
+  // Deduplicate matches by unique id
+  const seenIds = new Set<string>();
+  const uniqueMatches: LiveMatch[] = [];
+  for (const m of results) {
+    if (!seenIds.has(m.id)) {
+      seenIds.add(m.id);
+      uniqueMatches.push(m);
     }
-    if (!dateStr) return true;
-    const d = new Date(m.rawUtcDate);
-    if (isNaN(d.getTime())) return false;
-    const wibD = new Date(d.getTime() + 7 * 3600 * 1000);
-    const y = wibD.getUTCFullYear();
-    const mo = String(wibD.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(wibD.getUTCDate()).padStart(2, '0');
-    const wibDateStr = `${y}${mo}${day}`;
-    return wibDateStr === dateStr;
-  });
-
-  // Add supplemental matches only if not already provided by API
-  supplemental.forEach(sup => {
-    const alreadyExists = results.some(r => 
-      r.id === sup.id || 
-      (r.sport === sup.sport && 
-       ((r.homeTeam.name.toLowerCase().includes(sup.homeTeam.shortName.toLowerCase()) || sup.homeTeam.name.toLowerCase().includes(r.homeTeam.shortName.toLowerCase())) &&
-        (r.awayTeam.name.toLowerCase().includes(sup.awayTeam.shortName.toLowerCase()) || sup.awayTeam.name.toLowerCase().includes(r.awayTeam.shortName.toLowerCase()))))
-    );
-    if (!alreadyExists) {
-      results.push(sup);
-    }
-  });
+  }
 
   // Sort matches:
-  // Priority 1: LIVE matches first
+  // Priority 1: LIVE matches first (currently playing)
   // Priority 2: SCHEDULED matches (soonest kick-off first)
-  // Priority 3: FINISHED matches (most recently finished first)
-  results.sort((a, b) => {
+  // Priority 3: FINISHED matches (most recently completed first)
+  uniqueMatches.sort((a, b) => {
     if (a.status === 'LIVE' && b.status !== 'LIVE') return -1;
     if (b.status === 'LIVE' && a.status !== 'LIVE') return 1;
     
@@ -765,5 +674,11 @@ export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<Li
     return 0;
   });
 
-  return results;
+  // Store in cache
+  liveScoreCache.set(cacheKey, {
+    data: uniqueMatches,
+    timestamp: Date.now()
+  });
+
+  return uniqueMatches;
 }

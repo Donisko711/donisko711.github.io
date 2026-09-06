@@ -141,11 +141,16 @@ export interface CompetitorTeam {
 }
 
 export interface MatchEventItem {
-  type: 'goal' | 'card' | 'sub' | 'point';
+  type: 'goal' | 'card' | 'yellow_card' | 'red_card' | 'yellow_red_card' | 'sub' | 'point';
   minute?: string;
+  clockValue?: number;
+  period?: number;
   team: 'home' | 'away';
+  teamId?: string;
   player: string;
   detail?: string;
+  assistBy?: string;
+  cardType?: 'yellow' | 'red' | 'yellow_red';
 }
 
 export interface LiveMatch {
@@ -163,10 +168,14 @@ export interface LiveMatch {
   statusDetail: string;
   period?: number | string;
   displayClock?: string;
+  elapsedMinutes?: number;
+  elapsedDetail?: string;
+  kickoffWib?: string;
   rawUtcDate: string;
   wibTime: string;
   wibDate: string;
   venue?: string;
+  region?: 'england' | 'europe' | 'latin_america' | 'asia' | 'other';
   events?: MatchEventItem[];
   isBigMatch?: boolean;
   h2h?: {
@@ -183,6 +192,8 @@ export interface LiveMatch {
     }[];
   };
 }
+
+export type MatchRegionFilter = 'ALL' | 'ENGLAND' | 'EUROPE' | 'LATIN_AMERICA' | 'ASIA' | 'OTHER';
 
 export type LiveScoreAlertType = 'KICKOFF' | 'GOAL' | 'FULLTIME' | 'INFO';
 

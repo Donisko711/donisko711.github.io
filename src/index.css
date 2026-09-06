@@ -85,10 +85,30 @@
 .animate-marquee {
   display: inline-flex;
   white-space: nowrap;
-  animation: marquee-scroll 25s linear infinite;
+  animation: marquee-scroll 45s linear infinite;
 }
 
 .animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.animate-marquee-slow {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-scroll 75s linear infinite;
+}
+
+.animate-marquee-slow:hover {
+  animation-play-state: paused;
+}
+
+.animate-marquee-superslow {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-scroll 110s linear infinite;
+}
+
+.animate-marquee-superslow:hover {
   animation-play-state: paused;
 }
 

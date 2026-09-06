@@ -23,9 +23,10 @@ import {
   TrendingUp,
   Award,
   History,
-  Bell
+  Bell,
+  Globe
 } from 'lucide-react';
-import { LiveMatch, SportType, MatchStatusFilter, LiveScoreAlertItem } from '../../types';
+import { LiveMatch, SportType, MatchStatusFilter, MatchRegionFilter, LiveScoreAlertItem } from '../../types';
 import { 
   fetchAllLiveScores, 
   getWibDateString, 
@@ -49,6 +50,7 @@ export const LiveScore: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [selectedSport, setSelectedSport] = useState<SportType>('all');
   const [statusFilter, setStatusFilter] = useState<MatchStatusFilter>('ALL');
+  const [regionFilter, setRegionFilter] = useState<MatchRegionFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedDateOffset, setSelectedDateOffset] = useState<number>(0); // 0 = Hari ini, -1 = Kemarin, 1 = Besok
   const [customDate, setCustomDate] = useState<string>('');
@@ -141,7 +143,7 @@ export const LiveScore: React.FC = () => {
   }, []);
 
   // Fetch match data
-  const loadMatches = useCallback(async (showLoader = false) => {
+  const loadMatches = useCallback(async (showLoader = false, forceFresh = false) => {
     if (showLoader) setIsLoading(true);
     else setIsRefreshing(true);
 
@@ -155,7 +157,8 @@ export const LiveScore: React.FC = () => {
 
       const data = await fetchAllLiveScores({
         sport: selectedSport,
-        dateStr: dateQueryStr
+        dateStr: dateQueryStr,
+        forceFresh
       });
 
       // Check for bigmatch/soccer live events between loads
@@ -349,6 +352,15 @@ export const LiveScore: React.FC = () => {
       if (statusFilter === 'FINISHED' && m.status !== 'FINISHED') return false;
       if (statusFilter === 'SCHEDULED' && m.status !== 'SCHEDULED') return false;
 
+      // SBOBET Market Region filter
+      if (regionFilter !== 'ALL') {
+        if (regionFilter === 'ENGLAND' && m.region !== 'england') return false;
+        if (regionFilter === 'EUROPE' && m.region !== 'europe') return false;
+        if (regionFilter === 'LATIN_AMERICA' && m.region !== 'latin_america') return false;
+        if (regionFilter === 'ASIA' && m.region !== 'asia') return false;
+        if (regionFilter === 'OTHER' && m.region !== 'other') return false;
+      }
+
       // Search query filter (Team name, league, or venue)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -363,7 +375,7 @@ export const LiveScore: React.FC = () => {
 
       return true;
     });
-  }, [matches, selectedSport, statusFilter, searchQuery]);
+  }, [matches, selectedSport, statusFilter, regionFilter, searchQuery]);
 
   // Group by league
   const groupedByLeague = useMemo(() => {
@@ -406,6 +418,18 @@ export const LiveScore: React.FC = () => {
   const finishedCount = useMemo(() => matches.filter((m) => m.status === 'FINISHED').length, [matches]);
   const scheduledCount = useMemo(() => matches.filter((m) => m.status === 'SCHEDULED').length, [matches]);
 
+  // SBOBET Region match counts
+  const regionCounts = useMemo(() => {
+    return {
+      ALL: matches.length,
+      ENGLAND: matches.filter((m) => m.region === 'england').length,
+      EUROPE: matches.filter((m) => m.region === 'europe').length,
+      LATIN_AMERICA: matches.filter((m) => m.region === 'latin_america').length,
+      ASIA: matches.filter((m) => m.region === 'asia').length,
+      OTHER: matches.filter((m) => m.region === 'other').length,
+    };
+  }, [matches]);
+
   // Copy match summary to clipboard for CS/Staff
   const handleCopyMatchInfo = (m: LiveMatch) => {
     let text = `[LIVESCORE HS 711 - WAKTU INDONESIA BARAT (WIB)]\n`;
@@ -415,6 +439,9 @@ export const LiveScore: React.FC = () => {
     
     if (m.status === 'LIVE') {
       text += `🔴 Status : LIVE (${m.statusDetail})\n`;
+      if (m.elapsedDetail) {
+        text += `⏱️ Durasi Laga : ${m.elapsedDetail}\n`;
+      }
       text += `⚽ Skor Sementara : ${m.homeTeam.score} - ${m.awayTeam.score}\n`;
     } else if (m.status === 'FINISHED') {
       text += `✅ Status : Selesai (Full Time)\n`;
@@ -422,6 +449,39 @@ export const LiveScore: React.FC = () => {
     } else {
       text += `⏰ Status : Terjadwal (Belum Dimulai)\n`;
       text += `📌 Kick-off : ${m.wibTime}\n`;
+      if (m.elapsedDetail) {
+        text += `⏳ Estimasi : ${m.elapsedDetail}\n`;
+      }
+    }
+
+    if (m.events && m.events.length > 0) {
+      const goals = m.events.filter(e => e.type === 'goal');
+      const yellowCards = m.events.filter(e => e.type === 'yellow_card');
+      const redCards = m.events.filter(e => e.type === 'red_card' || e.type === 'yellow_red_card');
+
+      if (goals.length > 0) {
+        text += `⚽ Pencetak Gol:\n`;
+        goals.forEach(g => {
+          const teamName = g.team === 'home' ? m.homeTeam.shortName : m.awayTeam.shortName;
+          text += `   - ${g.minute ? `[${g.minute}] ` : ''}${g.player} (${teamName})${g.detail ? ` - ${g.detail}` : ''}\n`;
+        });
+      }
+
+      if (redCards.length > 0) {
+        text += `🟥 Kartu Merah:\n`;
+        redCards.forEach(c => {
+          const teamName = c.team === 'home' ? m.homeTeam.shortName : m.awayTeam.shortName;
+          text += `   - ${c.minute ? `[${c.minute}] ` : ''}${c.player} (${teamName})\n`;
+        });
+      }
+
+      if (yellowCards.length > 0) {
+        text += `🟨 Kartu Kuning:\n`;
+        yellowCards.forEach(c => {
+          const teamName = c.team === 'home' ? m.homeTeam.shortName : m.awayTeam.shortName;
+          text += `   - ${c.minute ? `[${c.minute}] ` : ''}${c.player} (${teamName})\n`;
+        });
+      }
     }
 
     if (m.venue) {
@@ -567,7 +627,7 @@ export const LiveScore: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => loadMatches(false)}
+                onClick={() => loadMatches(false, true)}
                 disabled={isRefreshing}
                 className="px-3.5 py-1.5 rounded-xl bg-black hover:bg-[#00F3FF] text-[#00F3FF] hover:text-black border-2 border-[#00F3FF] text-[11px] font-mono font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,243,255,0.3)] active:scale-95 disabled:opacity-50"
               >
@@ -847,24 +907,71 @@ export const LiveScore: React.FC = () => {
           </div>
         </div>
 
-        {/* Status Filter Pill Buttons */}
+        {/* Status Filter Pill Buttons with SBOBET Precision Counts */}
         <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t-2 border-[#00F3FF]/20">
-          <span className="text-[11px] font-mono font-bold text-yellow-400 uppercase tracking-wider pr-1">Filter Status:</span>
-          {(['ALL', 'LIVE', 'FINISHED', 'SCHEDULED'] as MatchStatusFilter[]).map((st) => {
-            const label = st === 'ALL' ? 'Semua Pertandingan' : st === 'LIVE' ? '🔴 Sedang Main' : st === 'FINISHED' ? '✅ Selesai (FT)' : '📅 Jadwal Mendatang';
-            const isSelected = statusFilter === st;
+          <span className="text-[11px] font-mono font-bold text-yellow-400 uppercase tracking-wider pr-1 flex items-center gap-1">
+            <Activity className="w-3.5 h-3.5 text-yellow-400" /> Status:
+          </span>
+          {([
+            { key: 'ALL', label: 'Semua Status', count: matches.length },
+            { key: 'LIVE', label: '🔴 Sedang Main (In-Play)', count: liveCount },
+            { key: 'SCHEDULED', label: '📅 Akan Bertanding (Jadwal)', count: scheduledCount },
+            { key: 'FINISHED', label: '✅ Sudah Selesai (FT)', count: finishedCount },
+          ] as { key: MatchStatusFilter; label: string; count: number }[]).map((st) => {
+            const isSelected = statusFilter === st.key;
             return (
               <button
-                key={st}
+                key={st.key}
                 type="button"
-                onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1 rounded-xl text-[11px] font-mono font-black transition-all cursor-pointer whitespace-nowrap border-2 ${
+                onClick={() => setStatusFilter(st.key)}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-black transition-all cursor-pointer whitespace-nowrap border-2 flex items-center gap-1.5 ${
                   isSelected
                     ? 'bg-black text-yellow-300 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.35)]'
                     : 'bg-black text-gray-300 border-white/10 hover:border-[#00F3FF]/50 hover:text-white'
                 }`}
               >
-                {label}
+                <span>{st.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono font-bold ${
+                  isSelected ? 'bg-yellow-400/20 text-yellow-300' : 'bg-white/10 text-gray-400'
+                }`}>
+                  {st.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* SBOBET Region Market Filter Bar */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-white/10">
+          <span className="text-[11px] font-mono font-bold text-[#00F3FF] uppercase tracking-wider pr-1 flex items-center gap-1">
+            <Globe className="w-3.5 h-3.5 text-[#00F3FF]" /> Pasar SBOBET:
+          </span>
+          {([
+            { key: 'ALL', label: '🌐 Semua Wilayah Dunia', count: regionCounts.ALL },
+            { key: 'ENGLAND', label: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inggris', count: regionCounts.ENGLAND },
+            { key: 'EUROPE', label: '🇪🇺 Eropa', count: regionCounts.EUROPE },
+            { key: 'LATIN_AMERICA', label: '🌎 Amerika Latin (Arg/Col/Bra/Mex)', count: regionCounts.LATIN_AMERICA },
+            { key: 'ASIA', label: '🌏 Asia & Pasifik', count: regionCounts.ASIA },
+            { key: 'OTHER', label: '🏀 Lainnya', count: regionCounts.OTHER },
+          ] as { key: MatchRegionFilter; label: string; count: number }[]).map((rg) => {
+            const isSelected = regionFilter === rg.key;
+            return (
+              <button
+                key={rg.key}
+                type="button"
+                onClick={() => setRegionFilter(rg.key)}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-black transition-all cursor-pointer whitespace-nowrap border-2 flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-black text-[#00F3FF] border-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.4)]'
+                    : 'bg-black text-gray-300 border-white/10 hover:border-[#00F3FF]/50 hover:text-white'
+                }`}
+              >
+                <span>{rg.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono font-bold ${
+                  isSelected ? 'bg-[#00F3FF]/20 text-[#00F3FF]' : 'bg-white/10 text-gray-400'
+                }`}>
+                  {rg.count}
+                </span>
               </button>
             );
           })}
@@ -1112,31 +1219,64 @@ export const LiveScore: React.FC = () => {
                       <div className="hidden md:flex items-center justify-between gap-3">
                         {/* 1. Time / Status Column */}
                         <div className="w-48 flex-shrink-0 flex flex-col justify-center">
-                          {isBigMatchGame(match) && (
-                            <span className="mb-1.5 px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-[9px] font-mono font-black tracking-wider uppercase flex items-center gap-1 w-fit shadow-[0_0_8px_rgba(250,204,21,0.5)]">
-                              <Flame className="w-2.5 h-2.5 text-black" />
-                              BIGMATCH
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                            {match.region && (
+                              <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-mono font-bold text-gray-300 uppercase">
+                                {match.region === 'latin_america' ? '🌎 LatAm' :
+                                 match.region === 'england' ? '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inggris' :
+                                 match.region === 'europe' ? '🇪🇺 Eropa' :
+                                 match.region === 'asia' ? '🌏 Asia' : '🌐 Dunia'}
+                              </span>
+                            )}
+                            {isBigMatchGame(match) && (
+                              <span className="px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-[9px] font-mono font-black tracking-wider uppercase flex items-center gap-1 shadow-[0_0_8px_rgba(250,204,21,0.5)]">
+                                <Flame className="w-2.5 h-2.5 text-black" />
+                                BIGMATCH
+                              </span>
+                            )}
+                          </div>
                           {isLive ? (
-                            <div className="px-3 py-1.5 rounded-xl bg-black border-2 border-rose-500 text-rose-300 text-xs font-mono font-black flex items-center gap-2 shadow-[0_0_12px_rgba(244,63,94,0.45)] w-fit">
-                              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                              <span>LIVE {match.statusDetail}</span>
+                            <div className="space-y-1">
+                              <div className="px-3 py-1.5 rounded-xl bg-black border-2 border-rose-500 text-rose-300 text-xs font-mono font-black flex items-center gap-2 shadow-[0_0_12px_rgba(244,63,94,0.45)] w-fit">
+                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                                <span>LIVE {match.statusDetail}</span>
+                              </div>
+                              {match.elapsedDetail && (
+                                <div className="text-[10px] font-mono text-yellow-300 flex items-center gap-1 font-bold">
+                                  <span>⏱️</span>
+                                  <span>{match.elapsedDetail}</span>
+                                </div>
+                              )}
+                              <div className="text-[10px] font-mono text-gray-400">
+                                Kick-off: {match.wibTime}
+                              </div>
                             </div>
                           ) : isFinished ? (
-                            <div className="px-3 py-1.5 rounded-xl bg-black border-2 border-emerald-400 text-emerald-300 text-xs font-mono font-black flex items-center gap-1.5 shadow-[0_0_10px_rgba(52,211,153,0.3)] w-fit">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>{match.statusDetail}</span>
+                            <div className="space-y-1">
+                              <div className="px-3 py-1.5 rounded-xl bg-black border-2 border-emerald-400 text-emerald-300 text-xs font-mono font-black flex items-center gap-1.5 shadow-[0_0_10px_rgba(52,211,153,0.3)] w-fit">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>{match.statusDetail}</span>
+                              </div>
+                              <div className="text-[10px] font-mono text-gray-400">
+                                Selesai • {match.wibDate.split(',')[1] || match.wibDate}
+                              </div>
                             </div>
                           ) : (
-                            <div className="px-3 py-1.5 rounded-xl bg-black border-2 border-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.25)] w-fit">
-                              <div className="text-xs font-mono font-black text-yellow-300 flex items-center gap-1">
-                                <span>⏰</span>
-                                <span>{match.wibTime}</span>
+                            <div className="space-y-1">
+                              <div className="px-3 py-1.5 rounded-xl bg-black border-2 border-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.25)] w-fit">
+                                <div className="text-xs font-mono font-black text-yellow-300 flex items-center gap-1">
+                                  <span>⏰</span>
+                                  <span>{match.wibTime}</span>
+                                </div>
+                                <div className="text-[10px] font-mono text-gray-300 whitespace-nowrap">
+                                  {match.wibDate.split(',')[1] || match.wibDate}
+                                </div>
                               </div>
-                              <div className="text-[10px] font-mono text-gray-300 whitespace-nowrap">
-                                {match.wibDate.split(',')[1] || match.wibDate}
-                              </div>
+                              {match.elapsedDetail && (
+                                <div className="text-[10px] font-mono text-[#00F3FF] font-semibold">
+                                  {match.elapsedDetail}
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -1292,6 +1432,14 @@ export const LiveScore: React.FC = () => {
                         {/* Mobile Top Bar: Status & Venue */}
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
+                            {match.region && (
+                              <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-mono font-bold text-gray-300 uppercase">
+                                {match.region === 'latin_america' ? '🌎 LatAm' :
+                                 match.region === 'england' ? '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inggris' :
+                                 match.region === 'europe' ? '🇪🇺 Eropa' :
+                                 match.region === 'asia' ? '🌏 Asia' : '🌐 Dunia'}
+                              </span>
+                            )}
                             {isBigMatchGame(match) && (
                               <span className="px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-[9px] font-mono font-black tracking-wider uppercase flex items-center gap-1 shadow-[0_0_8px_rgba(250,204,21,0.5)]">
                                 <Flame className="w-2.5 h-2.5 text-black" />
@@ -1299,19 +1447,33 @@ export const LiveScore: React.FC = () => {
                               </span>
                             )}
                             {isLive ? (
-                              <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-rose-500 text-rose-300 text-[10px] font-mono font-black flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.4)]">
-                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                                LIVE {match.statusDetail}
-                              </span>
+                              <div className="flex flex-col gap-1">
+                                <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-rose-500 text-rose-300 text-[10px] font-mono font-black flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.4)] w-fit">
+                                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                                  LIVE {match.statusDetail}
+                                </span>
+                                {match.elapsedDetail && (
+                                  <span className="text-[9px] font-mono text-yellow-300 font-bold">
+                                    ⏱️ {match.elapsedDetail}
+                                  </span>
+                                )}
+                              </div>
                             ) : isFinished ? (
                               <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-emerald-400 text-emerald-300 text-[10px] font-mono font-black flex items-center gap-1 shadow-[0_0_10px_rgba(52,211,153,0.3)]">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                                 {match.statusDetail}
                               </span>
                             ) : (
-                              <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-[#00F3FF] text-yellow-300 text-[10px] font-mono font-black shadow-[0_0_10px_rgba(0,243,255,0.25)]">
-                                ⏰ {match.wibTime} | {match.wibDate.split(',')[1] || match.wibDate}
-                              </span>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="px-2.5 py-1 rounded-xl bg-black border-2 border-[#00F3FF] text-yellow-300 text-[10px] font-mono font-black shadow-[0_0_10px_rgba(0,243,255,0.25)]">
+                                  ⏰ {match.wibTime} | {match.wibDate.split(',')[1] || match.wibDate}
+                                </span>
+                                {match.elapsedDetail && (
+                                  <span className="text-[9px] font-mono text-[#00F3FF]">
+                                    {match.elapsedDetail}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
 
@@ -1400,9 +1562,80 @@ export const LiveScore: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Expanded Section: Head-to-Head & Match Details (Neon Box Style) */}
+                      {/* Expanded Section: Head-to-Head, Real-time Events & Match Details (Neon Box Style) */}
                       {isExpanded && (
                         <div className="mt-4 pt-4 border-t-2 border-[#00F3FF]/40 bg-black rounded-2xl p-4 sm:p-5 space-y-4 animate-fade-in border border-white/10 shadow-[0_0_20px_rgba(0,243,255,0.15)]">
+                          {/* 1. Real-time Match Events: Pencetak Gol & Kartu Kuning/Merah */}
+                          <div className="space-y-3 bg-[#090A12] p-4 rounded-xl border border-white/10">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2">
+                              <h4 className="text-xs font-black text-yellow-400 flex items-center gap-2 uppercase font-mono tracking-wider">
+                                <span>⚽</span>
+                                <span>Pencetak Gol &amp; Kartu Pertandingan (Realtime)</span>
+                              </h4>
+                              {match.elapsedDetail && (
+                                <span className="text-[11px] font-mono text-[#00F3FF] font-bold bg-black/60 px-2.5 py-1 rounded-lg border border-[#00F3FF]/40 w-fit">
+                                  ⏱️ {match.elapsedDetail}
+                                </span>
+                              )}
+                            </div>
+
+                            {match.events && match.events.length > 0 ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                {/* Home Team Events */}
+                                <div className="space-y-1.5 border-b md:border-b-0 md:border-r border-white/10 pb-3 md:pb-0 md:pr-4">
+                                  <div className="text-[11px] font-mono font-bold text-gray-400 flex items-center justify-between border-b border-white/5 pb-1">
+                                    <span className="text-white font-bold">{match.homeTeam.name}</span>
+                                    <span className="text-yellow-400 font-black">{match.homeTeam.score}</span>
+                                  </div>
+                                  {match.events.filter(e => e.team === 'home').length === 0 ? (
+                                    <p className="text-[11px] text-gray-500 italic py-1">Belum ada peristiwa gol / kartu</p>
+                                  ) : (
+                                    match.events.filter(e => e.team === 'home').map((ev, idx) => (
+                                      <div key={idx} className="flex items-center gap-2 text-xs py-1.5 px-2.5 rounded-lg bg-black border border-white/10">
+                                        <span className="font-mono text-yellow-400 font-black text-[11px] min-w-[28px]">{ev.minute || '-'}</span>
+                                        <span className="text-sm">{ev.type === 'goal' ? '⚽' : ev.cardType === 'red' ? '🟥' : '🟨'}</span>
+                                        <div className="min-w-0 flex-1">
+                                          <span className="font-bold text-white text-xs">{ev.player}</span>
+                                          {ev.detail && <span className="text-[10px] text-gray-400 ml-1.5">({ev.detail})</span>}
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+
+                                {/* Away Team Events */}
+                                <div className="space-y-1.5 md:pl-2">
+                                  <div className="text-[11px] font-mono font-bold text-gray-400 flex items-center justify-between border-b border-white/5 pb-1">
+                                    <span className="text-white font-bold">{match.awayTeam.name}</span>
+                                    <span className="text-yellow-400 font-black">{match.awayTeam.score}</span>
+                                  </div>
+                                  {match.events.filter(e => e.team === 'away').length === 0 ? (
+                                    <p className="text-[11px] text-gray-500 italic py-1">Belum ada peristiwa gol / kartu</p>
+                                  ) : (
+                                    match.events.filter(e => e.team === 'away').map((ev, idx) => (
+                                      <div key={idx} className="flex items-center gap-2 text-xs py-1.5 px-2.5 rounded-lg bg-black border border-white/10">
+                                        <span className="font-mono text-yellow-400 font-black text-[11px] min-w-[28px]">{ev.minute || '-'}</span>
+                                        <span className="text-sm">{ev.type === 'goal' ? '⚽' : ev.cardType === 'red' ? '🟥' : '🟨'}</span>
+                                        <div className="min-w-0 flex-1">
+                                          <span className="font-bold text-white text-xs">{ev.player}</span>
+                                          {ev.detail && <span className="text-[10px] text-gray-400 ml-1.5">({ev.detail})</span>}
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-black/40 rounded-xl border border-white/5 text-center">
+                                <p className="text-xs text-gray-400">
+                                  {isScheduled 
+                                    ? 'Pertandingan belum dimulai. Pencetak gol dan kartu akan muncul otomatis begitu laga kickoff berjalan.' 
+                                    : 'Belum ada catatan gol atau kartu tercatat pada pertandingan ini.'}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Head to Head Record */}
                             <div className="space-y-2">

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { JobdeskTask, JobdeskTaskType, ShiftType } from '../../types';
+import { saveLocalCustomTask, deleteJobdeskTask } from '../../utils/jobdeskStorage';
 
 interface JobdeskManagerProps {
   tasks: JobdeskTask[];
@@ -182,6 +183,11 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
       }];
     }
 
+    // Save each new task to custom backup immediately so it never disappears
+    newTasksToAdd.forEach(taskItem => {
+      saveLocalCustomTask(taskItem);
+    });
+
     onUpdateTasks([...tasks, ...newTasksToAdd]);
     setNewTaskTitle('');
     setNewTaskTime('');
@@ -205,9 +211,10 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
     e.preventDefault();
     if (!editingTaskId || !editTitle.trim()) return;
 
+    let updatedEditedTask: JobdeskTask | null = null;
     const updated = tasks.map(t => {
       if (t.id === editingTaskId) {
-        return {
+        const modified: JobdeskTask = {
           ...t,
           title: editTitle.trim(),
           timeNote: editTime.trim() || undefined,
@@ -215,9 +222,15 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
           shift: editShift,
           taskType: editTaskType
         };
+        updatedEditedTask = modified;
+        return modified;
       }
       return t;
     });
+
+    if (updatedEditedTask) {
+      saveLocalCustomTask(updatedEditedTask);
+    }
 
     onUpdateTasks(updated);
     setEditingTaskId(null);
@@ -225,11 +238,11 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
   };
 
   // Delete task
-  const handleDeleteTask = (task: JobdeskTask) => {
+  const handleDeleteTask = async (task: JobdeskTask) => {
     if (window.confirm(`Hapus tugas ini secara permanen?\n\n"${task.title}"\n[${task.taskType === 'SAMBILAN' ? '☕ Tugas Sambilan' : '⚡ Tugas Utama'} - Shift ${task.shift}]`)) {
-      const updated = tasks.filter(t => t.id !== task.id);
+      const updated = await deleteJobdeskTask(task.id, tasks);
       onUpdateTasks(updated);
-      showToast('🗑️ Tugas berhasil dihapus dari sistem.');
+      showToast('🗑️ Tugas berhasil dihapus secara permanen dari sistem.');
     }
   };
 
