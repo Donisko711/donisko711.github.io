@@ -55,7 +55,8 @@ export const LiveScore: React.FC = () => {
   const [selectedDateOffset, setSelectedDateOffset] = useState<number>(0); // 0 = Hari ini, -1 = Kemarin, 1 = Besok
   const [customDate, setCustomDate] = useState<string>('');
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
-  const [expandedLeague, setExpandedLeague] = useState<string | null>('ALL_OPEN');
+  // Expanded league accordion: only opens when clicked, automatically closes when another is clicked
+  const [expandedLeague, setExpandedLeague] = useState<string | null>(null);
   const [copiedMatchId, setCopiedMatchId] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [countdown, setCountdown] = useState<number>(30);
@@ -396,22 +397,10 @@ export const LiveScore: React.FC = () => {
     return Object.values(groups);
   }, [filteredMatches]);
 
-  // Set default expanded league (prefer the one with LIVE matches or the first league)
-  useEffect(() => {
-    if (groupedByLeague.length > 0) {
-      setExpandedLeague((prev) => {
-        // If current expanded league still exists in the filtered list, maintain it
-        if (prev && groupedByLeague.some((g) => g.league === prev)) {
-          return prev;
-        }
-        // Otherwise, prioritize league with LIVE matches, or fallback to first league
-        const withLive = groupedByLeague.find((g) => g.matches.some((m) => m.status === 'LIVE'));
-        return withLive ? withLive.league : groupedByLeague[0].league;
-      });
-    } else {
-      setExpandedLeague(null);
-    }
-  }, [groupedByLeague]);
+  // Toggle single league accordion (opens on click, closes on re-click, closes all others)
+  const handleToggleLeague = (leagueName: string) => {
+    setExpandedLeague((prev) => (prev === leagueName ? null : leagueName));
+  };
 
   // Summary counts
   const liveCount = useMemo(() => matches.filter((m) => m.status === 'LIVE').length, [matches]);
@@ -1021,26 +1010,45 @@ export const LiveScore: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
                   <span className="text-sm font-black text-white tracking-wide uppercase">
-                    MENU PILIHAN LIGA <span className="text-yellow-400 font-mono">({groupedByLeague.length} KOMPETISI)</span>
+                    MENU PILIHAN LIGA <span className="text-yellow-400 font-mono">({groupedByLeague.length} KOMPETISI DUNIA)</span>
                   </span>
                 </div>
-                <div className="text-[11px] font-mono text-gray-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-                  <span>Klik liga untuk membuka jadwal tim (otomatis menutup liga lain)</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-mono text-gray-400">
+                    {expandedLeague ? (
+                      <span className="text-yellow-400 font-bold">Dibuka: {expandedLeague}</span>
+                    ) : (
+                      <span>Klik liga untuk membuka jadwal tim (otomatis menutup liga lain)</span>
+                    )}
+                  </span>
+                  {expandedLeague && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedLeague(null)}
+                      className="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                      title="Tutup semua menu liga"
+                    >
+                      <span>✕ Tutup Menu</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div className="flex items-center gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-yellow-400/50">
                 {groupedByLeague.map((g) => {
-                  const isCurrent = expandedLeague === g.league;
+                  const isCurrentOpen = expandedLeague === g.league;
                   const gHasLive = g.matches.some((m) => m.status === 'LIVE');
                   return (
                     <button
                       key={g.league}
                       type="button"
-                      onClick={() => setExpandedLeague(isCurrent ? null : g.league)}
+                      onClick={() => {
+                        handleToggleLeague(g.league);
+                        const el = document.getElementById(`league-${encodeURIComponent(g.league)}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
                       className={`px-4 py-2.5 rounded-xl font-mono text-xs font-black whitespace-nowrap transition-all flex items-center gap-2.5 cursor-pointer border-2 active:scale-95 flex-shrink-0 ${
-                        isCurrent
+                        isCurrentOpen
                           ? 'bg-yellow-400 text-black border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)]'
                           : 'bg-black text-gray-200 hover:text-white border-[#00F3FF]/60 hover:border-[#00F3FF] shadow-[0_0_12px_rgba(0,243,255,0.2)] hover:bg-[#00F3FF]/10'
                       }`}
@@ -1053,11 +1061,11 @@ export const LiveScore: React.FC = () => {
                           onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                         />
                       ) : (
-                        <Trophy className={`w-4 h-4 ${isCurrent ? 'text-black' : 'text-yellow-400'}`} />
+                        <Trophy className={`w-4 h-4 ${isCurrentOpen ? 'text-black' : 'text-yellow-400'}`} />
                       )}
                       <span className="uppercase">{g.league}</span>
                       <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-black ${
-                        isCurrent ? 'bg-black text-yellow-400' : 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40'
+                        isCurrentOpen ? 'bg-black text-yellow-400' : 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/40'
                       }`}>
                         {g.matches.length} LAGA
                       </span>
@@ -1080,6 +1088,7 @@ export const LiveScore: React.FC = () => {
             return (
               <div 
                 key={group.league} 
+                id={`league-${encodeURIComponent(group.league)}`}
                 className={`rounded-2xl bg-[#06070B] overflow-hidden transition-all duration-300 border-2 ${
                   isLeagueOpen 
                     ? 'border-yellow-400 shadow-[0_0_35px_rgba(250,204,21,0.35)]' 
@@ -1089,7 +1098,7 @@ export const LiveScore: React.FC = () => {
                 {/* Enlarged Clickable League Header Banner (Menu Style Accordion) */}
                 <button
                   type="button"
-                  onClick={() => setExpandedLeague(isLeagueOpen ? null : group.league)}
+                  onClick={() => handleToggleLeague(group.league)}
                   className={`w-full text-left p-4 sm:p-5 transition-all cursor-pointer flex items-center justify-between gap-4 select-none ${
                     isLeagueOpen
                       ? 'bg-gradient-to-r from-[#141E33] via-[#0C111F] to-[#141E33] border-b-2 border-yellow-400/80'
@@ -1205,6 +1214,10 @@ export const LiveScore: React.FC = () => {
                   const isLive = match.status === 'LIVE';
                   const isFinished = match.status === 'FINISHED';
                   const isScheduled = match.status === 'SCHEDULED' || (!isLive && !isFinished);
+                  const matchEvents = match.events || [];
+                  const homeEvents = matchEvents.filter((e) => e.team === 'home');
+                  const awayEvents = matchEvents.filter((e) => e.team === 'away');
+                  const hasEvents = matchEvents.length > 0;
 
                   return (
                     <div 
@@ -1216,7 +1229,8 @@ export const LiveScore: React.FC = () => {
                       }`}
                     >
                       {/* Desktop / Tablet Sports Table Row */}
-                      <div className="hidden md:flex items-center justify-between gap-3">
+                      <div className="hidden md:block">
+                        <div className="flex items-center justify-between gap-3">
                         {/* 1. Time / Status Column */}
                         <div className="w-48 flex-shrink-0 flex flex-col justify-center">
                           <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
@@ -1427,6 +1441,86 @@ export const LiveScore: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* Desktop Live Events Strip (Pencetak Gol & Kartu Kuning/Merah Langsung Terlihat) */}
+                      {(hasEvents || isLive) && (
+                        <div className="mt-2.5 pt-2.5 border-t border-white/10 flex items-center justify-between gap-3 text-xs">
+                          {/* 1. Status / Badge Legend (w-48) */}
+                          <div className="w-48 flex-shrink-0 flex items-center gap-1.5 text-[10px] font-mono text-gray-400">
+                            <span className="px-1.5 py-0.5 rounded bg-yellow-400/15 text-yellow-300 border border-yellow-400/30 text-[9px] font-black uppercase tracking-wider">
+                              Catatan Laga
+                            </span>
+                            <span className="text-gray-300 font-bold truncate">Gol &amp; Kartu:</span>
+                          </div>
+
+                          {/* 2. Home Events (Right-aligned under Home Team) */}
+                          <div className="flex-1 min-w-0 flex items-center justify-end flex-wrap gap-1.5 pr-4">
+                            {homeEvents.length > 0 ? (
+                              homeEvents.map((ev, idx) => {
+                                const isGoal = ev.type === 'goal';
+                                const isRed = ev.type === 'red_card' || ev.cardType === 'red';
+                                return (
+                                  <span
+                                    key={`h-${idx}`}
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono border transition-all ${
+                                      isGoal
+                                        ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
+                                        : isRed
+                                        ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.25)]'
+                                        : 'bg-amber-950/80 border-amber-400/70 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.25)]'
+                                    }`}
+                                    title={`${ev.player} ${ev.minute ? `(${ev.minute})` : ''} - ${isGoal ? 'Gol' : isRed ? 'Kartu Merah' : 'Kartu Kuning'}${ev.detail ? ` (${ev.detail})` : ''}`}
+                                  >
+                                    <span className="text-xs">{isGoal ? '⚽' : isRed ? '🟥' : '🟨'}</span>
+                                    <span className="font-black text-white truncate max-w-[130px]">{ev.player}</span>
+                                    <span className="text-yellow-400 font-black bg-black/50 px-1 py-0.2 rounded">{ev.minute || ''}</span>
+                                  </span>
+                                );
+                              })
+                            ) : isLive ? (
+                              <span className="text-[10px] font-mono text-gray-500 italic">-</span>
+                            ) : null}
+                          </div>
+
+                          {/* 3. Center Divider / Midpoint (w-28) */}
+                          <div className="w-28 flex-shrink-0 flex items-center justify-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white/25"></span>
+                          </div>
+
+                          {/* 4. Away Events (Left-aligned under Away Team) */}
+                          <div className="flex-1 min-w-0 flex items-center justify-start flex-wrap gap-1.5 pl-4">
+                            {awayEvents.length > 0 ? (
+                              awayEvents.map((ev, idx) => {
+                                const isGoal = ev.type === 'goal';
+                                const isRed = ev.type === 'red_card' || ev.cardType === 'red';
+                                return (
+                                  <span
+                                    key={`a-${idx}`}
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono border transition-all ${
+                                      isGoal
+                                        ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
+                                        : isRed
+                                        ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.25)]'
+                                        : 'bg-amber-950/80 border-amber-400/70 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.25)]'
+                                    }`}
+                                    title={`${ev.player} ${ev.minute ? `(${ev.minute})` : ''} - ${isGoal ? 'Gol' : isRed ? 'Kartu Merah' : 'Kartu Kuning'}${ev.detail ? ` (${ev.detail})` : ''}`}
+                                  >
+                                    <span className="text-xs">{isGoal ? '⚽' : isRed ? '🟥' : '🟨'}</span>
+                                    <span className="font-black text-white truncate max-w-[130px]">{ev.player}</span>
+                                    <span className="text-yellow-400 font-black bg-black/50 px-1 py-0.2 rounded">{ev.minute || ''}</span>
+                                  </span>
+                                );
+                              })
+                            ) : isLive ? (
+                              <span className="text-[10px] font-mono text-gray-500 italic">-</span>
+                            ) : null}
+                          </div>
+
+                          {/* 5. CS Spacer (w-44) */}
+                          <div className="w-44 flex-shrink-0"></div>
+                        </div>
+                      )}
+                    </div>
+
                       {/* Mobile Card Layout (< md) */}
                       <div className="md:hidden space-y-3">
                         {/* Mobile Top Bar: Status & Venue */}
@@ -1540,6 +1634,85 @@ export const LiveScore: React.FC = () => {
                             )}
                           </div>
                         </div>
+
+                        {/* Mobile Live Events Bar (Gol, Kartu Kuning & Merah Langsung Terlihat) */}
+                        {(hasEvents || isLive) && (
+                          <div className="pt-2 border-t border-white/10 space-y-1.5 bg-black/60 p-2.5 rounded-xl border border-white/10">
+                            <div className="flex items-center justify-between text-[10px] font-mono text-gray-400">
+                              <span className="flex items-center gap-1.5 text-yellow-300 font-bold">
+                                <span>⚽ 🟨 🟥</span>
+                                <span>Catatan Gol &amp; Kartu:</span>
+                              </span>
+                              {match.elapsedDetail && isLive && (
+                                <span className="text-[#00F3FF] text-[9px] font-bold">{match.elapsedDetail}</span>
+                              )}
+                            </div>
+
+                            {hasEvents ? (
+                              <div className="space-y-1.5 pt-0.5">
+                                {homeEvents.length > 0 && (
+                                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                                    <span className="text-[10px] font-mono font-black text-white bg-white/10 px-1.5 py-0.5 rounded">
+                                      {match.homeTeam.shortName || match.homeTeam.name}:
+                                    </span>
+                                    {homeEvents.map((ev, idx) => {
+                                      const isGoal = ev.type === 'goal';
+                                      const isRed = ev.type === 'red_card' || ev.cardType === 'red';
+                                      return (
+                                        <span
+                                          key={`mh-${idx}`}
+                                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border ${
+                                            isGoal
+                                              ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-300 font-bold'
+                                              : isRed
+                                              ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 font-bold'
+                                              : 'bg-amber-950/80 border-amber-400/70 text-amber-300 font-bold'
+                                          }`}
+                                        >
+                                          <span>{isGoal ? '⚽' : isRed ? '🟥' : '🟨'}</span>
+                                          <span className="text-white font-bold">{ev.player}</span>
+                                          <span className="text-yellow-400 font-black">{ev.minute || ''}</span>
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+
+                                {awayEvents.length > 0 && (
+                                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                                    <span className="text-[10px] font-mono font-black text-white bg-white/10 px-1.5 py-0.5 rounded">
+                                      {match.awayTeam.shortName || match.awayTeam.name}:
+                                    </span>
+                                    {awayEvents.map((ev, idx) => {
+                                      const isGoal = ev.type === 'goal';
+                                      const isRed = ev.type === 'red_card' || ev.cardType === 'red';
+                                      return (
+                                        <span
+                                          key={`ma-${idx}`}
+                                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border ${
+                                            isGoal
+                                              ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-300 font-bold'
+                                              : isRed
+                                              ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 font-bold'
+                                              : 'bg-amber-950/80 border-amber-400/70 text-amber-300 font-bold'
+                                          }`}
+                                        >
+                                          <span>{isGoal ? '⚽' : isRed ? '🟥' : '🟨'}</span>
+                                          <span className="text-white font-bold">{ev.player}</span>
+                                          <span className="text-yellow-400 font-black">{ev.minute || ''}</span>
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-[10px] font-mono text-gray-500 italic">
+                                Belum ada catatan gol atau kartu saat ini
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Mobile Actions */}
                         <div className="flex items-center justify-end gap-2 pt-1">
