@@ -36,6 +36,48 @@ function getGenAI(): GoogleGenAI | null {
   return genAIClient;
 }
 
+let cachedGroqModel: string | null = null;
+
+async function getBestGroqModel(apiKey: string): Promise<string> {
+  if (cachedGroqModel) return cachedGroqModel;
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/models", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (res.ok) {
+      const data = (await res.json()) as any;
+      const modelIds: string[] = (data?.data || []).map((m: any) => m.id);
+      const priorities = [
+        "openai/gpt-oss-120b",
+        "qwen/qwen3.8-27b",
+        "qwen/qwen3.6-27b",
+        "openai/gpt-oss-20b",
+        "groq/compound-mini",
+        "groq/compound",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-70b-versatile",
+        "llama3-70b-8192",
+      ];
+      for (const pref of priorities) {
+        if (modelIds.includes(pref)) {
+          cachedGroqModel = pref;
+          return pref;
+        }
+      }
+      const chatFallback = modelIds.find(
+        (id) => !id.includes("whisper") && !id.includes("guard")
+      );
+      if (chatFallback) {
+        cachedGroqModel = chatFallback;
+        return chatFallback;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to query Groq models list:", err);
+  }
+  return "openai/gpt-oss-120b";
+}
+
 const SYSTEM_INSTRUCTION = `Anda adalah DON ISKO AI INTELLIGENCE — asisten AI mutakhir bertenaga Gemini mutakhir untuk HS GROUP 711. 
 Karakteristik & Kemampuan Anda:
 1. Berfungsi penuh seperti ChatGPT dan Ask Gemini: Anda mampu menjawab SEGALA PERTANYAAN umum, sains, teknologi, matematika, coding, penerjemahan bahasa, pembuatan konten kreatif, dan analisis mendalam.
@@ -49,7 +91,79 @@ async function startServer() {
 
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", aiReady: Boolean(process.env.GEMINI_API_KEY) });
+    res.json({ 
+      status: "ok", 
+      aiReady: Boolean(process.env.GEMINI_API_KEY),
+      groqReady: Boolean(process.env.GROQ_API_KEY),
+    });
+  });
+
+  // AI Service Status Endpoint
+  app.get("/api/ai/status", (_req, res) => {
+    const hasGemini = Boolean(process.env.GEMINI_API_KEY);
+    const hasGroq = Boolean(process.env.GROQ_API_KEY);
+    res.json({
+      geminiReady: hasGemini,
+      groqReady: hasGroq,
+      freeImageReady: true,
+      activeProvider: hasGemini ? "gemini" : hasGroq ? "groq" : "builtin",
+      models: {
+        text: hasGemini ? "Google Gemini 3.8 Flash (Free Tier)" : hasGroq ? "Groq Llama 3.3 (Free Tier)" : "DON ISKO Intelligent Core",
+        image: "AI Image Studio (Free Text-to-Image / Pollinations)",
+      }
+    });
+  });
+
+  // AI Image Generation Endpoint (Free Text-to-Image Engine)
+  app.post("/api/ai/image", async (req, res) => {
+    const { prompt, style, width = 1024, height = 1024 } = req.body;
+    if (!prompt || typeof prompt !== "string") {
+      res.status(400).json({ error: "Deskripsi gambar (prompt) wajib diisi." });
+      return;
+    }
+
+    try {
+      let styleModifier = "";
+      switch (style) {
+        case "neon-cyberpunk":
+          styleModifier = ", cyberpunk neon glowing style, high contrast, dark luxury background, ultra detailed, 8k render";
+          break;
+        case "luxury-gold":
+          styleModifier = ", luxury golden metallic, elegant black background, cinematic lighting, 3d octane render";
+          break;
+        case "banner-promo":
+          styleModifier = ", high quality marketing promotional banner, crisp graphics, modern typography space, clean commercial design";
+          break;
+        case "vector-logo":
+          styleModifier = ", clean minimalist vector logo emblem, esports gaming badge, sharp vector lines, high resolution";
+          break;
+        case "realistic":
+          styleModifier = ", photorealistic, 8k resolution, cinematic lighting, hyper-detailed photography";
+          break;
+        default:
+          styleModifier = ", highly detailed, vivid colors, modern sharp design, 4k";
+          break;
+      }
+
+      const enhancedPrompt = `${prompt.trim()}${styleModifier}`;
+      const randomSeed = Math.floor(Math.random() * 10000000);
+      const encodedPrompt = encodeURIComponent(enhancedPrompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${randomSeed}&nologo=true`;
+
+      res.json({
+        success: true,
+        imageUrl,
+        prompt: enhancedPrompt,
+        originalPrompt: prompt,
+        width,
+        height,
+        seed: randomSeed,
+        timestamp: Date.now()
+      });
+    } catch (err: any) {
+      console.error("Image generation error:", err);
+      res.status(500).json({ error: err?.message || "Gagal menghasilkan gambar AI." });
+    }
   });
 
   // ==========================================
@@ -627,14 +741,15 @@ async function startServer() {
 
   // Streaming Chat Completion Endpoint (SSE - Server Sent Events)
   app.post("/api/ai/chat", async (req, res) => {
-    const { messages, systemPrompt, modelName } = req.body;
+    const { messages, systemPrompt, modelName, provider } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       res.status(400).json({ error: "Pesan tidak boleh kosong" });
       return;
     }
 
-    const ai = getGenAI();
+    const lastMessage = messages[messages.length - 1];
+    const userQuery = (lastMessage?.content || "").trim();
 
     // Set headers for SSE Streaming
     res.setHeader("Content-Type", "text/event-stream");
@@ -642,56 +757,207 @@ async function startServer() {
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders?.();
 
-    if (!ai) {
-      // Fallback if API key is not yet set in environment
-      const fallbackReply = `⚠️ **Pemberitahuan Sistem AI Studio:**
-Kunci API \`GEMINI_API_KEY\` belum terdeteksi pada environment server. 
+    // 1. Cek apakah ini permintaan pembuatan gambar langsung (misal: /gambar atau /image)
+    if (userQuery.startsWith("/gambar ") || userQuery.startsWith("/image ") || userQuery.toLowerCase().startsWith("buatkan gambar ")) {
+      const imagePrompt = userQuery.replace(/^\/(gambar|image)\s+/i, "").replace(/^buatkan gambar\s+/i, "").trim();
+      if (imagePrompt) {
+        const seed = Math.floor(Math.random() * 10000000);
+        const enhancedPrompt = `${imagePrompt}, highly detailed, vibrant colors, 4k digital art, clean commercial composition`;
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true`;
 
-Namun DON ISKO AI tetap siap beroperasi. Silakan hubungkan API Key melalui menu Settings > Secrets bila diperlukan.
-Pertanyaan Anda: "${messages[messages.length - 1]?.content || ''}"`;
+        const markdownReply = `🎨 **Hasil Pembuatan Gambar AI:**\n\n` +
+          `**Prompt:** *${imagePrompt}*\n\n` +
+          `![${imagePrompt}](${imageUrl})\n\n` +
+          `🔗 **[Klik Disini untuk Buka Gambar Ukuran Penuh (HD)](${imageUrl})**\n\n` +
+          `> *Gambar dibuat menggunakan mesin AI Image Studio (Free Text-to-Image). Anda dapat menyalin tautan atau klik kanan untuk menyimpan.*`;
 
-      res.write(`data: ${JSON.stringify({ chunk: fallbackReply, done: true })}\n\n`);
-      res.end();
-      return;
-    }
-
-    try {
-      const selectedModel = modelName || "gemini-3.7-flash";
-
-      // Transform messages into contents for @google/genai
-      const contents = messages.map((m: { role: string; content: string }) => ({
-        role: m.role === "user" ? "user" : "model",
-        parts: [{ text: m.content }],
-      }));
-
-      const fullSystemInstruction = systemPrompt 
-        ? `${SYSTEM_INSTRUCTION}\n\nInstruksi Khusus Mode: ${systemPrompt}`
-        : SYSTEM_INSTRUCTION;
-
-      const responseStream = await ai.models.generateContentStream({
-        model: selectedModel,
-        contents,
-        config: {
-          systemInstruction: fullSystemInstruction,
-          temperature: 0.7,
-        },
-      });
-
-      for await (const chunk of responseStream) {
-        const text = chunk.text || "";
-        if (text) {
-          res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
-        }
+        res.write(`data: ${JSON.stringify({ chunk: markdownReply })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
+        return;
       }
-
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
-    } catch (error: any) {
-      console.error("Gemini API Error:", error);
-      const errorMessage = error?.message || "Terjadi kesalahan saat memproses permintaan AI.";
-      res.write(`data: ${JSON.stringify({ error: errorMessage, done: true })}\n\n`);
-      res.end();
     }
+
+    const ai = getGenAI();
+    const groqKey = process.env.GROQ_API_KEY;
+
+    // 2. Gunakan Groq jika diminta atau jika Gemini tidak ada dan Groq tersedia
+    if ((provider === "groq" || (!ai && groqKey)) && groqKey) {
+      try {
+        const groqModel = await getBestGroqModel(groqKey);
+        const groqMessages = [
+          {
+            role: "system",
+            content: systemPrompt ? `${SYSTEM_INSTRUCTION}\n\nInstruksi Khusus Mode: ${systemPrompt}` : SYSTEM_INSTRUCTION
+          },
+          ...messages.map((m: { role: string; content: string }) => ({
+            role: m.role === "model" ? "assistant" : m.role,
+            content: m.content
+          }))
+        ];
+
+        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${groqKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: groqModel,
+            messages: groqMessages,
+            temperature: 0.7,
+            stream: true
+          })
+        });
+
+        if (!groqRes.ok) {
+          const errBody = await groqRes.text().catch(() => "");
+          console.error("Groq API error status:", groqRes.status, errBody);
+          throw new Error(`Groq API returned status ${groqRes.status}: ${errBody}`);
+        }
+
+        const reader = groqRes.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (reader) {
+          let buffer = "";
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith("data: ") && trimmed !== "data: [DONE]") {
+                try {
+                  const parsed = JSON.parse(trimmed.slice(6));
+                  const text = parsed.choices?.[0]?.delta?.content || "";
+                  if (text) {
+                    res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
+                  }
+                } catch {
+                  // ignore partial JSON parse
+                }
+              }
+            }
+          }
+        }
+
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
+        return;
+      } catch (groqErr) {
+        console.error("Groq API error, falling back:", groqErr);
+      }
+    }
+
+    // 3. Gunakan Google Gemini 3.8 Flash (Pilihan Utama & Resmi)
+    if (ai) {
+      try {
+        const selectedModel = modelName || "gemini-3.8-flash";
+
+        // Transform messages into contents for @google/genai
+        const contents = messages.map((m: { role: string; content: string }) => ({
+          role: m.role === "user" ? "user" : "model",
+          parts: [{ text: m.content }],
+        }));
+
+        const fullSystemInstruction = systemPrompt 
+          ? `${SYSTEM_INSTRUCTION}\n\nInstruksi Khusus Mode: ${systemPrompt}`
+          : SYSTEM_INSTRUCTION;
+
+        const responseStream = await ai.models.generateContentStream({
+          model: selectedModel,
+          contents,
+          config: {
+            systemInstruction: fullSystemInstruction,
+            temperature: 0.7,
+          },
+        });
+
+        for await (const chunk of responseStream) {
+          const text = chunk.text || "";
+          if (text) {
+            res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
+          }
+        }
+
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
+        return;
+      } catch (error: any) {
+        console.error("Gemini API Error:", error);
+        const errorMessage = error?.message || "Terjadi kesalahan saat memproses permintaan AI.";
+        res.write(`data: ${JSON.stringify({ error: errorMessage, done: true })}\n\n`);
+        res.end();
+        return;
+      }
+    }
+
+    // 4. Intelligent Fallback Assistant jika API key belum dimasukkan
+    let smartFallback = "";
+    const lowerQuery = userQuery.toLowerCase();
+
+    if (lowerQuery.includes("script") || lowerQuery.includes("kode") || lowerQuery.includes("python") || lowerQuery.includes("javascript") || lowerQuery.includes("bot")) {
+      smartFallback = `💻 **Contoh Script Automasi (DON ISKO Script Engine):**\n\n` +
+        `Berikut adalah template script pemantauan status website & notifikasi Telegram yang siap Anda gunakan:\n\n` +
+        "```javascript\n" +
+        "// Script Monitoring Domain & Notifikasi Telegram (Node.js)\n" +
+        "const https = require('https');\n" +
+        "const TELEGRAM_TOKEN = 'YOUR_BOT_TOKEN';\n" +
+        "const CHAT_ID = 'YOUR_CHAT_ID';\n" +
+        "const TARGET_URL = 'https://donisko711.com';\n\n" +
+        "function checkWebsite() {\n" +
+        "  https.get(TARGET_URL, (res) => {\n" +
+        "    if (res.statusCode === 200) {\n" +
+        "      console.log(`[OK] ${TARGET_URL} aktif (Status: 200)`);\n" +
+        "    } else {\n" +
+        "      sendTelegramAlert(`⚠️ PERINGATAN: ${TARGET_URL} down! Status: ${res.statusCode}`);\n" +
+        "    }\n" +
+        "  }).on('error', (e) => {\n" +
+        "    sendTelegramAlert(`🚨 ERROR: Tidak dapat mengakses ${TARGET_URL}: ${e.message}`);\n" +
+        "  });\n" +
+        "}\n\n" +
+        "function sendTelegramAlert(message) {\n" +
+        "  const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`;\n" +
+        "  https.get(url);\n" +
+        "}\n\n" +
+        "setInterval(checkWebsite, 60000); // Periksa setiap 1 menit\n" +
+        "console.log('Monitoring aktif...');\n" +
+        "```\n\n" +
+        `💡 *Tips: Anda dapat menghubungkan \`GEMINI_API_KEY\` gratis dari Google AI Studio untuk membuat script bahasa pemrograman lain secara otomatis.*`;
+    } else if (lowerQuery.includes("deposit") || lowerQuery.includes("pending") || lowerQuery.includes("komplain")) {
+      smartFallback = `💬 **Rekomendasi Draft CS 711 - Penanganan Deposit Pending:**\n\n` +
+        `*"Halo Bosku, mohon maaf atas ketidaknyamanannya. Terkait kendala deposit yang belum masuk, saat ini sistem perbankan kami sedang melakukan verifikasi mutasi berkala. Silakan lampirkan bukti transfer struk/m-Banking yang memuat nomor referensi dan jam transaksi ya Bosku, tim kasir kami akan segera memprosesnya secepat mungkin. Terima kasih atas kesabarannya 🙏"*\n\n` +
+        `**Langkah Operasional CS:**\n` +
+        `1. Cek mutasi rekening di internet banking terkait.\n` +
+        `2. Pastikan nominal dan 3 digit angka unik (bila ada) sesuai.\n` +
+        `3. Jika mutasi bank sedang maintenance, berikan estimasi waktu yang sopan kepada member.`;
+    } else if (lowerQuery.includes("turnover") || lowerQuery.includes(" to ") || lowerQuery.includes("rumus")) {
+      smartFallback = `🧮 **Panduan & Rumus Hitung Turnover (TO):**\n\n` +
+        `**Rumus Dasar:**\n` +
+        `$$\\text{Target TO} = (\\text{Deposit} + \\text{Bonus}) \\times \\text{Syarat TO}$$\n\n` +
+        `**Contoh Kasus:**\n` +
+        `- Deposit: Rp 100.000\n` +
+        `- Bonus 100%: Rp 100.000\n` +
+        `- Total Modal: Rp 200.000\n` +
+        `- Syarat TO: x18\n` +
+        `- **Target Turnover:** Rp 200.000 × 18 = **Rp 3.600.000**\n\n` +
+        `*Catatan: Turnover dihitung dari total nominal taruhan yang sah (menang/kalah), bukan dari sisa saldo.*`;
+    } else {
+      smartFallback = `Halo! Saya **DON ISKO AI INTELLIGENCE**.\n\n` +
+        `Pertanyaan Anda: *"${userQuery}"*\n\n` +
+        `Saya siap membantu Anda dalam:\n` +
+        `1. 💬 **Tanya Jawab & CS Knowledge**: SOP pelayanan, balasan komplain, dan kalkulasi odds/TO.\n` +
+        `2. 💻 **Script & Coding Generator**: Menulis kode JavaScript, Python, Bash, SQL, formula Excel, dll.\n` +
+        `3. 🎨 **Pembuatan Gambar AI**: Ketik \`/gambar [deskripsi]\` atau gunakan tab **Studio Gambar** di atas untuk membuat visual/banner promosi gratis!\n\n` +
+        `ℹ️ *Untuk mengaktifkan model penuh Google Gemini 3.8 Flash secara gratis, masukkan \`GEMINI_API_KEY\` Anda di menu Settings > Secrets.*`;
+    }
+
+    res.write(`data: ${JSON.stringify({ chunk: smartFallback })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
   });
 
   // Standard Non-streaming Generate Endpoint
@@ -704,9 +970,47 @@ Pertanyaan Anda: "${messages[messages.length - 1]?.content || ''}"`;
     }
 
     const ai = getGenAI();
+    const groqKey = process.env.GROQ_API_KEY;
+
+    if (!ai && groqKey) {
+      try {
+        const groqModel = await getBestGroqModel(groqKey);
+        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${groqKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: groqModel,
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt ? `${SYSTEM_INSTRUCTION}\n${systemPrompt}` : SYSTEM_INSTRUCTION,
+              },
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            temperature: 0.7,
+          }),
+        });
+
+        if (groqRes.ok) {
+          const data = (await groqRes.json()) as any;
+          const reply = data?.choices?.[0]?.message?.content || "";
+          res.json({ text: reply });
+          return;
+        }
+      } catch (groqErr) {
+        console.error("Groq Generate Error:", groqErr);
+      }
+    }
+
     if (!ai) {
       res.json({
-        text: `Kunci API GEMINI_API_KEY belum dikonfigurasi. Respon lokal: Terima kasih atas pertanyaan "${prompt}".`,
+        text: `Kunci API belum dikonfigurasi. Respon lokal: Terima kasih atas pertanyaan "${prompt}".`,
       });
       return;
     }

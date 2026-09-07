@@ -26,9 +26,13 @@ import {
   Layers,
   ArrowDown,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  Image as ImageIcon,
+  Wand2,
+  Terminal
 } from 'lucide-react';
 import donIskoLogo from '../../assets/images/don_isko_711_1788035559676.jpg';
+import { AiImageStudio } from './AiImageStudio';
 
 export interface ChatMessage {
   id: string;
@@ -117,29 +121,16 @@ const SUGGESTED_PROMPTS = [
   }
 ];
 
-export const AiIntelligence: React.FC = () => {
-  // Chat Sessions Storage
-  const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    try {
-      const saved = localStorage.getItem('don_isko_ai_sessions_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // fallback
-    }
-    return [
-      {
-        id: 'session-default',
-        title: 'Percakapan Baru',
-        createdAt: Date.now(),
-        persona: 'general',
-        messages: [
-          {
-            id: 'msg-welcome',
-            role: 'model',
-            content: `### Halo! Saya DON ISKO AI INTELLIGENCE ⚡
+const createFreshWelcomeSession = (): ChatSession => ({
+  id: `session-fresh-${Date.now()}`,
+  title: 'Percakapan Baru',
+  createdAt: Date.now(),
+  persona: 'general',
+  messages: [
+    {
+      id: 'msg-welcome',
+      role: 'model',
+      content: `### Halo! Saya DON ISKO AI INTELLIGENCE ⚡
 Asisten kecerdasan buatan terintegrasi HS GROUP 711 yang bekerja layaknya **Ask Gemini** & **ChatGPT**.
 
 Saya dapat membantu Anda dalam:
@@ -150,19 +141,32 @@ Saya dapat membantu Anda dalam:
 - ✍️ **Membuat Artikel SEO, Broadcast WhatsApp, & Copywriting**
 
 *Silakan ketik pertanyaan apapun di bawah atau pilih topik prompt yang tersedia!*`,
-            timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-          }
-        ]
-      }
-    ];
-  });
+      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    }
+  ]
+});
 
-  const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'session-default');
+export const AiIntelligence: React.FC = () => {
+  // Setiap kali menu AI dibuka: bersihkan riwayat tanya jawab lama dari storage
+  useEffect(() => {
+    try {
+      localStorage.removeItem('don_isko_ai_sessions_v1');
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Chat Sessions: Selalu mulai dengan percakapan baru yang bersih (tanpa memuat riwayat lama)
+  const [sessions, setSessions] = useState<ChatSession[]>(() => [createFreshWelcomeSession()]);
+
+  const [activeWorkstation, setActiveWorkstation] = useState<'chat' | 'image-studio'>('chat');
+  const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'session-fresh');
   const [inputPrompt, setInputPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedPersona, setSelectedPersona] = useState<string>('general');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
@@ -170,15 +174,6 @@ Saya dapat membantu Anda dalam:
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Save sessions to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('don_isko_ai_sessions_v1', JSON.stringify(sessions));
-    } catch (e) {
-      console.warn('Failed to save chat sessions to localStorage:', e);
-    }
-  }, [sessions]);
 
   // Auto-scroll when new messages arrive
   useEffect(() => {
@@ -233,17 +228,9 @@ Saya dapat membantu Anda dalam:
     e.stopPropagation();
     if (sessions.length <= 1) {
       // If deleting last session, reset to fresh one
-      const freshId = `session-${Date.now()}`;
-      setSessions([
-        {
-          id: freshId,
-          title: 'Percakapan Baru',
-          createdAt: Date.now(),
-          persona: 'general',
-          messages: []
-        }
-      ]);
-      setActiveSessionId(freshId);
+      const fresh = createFreshWelcomeSession();
+      setSessions([fresh]);
+      setActiveSessionId(fresh.id);
       return;
     }
 
@@ -252,6 +239,22 @@ Saya dapat membantu Anda dalam:
     if (activeSessionId === id) {
       setActiveSessionId(filtered[0]?.id || '');
     }
+  };
+
+  // Bersihkan seluruh riwayat tanya jawab sekarang
+  const handleClearAllHistory = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsGenerating(false);
+    }
+    try {
+      localStorage.removeItem('don_isko_ai_sessions_v1');
+    } catch {}
+    const fresh = createFreshWelcomeSession();
+    setSessions([fresh]);
+    setActiveSessionId(fresh.id);
+    setInputPrompt('');
   };
 
   // Stop Generation
@@ -335,7 +338,7 @@ Saya dapat membantu Anda dalam:
         body: JSON.stringify({
           messages: historyPayload,
           systemPrompt: currentPersona.systemPrompt,
-          modelName: 'gemini-3.7-flash'
+          modelName: 'gemini-3.8-flash'
         }),
         signal: controller.signal
       });
@@ -507,10 +510,10 @@ Saya dapat membantu Anda dalam:
                 <h2 className="text-xs font-extrabold text-white flex items-center gap-1.5">
                   <span>DON ISKO AI</span>
                   <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-[#00F3FF]/20 text-[#00F3FF]">
-                    3.7
+                    3.8
                   </span>
                 </h2>
-                <p className="text-[9px] text-gray-400 font-mono">ASK GEMINI / GPT MODE</p>
+                <p className="text-[9px] text-gray-400 font-mono">GEMINI &amp; GROQ &amp; IMAGE</p>
               </div>
             </div>
 
@@ -522,9 +525,37 @@ Saya dapat membantu Anda dalam:
             </button>
           </div>
 
+          {/* Workstation Mode Switcher */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-black/60 border border-white/10">
+            <button
+              type="button"
+              onClick={() => setActiveWorkstation('chat')}
+              className={`py-2 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                activeWorkstation === 'chat'
+                  ? 'bg-[#00F3FF] text-black shadow-md'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Chat &amp; Script</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveWorkstation('image-studio')}
+              className={`py-2 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                activeWorkstation === 'image-studio'
+                  ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black shadow-md'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Gambar AI</span>
+            </button>
+          </div>
+
           <button
             onClick={handleCreateNewChat}
-            className="w-full py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-[#00F3FF] to-[#00c8ff] hover:from-[#33f6ff] hover:to-[#00b4e6] text-black font-extrabold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,243,255,0.3)] transition-all cursor-pointer"
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#00F3FF]/20 to-[#00c8ff]/20 hover:from-[#00F3FF]/30 hover:to-[#00c8ff]/30 text-[#00F3FF] border border-[#00F3FF]/40 font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Chat Baru (+ New Chat)</span>
@@ -560,10 +591,21 @@ Saya dapat membantu Anda dalam:
 
         {/* Chat History List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1 font-mono flex items-center gap-1">
-            <Clock className="w-3 h-3 text-yellow-400" />
-            <span>RIWAYAT PERCAKAPAN</span>
-          </p>
+          <div className="flex items-center justify-between px-2 py-1">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono flex items-center gap-1">
+              <Clock className="w-3 h-3 text-yellow-400" />
+              <span>SESI AKTIF</span>
+            </p>
+            <button
+              type="button"
+              onClick={handleClearAllHistory}
+              title="Hapus riwayat tanya jawab sekarang"
+              className="text-[10px] font-mono text-red-400 hover:text-red-300 flex items-center gap-1 hover:underline cursor-pointer"
+            >
+              <Trash2 className="w-2.5 h-2.5" />
+              <span>Hapus History</span>
+            </button>
+          </div>
 
           {sessions.map(s => (
             <div
@@ -625,7 +667,11 @@ Saya dapat membantu Anda dalam:
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
-                  <span>{activeSession.title || 'AI Intelegency Chat'}</span>
+                  <span>
+                    {activeWorkstation === 'image-studio' 
+                      ? 'AI Image Generation Studio' 
+                      : (activeSession.title || 'AI Intelligence Chat')}
+                  </span>
                 </h1>
                 <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -633,21 +679,73 @@ Saya dapat membantu Anda dalam:
                 </span>
               </div>
               <p className="text-[10px] text-gray-400 font-mono truncate">
-                Mode: {PERSONAS.find(p => p.id === selectedPersona)?.name || 'General'}
+                {activeWorkstation === 'image-studio'
+                  ? 'Model: Text-to-Image (Free Unlimited Flux/Pollinations)'
+                  : `Model: Gemini 3.8 Flash / Groq • Mode: ${PERSONAS.find(p => p.id === selectedPersona)?.name || 'General'}`}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleCreateNewChat}
-              className="p-2 rounded-xl bg-[#1C1C1C] hover:bg-[#252525] text-gray-300 hover:text-white border border-white/10 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <Plus className="w-3.5 h-3.5 text-[#00F3FF]" />
-              <span className="hidden sm:inline">New Chat</span>
-            </button>
+            {/* Direct Switcher Tabs in Header */}
+            <div className="flex items-center p-1 rounded-xl bg-black/60 border border-white/10">
+              <button
+                type="button"
+                onClick={() => setActiveWorkstation('chat')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeWorkstation === 'chat'
+                    ? 'bg-[#00F3FF] text-black shadow-md'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Tanya Jawab &amp; Script</span>
+                <span className="sm:hidden">Chat</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveWorkstation('image-studio')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  activeWorkstation === 'image-studio'
+                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black shadow-md'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Studio Gambar AI</span>
+                <span className="sm:hidden">Gambar</span>
+              </button>
+            </div>
+
+            {activeWorkstation === 'chat' && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleClearAllHistory}
+                  className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/25 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  title="Hapus dan bersihkan riwayat tanya jawab"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Hapus History</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateNewChat}
+                  className="p-2 rounded-xl bg-[#1C1C1C] hover:bg-[#252525] text-gray-300 hover:text-white border border-white/10 text-xs font-bold transition-all cursor-pointer hidden md:flex items-center gap-1.5"
+                  title="Chat Baru"
+                >
+                  <Plus className="w-3.5 h-3.5 text-[#00F3FF]" />
+                  <span>New</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        {activeWorkstation === 'image-studio' ? (
+          <AiImageStudio />
+        ) : (
+          <>
 
         {/* Chat Message Scroll Area */}
         <div
@@ -739,8 +837,60 @@ Saya dapat membantu Anda dalam:
                   {/* Message Body with Markdown formatting */}
                   <div className="text-xs sm:text-sm leading-relaxed space-y-2 text-gray-100 selection:bg-[#00F3FF] selection:text-black">
                     {msg.content ? (
-                      <div className="markdown-body prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed [&>p]:mb-2.5 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-2.5 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-2.5 [&>h1]:text-base [&>h1]:font-bold [&>h1]:text-yellow-400 [&>h2]:text-sm [&>h2]:font-bold [&>h2]:text-[#00F3FF] [&>h3]:text-xs [&>h3]:font-bold [&>h3]:text-emerald-400 [&>pre]:bg-black/60 [&>pre]:p-3 [&>pre]:rounded-xl [&>pre]:border [&>pre]:border-white/10 [&>pre]:overflow-x-auto [&>code]:text-yellow-300 [&>code]:font-mono [&>blockquote]:border-l-2 [&>blockquote]:border-yellow-400 [&>blockquote]:pl-3 [&>blockquote]:text-gray-300 [&>table]:w-full [&>table]:text-left [&>table]:border-collapse [&>table_th]:border-b [&>table_th]:border-white/20 [&>table_th]:p-2 [&>table_td]:border-b [&>table_td]:border-white/10 [&>table_td]:p-2">
-                        <Markdown>{msg.content}</Markdown>
+                      <div className="markdown-body prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed [&>p]:mb-2.5 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-2.5 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-2.5 [&>h1]:text-base [&>h1]:font-bold [&>h1]:text-yellow-400 [&>h2]:text-sm [&>h2]:font-bold [&>h2]:text-[#00F3FF] [&>h3]:text-xs [&>h3]:font-bold [&>h3]:text-emerald-400 [&>blockquote]:border-l-2 [&>blockquote]:border-yellow-400 [&>blockquote]:pl-3 [&>blockquote]:text-gray-300 [&>table]:w-full [&>table]:text-left [&>table]:border-collapse [&>table_th]:border-b [&>table_th]:border-white/20 [&>table_th]:p-2 [&>table_td]:border-b [&>table_td]:border-white/10 [&>table_td]:p-2">
+                        <Markdown
+                          components={{
+                            code({ className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              const codeString = String(children).replace(/\n$/, '');
+                              const isMultiLine = codeString.includes('\n');
+                              if (match || isMultiLine) {
+                                const lang = match ? match[1] : 'script';
+                                return (
+                                  <div className="relative my-3 rounded-xl overflow-hidden border border-white/15 bg-[#090A10] shadow-lg">
+                                    <div className="flex items-center justify-between px-3 py-1.5 bg-white/5 border-b border-white/10 text-[10px] font-mono text-gray-400">
+                                      <span className="text-[#00F3FF] font-bold uppercase flex items-center gap-1.5">
+                                        <Terminal className="w-3 h-3 text-yellow-400" />
+                                        {lang}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(codeString);
+                                          setCopiedCodeId(codeString.slice(0, 25));
+                                          setTimeout(() => setCopiedCodeId(null), 2000);
+                                        }}
+                                        className="flex items-center gap-1 text-[10px] text-yellow-400 hover:text-white px-2 py-0.5 rounded bg-black/60 hover:bg-black/90 border border-white/10 transition-colors cursor-pointer"
+                                      >
+                                        {copiedCodeId === codeString.slice(0, 25) ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-emerald-400" />
+                                            <span className="text-emerald-400 font-bold">Tersalin!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3 h-3 text-yellow-400" />
+                                            <span>Salin Script</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                    <pre className="p-3.5 overflow-x-auto text-xs font-mono text-emerald-300 leading-relaxed">
+                                      <code>{children}</code>
+                                    </pre>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <code className="px-1.5 py-0.5 rounded bg-white/10 text-yellow-300 font-mono text-[11px]" {...props}>
+                                  {children}
+                                </code>
+                              );
+                            }
+                          }}
+                        >
+                          {msg.content}
+                        </Markdown>
                       </div>
                     ) : (
                       /* Thinking / Typing Pulse Animation */
@@ -816,16 +966,24 @@ Saya dapat membantu Anda dalam:
             <Zap className="w-3 h-3 text-yellow-400" /> Cepat:
           </span>
           <button
+            onClick={() => handleSendMessage('Buatkan script bot Telegram untuk cek status aktif link website')}
+            className="px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:text-white text-[10px] whitespace-nowrap transition-all cursor-pointer flex items-center gap-1"
+          >
+            <Terminal className="w-3 h-3 text-emerald-400" />
+            <span>Script Bot Telegram</span>
+          </button>
+          <button
+            onClick={() => handleSendMessage('/gambar Banner promosi tema neon emas HS GROUP 711 mewah')}
+            className="px-2.5 py-1 rounded-full bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/30 text-yellow-300 hover:text-white text-[10px] whitespace-nowrap transition-all cursor-pointer flex items-center gap-1"
+          >
+            <ImageIcon className="w-3 h-3 text-yellow-400" />
+            <span>Buat Gambar AI</span>
+          </button>
+          <button
             onClick={() => handleSendMessage('Buatkan template balasan LiveChat untuk komplain deposit pending')}
             className="px-2.5 py-1 rounded-full bg-[#1C1C1C] hover:bg-[#252525] border border-white/10 text-gray-300 hover:text-white text-[10px] whitespace-nowrap transition-all cursor-pointer"
           >
             Deposit Pending
-          </button>
-          <button
-            onClick={() => handleSendMessage('Apa saja SOP serah terima handover shift kasir dan CS?')}
-            className="px-2.5 py-1 rounded-full bg-[#1C1C1C] hover:bg-[#252525] border border-white/10 text-gray-300 hover:text-white text-[10px] whitespace-nowrap transition-all cursor-pointer"
-          >
-            Handover Shift
           </button>
           <button
             onClick={() => handleSendMessage('Hitung Turnover (TO) bonus 100% depo 200rb syarat TO x15')}
@@ -890,11 +1048,14 @@ Saya dapat membantu Anda dalam:
             </div>
           </form>
 
-          <p className="text-center text-[9px] text-gray-500 font-mono mt-2">
-            DON ISKO AI INTELLIGENCE bertenaga Gemini 3.7 Flash dapat membuat kesalahan. Selalu periksa kembali data transaksi perbankan riil.
+          <p className="text-center text-[9px] text-gray-400 font-mono mt-2 flex items-center justify-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span>Mode Aman &amp; Bersih: Riwayat sesi tanya jawab otomatis hilang saat menu dibuka kembali.</span>
           </p>
         </div>
 
+          </>
+        )}
       </div>
     </div>
   );

@@ -28,6 +28,8 @@ import { BniWonderStrukEditor } from './struk/BniWonderStrukEditor';
 import { MandiriStrukEditor } from './struk/MandiriStrukEditor';
 import { BriStrukEditor } from './struk/BriStrukEditor';
 import { TransaksiSlotEditor } from './struk/TransaksiSlotEditor';
+import { TransaksiTogelEditor } from './struk/TransaksiTogelEditor';
+import { SlipBetTogelEditor } from './struk/SlipBetTogelEditor';
 
 export type PaymentSubMode = 
   | 'STRUK'
@@ -274,12 +276,12 @@ export const EditPembayaran: React.FC = () => {
               onClick={() => setSubMode('BET_TOGEL')}
               className={`col-span-2 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all text-left flex items-center gap-1.5 cursor-pointer ${
                 subMode === 'BET_TOGEL'
-                  ? 'bg-yellow-400 text-black shadow-[0_0_12px_rgba(250,204,21,0.4)]'
-                  : 'bg-[#0a0f18] text-yellow-300 hover:text-yellow-200 hover:bg-[#141e30] border border-yellow-500/20'
+                  ? 'bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.4)]'
+                  : 'bg-[#0a0f18] text-red-300 hover:text-red-200 hover:bg-[#141e30] border border-red-500/20'
               }`}
             >
               <Receipt className="w-3.5 h-3.5 shrink-0" />
-              <span>Edit Bet Togel (Slip Fisik/Digital)</span>
+              <span>Editor Slip Bukti Bet Togel (Invoice Merah)</span>
             </button>
           </div>
         </div>
@@ -595,78 +597,10 @@ export const EditPembayaran: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODE 4: EDIT TRANSAKSI TOGEL                                              */}
+      {/* MODE 4: EDIT TRANSAKSI TOGEL (GENERATOR & SIMULASI MUTASI TOGEL)          */}
       {/* ========================================================================= */}
       {subMode === 'TRANSAKSI_TOGEL' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in">
-          <div className="lg:col-span-7 p-6 rounded-3xl bg-[#0a0f18] border border-cyan-500/30 space-y-4 font-mono">
-            <h3 className="text-sm font-black text-cyan-300 uppercase flex items-center gap-2 border-b border-white/10 pb-3">
-              <Dices className="w-4 h-4" /> Form Detail Invoice Transaksi Togel
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Pasaran Togel:</label>
-                <input
-                  type="text"
-                  value={togelPasaran}
-                  onChange={e => setTogelPasaran(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-cyan-500/40 text-xs text-yellow-400 font-bold"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Periode Pasaran:</label>
-                <input
-                  type="text"
-                  value={togelPeriode}
-                  onChange={e => setTogelPeriode(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Nomor Tebakan Pasang:</label>
-                <input
-                  type="text"
-                  value={togelNomor}
-                  onChange={e => setTogelNomor(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-cyan-300 font-black tracking-widest"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Hadiah Kemenangan (Rp):</label>
-                <input
-                  type="number"
-                  value={togelPrize}
-                  onChange={e => setTogelPrize(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-emerald-400 font-black"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 space-y-4">
-            <div className="p-6 rounded-3xl bg-gradient-to-b from-[#0a1e2f] to-[#040810] border-2 border-cyan-400 shadow-xl space-y-3 font-mono">
-              <div className="flex items-center justify-between border-b border-cyan-500/30 pb-2">
-                <span className="text-xs font-black text-cyan-300 uppercase">NOTA BETTING TOGEL</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500 text-black font-black">{togelStatus}</span>
-              </div>
-              <div className="space-y-1 text-center py-2">
-                <span className="text-[10px] text-gray-400 uppercase">NOMOR TEBAKAN RESULT</span>
-                <div className="text-3xl font-black text-cyan-400 tracking-widest">{togelNomor}</div>
-              </div>
-              <div className="p-3 rounded-2xl bg-black/60 border border-white/10 space-y-1.5 text-xs">
-                <div className="flex justify-between"><span className="text-gray-400">Pasaran:</span><span className="text-white font-bold">{togelPasaran}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Total Hadiah:</span><span className="text-emerald-400 font-black">Rp {togelPrize.toLocaleString('id-ID')}</span></div>
-              </div>
-            </div>
-            <button
-              onClick={handleCopySlipText}
-              className="w-full py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono text-xs font-black flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-            >
-              <Copy className="w-4 h-4" />
-              <span>Salin Nota Transaksi Togel</span>
-            </button>
-          </div>
-        </div>
+        <TransaksiTogelEditor />
       )}
 
       {/* ========================================================================= */}
@@ -814,67 +748,11 @@ export const EditPembayaran: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODE 7: EDIT BET TOGEL (SLIP FISIK / NOTA CETAK)                          */}
+      {/* MODE 7: EDIT BET TOGEL (SLIP BUKTI BET TOGEL / INVOICE MERAH IDN)         */}
       {/* ========================================================================= */}
       {subMode === 'BET_TOGEL' && (
         <div className="space-y-4 animate-in fade-in">
-          <div className="p-6 rounded-3xl bg-[#0a0f18] border border-yellow-500/40 shadow-xl space-y-4 font-mono">
-            <div className="flex items-center justify-between border-b border-yellow-500/30 pb-3">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-yellow-400" />
-                <h3 className="text-sm font-black text-yellow-400 uppercase">
-                  Editor Slip Bukti Bet Togel (Cetak Fisik / Struk Struk Nota)
-                </h3>
-              </div>
-              <span className="text-xs text-gray-400">Mode Invoice Kasir</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Nama Pasaran:</label>
-                <input
-                  type="text"
-                  value={slipPasaran}
-                  onChange={e => setSlipPasaran(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-yellow-400 font-bold"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Tanggal Pasang:</label>
-                <input
-                  type="text"
-                  value={slipTanggal}
-                  onChange={e => setSlipTanggal(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-white"
-                />
-              </div>
-            </div>
-
-            {/* Preview Slip Nota */}
-            <div className="p-5 rounded-2xl bg-zinc-950 border border-yellow-500/30 text-white space-y-3 max-w-xl mx-auto">
-              <div className="text-center border-b border-dashed border-white/20 pb-2">
-                <span className="text-base font-black tracking-wider text-yellow-400 block">*** SLIP INVOICE TOGEL RESMI ***</span>
-                <span className="text-xs text-gray-400">{slipPasaran} • {slipTanggal}</span>
-              </div>
-
-              <div className="space-y-1 text-xs">
-                {slipItems.map((item, idx) => (
-                  <div key={idx} className="flex justify-between py-1 border-b border-white/5">
-                    <span>{idx + 1}. [{item.tipe}] Angka: <b>{item.tebakan}</b></span>
-                    <span>Bayar: <b>Rp {item.bayar.toLocaleString('id-ID')}</b> ({item.diskon})</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pt-2 border-t border-dashed border-white/20 flex justify-between font-black text-sm text-yellow-400">
-                <span>TOTAL BAYAR:</span>
-                <span>Rp 14.600</span>
-              </div>
-              <div className="text-center text-[10px] text-gray-500 pt-1">
-                LUNAS • SIMPAN SLIP INI SEBAGAI BUKTI KLAIM SAH
-              </div>
-            </div>
-          </div>
+          <SlipBetTogelEditor />
         </div>
       )}
     </div>
