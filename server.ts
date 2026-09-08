@@ -419,7 +419,7 @@ async function startServer() {
       // Try candidate URLs until one connects successfully
       for (const candidate of candidateUrls) {
         try {
-          const res = await fetchWithTimeout(candidate, selectedUA, 15000);
+          const res = await fetchWithTimeout(candidate, selectedUA, 7000);
           response = res;
           finalUsedUrl = candidate;
           break;
@@ -437,7 +437,7 @@ async function startServer() {
       // If server blocks Googlebot (403, 401, 503, or 0 bytes), automatically fallback to Desktop Chrome
       if ((!html || html.length === 0 || response.status === 403 || response.status === 503) && selectedUA !== desktopUA) {
         try {
-          const fallbackRes = await fetchWithTimeout(finalUsedUrl, desktopUA, 12000);
+          const fallbackRes = await fetchWithTimeout(finalUsedUrl, desktopUA, 6000);
           const fallbackHtml = await fallbackRes.text();
           if (fallbackHtml && fallbackHtml.length > 0) {
             response = fallbackRes;
@@ -729,12 +729,28 @@ async function startServer() {
     } catch (err: any) {
       console.error("Domain fetch error:", err);
       const isTimeout = err.name === "AbortError";
+      let errorDetail = err.message || "Gagal menghubungi domain tujuan.";
+
+      if (err.cause) {
+        if (err.cause.code === "ENOTFOUND") {
+          errorDetail = "Domain tidak ditemukan / DNS mati (Domain Expired, Suspended oleh Registrar, atau salah ketik).";
+        } else if (err.cause.code === "ECONNREFUSED") {
+          errorDetail = "Koneksi ditolak oleh server tujuan (Port 80/443 ditutup atau server hosting target mati).";
+        } else if (err.cause.code === "ETIMEDOUT" || err.cause.name === "AbortError" || isTimeout) {
+          errorDetail = "Waktu koneksi habis (Timeout). Server tujuan lambat atau memblokir IP server.";
+        } else if (err.cause.code === "ECONNRESET") {
+          errorDetail = "Koneksi diputus paksa oleh server target (Firewall / Cloudflare Anti-Bot WAF memutus akses).";
+        } else if (err.cause.message) {
+          errorDetail = `Gagal membaca domain (${err.cause.message})`;
+        }
+      } else if (isTimeout) {
+        errorDetail = "Request Timeout (server tujuan tidak merespons dalam batas waktu).";
+      }
+
       res.status(500).json({
         success: false,
         targetUrl,
-        error: isTimeout 
-          ? "Request Timeout (server tujuan tidak merespons dalam 15 detik)" 
-          : (err.message || "Gagal menghubungi domain tujuan. Pastikan nama domain aktif dan dapat diakses."),
+        error: errorDetail,
       });
     }
   });
