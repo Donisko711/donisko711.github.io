@@ -16,7 +16,35 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Roboto:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   </head>
   <body class="bg-[#0A0A0A] text-[#E0E0E0] font-sans antialiased selection:bg-[#00F3FF] selection:text-black overflow-x-hidden min-h-screen">
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height: 100vh; background-color: #0A0A0A; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #E0E0E0; padding: 20px; box-sizing: border-box;">
+        <div style="position: relative; width: 68px; height: 68px; margin-bottom: 24px;">
+          <div style="position: absolute; inset: 0; border: 3px solid rgba(0, 243, 255, 0.15); border-top: 3px solid #00F3FF; border-radius: 50%; animation: spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite; box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);"></div>
+          <div style="position: absolute; inset: 6px; border: 2px solid rgba(234, 179, 8, 0.15); border-bottom: 2px solid #EAB308; border-radius: 50%; animation: spin-reverse 1.3s linear infinite;"></div>
+          <div style="position: absolute; inset: 16px; background: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; color: #00F3FF; letter-spacing: 0.5px;">711</div>
+        </div>
+        <div style="font-weight: 900; font-size: 16px; letter-spacing: 2.5px; color: #FFFFFF; text-transform: uppercase; margin-bottom: 6px; text-shadow: 0 0 12px rgba(0, 243, 255, 0.5);">
+          DON <span style="color: #00F3FF;">ISKO</span> <span style="color: #EAB308;">711</span>
+        </div>
+        <div style="font-size: 11px; color: #9CA3AF; font-family: monospace; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px;">
+          SISTEM WORKSTATION CS &amp; KASIR
+        </div>
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 9999px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font-size: 11px; font-family: monospace; color: #EAB308;">
+          <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #00F3FF; box-shadow: 0 0 8px #00F3FF;"></span>
+          <span>Memuat antarmuka sistem...</span>
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse {
+          0% { transform: rotate(360deg); }
+          100% { transform: rotate(0deg); }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

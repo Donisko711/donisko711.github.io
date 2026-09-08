@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Lock, User, CheckCircle, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { ShiftType, UserProfile } from '../types';
-import donIskoLogo from '../assets/images/don_isko_711_1788035559676.jpg';
+
+const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -122,7 +123,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         <div className="text-center mb-6 relative">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 p-0.5 shadow-[0_0_20px_rgba(234,179,8,0.5)] mb-3 bg-black">
             <img 
-              src={donIskoLogo} 
+              src={OFFICIAL_DON_ISKO_IMG} 
               alt="DON ISKO 711" 
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"

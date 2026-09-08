@@ -3,34 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, ActiveView } from './components/Sidebar';
 import { LoginModal } from './components/LoginModal';
 import { BackgroundSelectorModal } from './components/BackgroundSelectorModal';
 import { HomeDashboard } from './components/HomeDashboard';
-import { JobdeskManager } from './components/tools/JobdeskManager';
-import { NawalaChecker } from './components/tools/NawalaChecker';
-import { ArticleGenerator } from './components/tools/ArticleGenerator';
-import { PhisingChecker } from './components/tools/PhisingChecker';
-import { ParlayCalculator } from './components/tools/ParlayCalculator';
-import { LiveScore } from './components/tools/LiveScore';
-import { BonusCalculator } from './components/tools/BonusCalculator';
-import { BonusParlayCalculator } from './components/tools/BonusParlayCalculator';
-import { BbfsGenerator } from './components/tools/BbfsGenerator';
-import { EditPembayaran } from './components/tools/EditPembayaran';
-import { IsiRekapan } from './components/tools/IsiRekapan';
-import { LaporanCS } from './components/tools/LaporanCS';
-import { ScriptChatMemo } from './components/tools/ScriptChatMemo';
-import { ScriptChatLC } from './components/tools/ScriptChatLC';
-import { WdAutoFlop } from './components/tools/WdAutoFlop';
-import { InfoWd } from './components/tools/InfoWd';
-import { InfoDataPL } from './components/tools/InfoDataPL';
-import { ModulBelajar } from './components/tools/ModulBelajar';
-import { AiIntelligence } from './components/tools/AiIntelligence';
-import { HadiahTogelOnline } from './components/tools/HadiahTogelOnline';
-import { JadwalPasaranTogel } from './components/tools/JadwalPasaranTogel';
-import { ModulPromoSitus } from './components/tools/ModulPromoSitus';
 import { ShiftType, UserProfile, JobdeskTask } from './types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from './data/initialData';
 import { 
@@ -39,6 +17,57 @@ import {
   persistJobdeskTasks 
 } from './utils/jobdeskStorage';
 import { ChevronRight, Home, Lock } from 'lucide-react';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Resilient lazy loader with automatic retry on network glitches
+function safeLazy<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      console.warn('Chunk loading failed, retrying...', err);
+      await new Promise(r => setTimeout(r, 600));
+      return await factory();
+    }
+  });
+}
+
+// Lazy-loaded tool modules for ultra-fast initial page load & low memory usage
+const JobdeskManager = safeLazy(() => import('./components/tools/JobdeskManager').then(m => ({ default: m.JobdeskManager })));
+const NawalaChecker = safeLazy(() => import('./components/tools/NawalaChecker').then(m => ({ default: m.NawalaChecker })));
+const ArticleGenerator = safeLazy(() => import('./components/tools/ArticleGenerator').then(m => ({ default: m.ArticleGenerator })));
+const PhisingChecker = safeLazy(() => import('./components/tools/PhisingChecker').then(m => ({ default: m.PhisingChecker })));
+const ParlayCalculator = safeLazy(() => import('./components/tools/ParlayCalculator').then(m => ({ default: m.ParlayCalculator })));
+const LiveScore = safeLazy(() => import('./components/tools/LiveScore').then(m => ({ default: m.LiveScore })));
+const BonusCalculator = safeLazy(() => import('./components/tools/BonusCalculator').then(m => ({ default: m.BonusCalculator })));
+const BonusParlayCalculator = safeLazy(() => import('./components/tools/BonusParlayCalculator').then(m => ({ default: m.BonusParlayCalculator })));
+const BbfsGenerator = safeLazy(() => import('./components/tools/BbfsGenerator').then(m => ({ default: m.BbfsGenerator })));
+const EditPembayaran = safeLazy(() => import('./components/tools/EditPembayaran').then(m => ({ default: m.EditPembayaran })));
+const IsiRekapan = safeLazy(() => import('./components/tools/IsiRekapan').then(m => ({ default: m.IsiRekapan })));
+const LaporanCS = safeLazy(() => import('./components/tools/LaporanCS').then(m => ({ default: m.LaporanCS })));
+const ScriptChatMemo = safeLazy(() => import('./components/tools/ScriptChatMemo').then(m => ({ default: m.ScriptChatMemo })));
+const ScriptChatLC = safeLazy(() => import('./components/tools/ScriptChatLC').then(m => ({ default: m.ScriptChatLC })));
+const WdAutoFlop = safeLazy(() => import('./components/tools/WdAutoFlop').then(m => ({ default: m.WdAutoFlop })));
+const InfoWd = safeLazy(() => import('./components/tools/InfoWd').then(m => ({ default: m.InfoWd })));
+const InfoDataPL = safeLazy(() => import('./components/tools/InfoDataPL').then(m => ({ default: m.InfoDataPL })));
+const ModulBelajar = safeLazy(() => import('./components/tools/ModulBelajar').then(m => ({ default: m.ModulBelajar })));
+const AiIntelligence = safeLazy(() => import('./components/tools/AiIntelligence').then(m => ({ default: m.AiIntelligence })));
+const HadiahTogelOnline = safeLazy(() => import('./components/tools/HadiahTogelOnline').then(m => ({ default: m.HadiahTogelOnline })));
+const JadwalPasaranTogel = safeLazy(() => import('./components/tools/JadwalPasaranTogel').then(m => ({ default: m.JadwalPasaranTogel })));
+const ModulPromoSitus = safeLazy(() => import('./components/tools/ModulPromoSitus').then(m => ({ default: m.ModulPromoSitus })));
+
+function ToolLoadingFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[350px] p-8 space-y-4 font-mono">
+      <div className="w-9 h-9 border-2 border-[#00F3FF]/20 border-t-[#00F3FF] rounded-full animate-spin shadow-[0_0_15px_rgba(0,243,255,0.4)]"></div>
+      <div className="text-xs text-gray-400 font-bold tracking-wider uppercase animate-pulse">
+        Memuat Modul Sistem...
+      </div>
+    </div>
+  );
+}
 
 export const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
 export const CURRENT_RELEASE_VERSION = 'RELEASE_HS711_AUTH_20260903_STRICT';
@@ -436,114 +465,118 @@ export default function App() {
               </div>
             </div>
 
-            {/* Dynamic View Router */}
-            {activeView === 'home' && (
-              <HomeDashboard
-                onNavigate={handleSelectView}
-                shiftName={activeShift}
-              />
-            )}
+            {/* Dynamic View Router with Suspense for fast, lightweight loading */}
+            <ErrorBoundary fallbackTitle="Kendala Memuat Modul Ini">
+              <Suspense fallback={<ToolLoadingFallback />}>
+                {activeView === 'home' && (
+                  <HomeDashboard
+                    onNavigate={handleSelectView}
+                    shiftName={activeShift}
+                  />
+                )}
 
-            {activeView === 'ai-intelegency' && <AiIntelligence />}
+              {activeView === 'ai-intelegency' && <AiIntelligence />}
 
-            {activeView === 'jobdesk-cs' && (
-              <JobdeskManager
-                tasks={tasks}
-                onUpdateTasks={handleUpdateTasks}
-                category="CS"
-                activeShift={activeShift}
-                onShiftChange={handleShiftChange}
-              />
-            )}
+              {activeView === 'jobdesk-cs' && (
+                <JobdeskManager
+                  tasks={tasks}
+                  onUpdateTasks={handleUpdateTasks}
+                  category="CS"
+                  activeShift={activeShift}
+                  onShiftChange={handleShiftChange}
+                />
+              )}
 
-            {activeView === 'jobdesk-kasir' && (
-              <JobdeskManager
-                tasks={tasks}
-                onUpdateTasks={handleUpdateTasks}
-                category="KASIR"
-                activeShift={activeShift}
-                onShiftChange={handleShiftChange}
-              />
-            )}
+              {activeView === 'jobdesk-kasir' && (
+                <JobdeskManager
+                  tasks={tasks}
+                  onUpdateTasks={handleUpdateTasks}
+                  category="KASIR"
+                  activeShift={activeShift}
+                  onShiftChange={handleShiftChange}
+                />
+              )}
 
-            {activeView === 'nawala-checker' && <NawalaChecker />}
+              {activeView === 'nawala-checker' && <NawalaChecker />}
 
-            {activeView === 'generate-artikel' && <ArticleGenerator />}
+              {activeView === 'generate-artikel' && <ArticleGenerator />}
 
-            {activeView === 'phising-checker' && <PhisingChecker />}
+              {activeView === 'phising-checker' && <PhisingChecker />}
 
-            {activeView === 'kalkulator-parlay' && <ParlayCalculator />}
+              {activeView === 'kalkulator-parlay' && <ParlayCalculator />}
 
-            {activeView === 'livescore' && <LiveScore />}
+              {activeView === 'livescore' && <LiveScore />}
 
-            {activeView === 'bagi-bonus-slot' && (
-              <BonusCalculator />
-            )}
+              {activeView === 'bagi-bonus-slot' && (
+                <BonusCalculator />
+              )}
 
-            {activeView === 'bagi-bonus-parlay' && (
-              <BonusParlayCalculator />
-            )}
+              {activeView === 'bagi-bonus-parlay' && (
+                <BonusParlayCalculator />
+              )}
 
-            {activeView === 'bbfs-angka-tarung' && <BbfsGenerator />}
+              {activeView === 'bbfs-angka-tarung' && <BbfsGenerator />}
 
-            {activeView === 'edit-pembayaran' && <EditPembayaran />}
+              {activeView === 'edit-pembayaran' && <EditPembayaran />}
 
-            {activeView === 'isi-rekapan' && <IsiRekapan />}
+              {activeView === 'isi-rekapan' && <IsiRekapan />}
 
-            {activeView === 'laporan-cs-ganti-data' && (
-              <LaporanCS initialTab="GANTI_DATA" currentUser={currentUser} />
-            )}
+              {activeView === 'laporan-cs-ganti-data' && (
+                <LaporanCS initialTab="GANTI_DATA" currentUser={currentUser} />
+              )}
 
-            {activeView === 'laporan-cs-locked' && (
-              <LaporanCS initialTab="LOCKED" currentUser={currentUser} />
-            )}
+              {activeView === 'laporan-cs-locked' && (
+                <LaporanCS initialTab="LOCKED" currentUser={currentUser} />
+              )}
 
-            {activeView === 'sc-memo' && <ScriptChatMemo />}
+              {activeView === 'sc-memo' && <ScriptChatMemo />}
 
-            {activeView === 'sc-lc' && <ScriptChatLC />}
+              {activeView === 'sc-lc' && <ScriptChatLC />}
 
-            {activeView === 'wd-auto-flop' && <WdAutoFlop />}
+              {activeView === 'wd-auto-flop' && <WdAutoFlop />}
 
-            {activeView === 'info-wd' && <InfoWd currentUser={currentUser} />}
+              {activeView === 'info-wd' && <InfoWd currentUser={currentUser} />}
 
-            {activeView === 'info-data-pl' && <InfoDataPL currentUser={currentUser} />}
+              {activeView === 'info-data-pl' && <InfoDataPL currentUser={currentUser} />}
 
-            {activeView === 'modul-promo-situs' && (
-              <ModulPromoSitus />
-            )}
+              {activeView === 'modul-promo-situs' && (
+                <ModulPromoSitus />
+              )}
 
-            {activeView === 'modul-sportbooks' && (
-              <ModulBelajar initialModuleId="sop-games-1" />
-            )}
+              {activeView === 'modul-sportbooks' && (
+                <ModulBelajar initialModuleId="sop-games-1" />
+              )}
 
-            {activeView === 'modul-togel-cara' && (
-              <ModulBelajar initialCategory="Togel" />
-            )}
+              {activeView === 'modul-togel-cara' && (
+                <ModulBelajar initialCategory="Togel" />
+              )}
 
-            {activeView === 'modul-togel-hadiah' && (
-              <HadiahTogelOnline />
-            )}
+              {activeView === 'modul-togel-hadiah' && (
+                <HadiahTogelOnline />
+              )}
 
-            {activeView === 'modul-togel-jadwal' && (
-              <JadwalPasaranTogel />
-            )}
+              {activeView === 'modul-togel-jadwal' && (
+                <JadwalPasaranTogel />
+              )}
 
-            {activeView === 'modul-slot' && (
-              <ModulBelajar initialCategory="Slot" />
-            )}
+              {activeView === 'modul-slot' && (
+                <ModulBelajar initialCategory="Slot" />
+              )}
 
-            {activeView === 'modul-casino' && (
-              <ModulBelajar initialCategory="Casino" />
-            )}
+              {activeView === 'modul-casino' && (
+                <ModulBelajar initialCategory="Casino" />
+              )}
 
-            {activeView === 'modul-cari-selisih' && (
-              <ModulBelajar initialModuleId="sop-kasir-1" />
-            )}
+              {activeView === 'modul-cari-selisih' && (
+                <ModulBelajar initialModuleId="sop-kasir-1" />
+              )}
 
-            {activeView === 'modul-ganti-docs' && (
-              <ModulBelajar initialModuleId="sop-keamanan-1" />
-            )}
-          </main>
+              {activeView === 'modul-ganti-docs' && (
+                <ModulBelajar initialModuleId="sop-keamanan-1" />
+              )}
+            </Suspense>
+          </ErrorBoundary>
+        </main>
         </div>
 
         <BackgroundSelectorModal

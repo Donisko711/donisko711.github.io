@@ -31,7 +31,7 @@ import {
   Wand2,
   Terminal
 } from 'lucide-react';
-import donIskoLogo from '../../assets/images/don_isko_711_1788035559676.jpg';
+const donIskoLogo = 'https://ik.imagekit.io/donisko711/donisko711.jpg';
 import { AiImageStudio } from './AiImageStudio';
 
 export interface ChatMessage {

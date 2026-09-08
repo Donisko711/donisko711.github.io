@@ -212,9 +212,18 @@ export function scanDocumentForBrands(
     const snippets: BrandSnippetInfo[] = [];
     const detectedVariantsSet = new Set<string>();
 
+    // Compile regex once per target brand definition (not per line!)
+    const lineRegex = buildBrandRegex(def);
+    const rootLower = def.root.toLowerCase();
+
     lines.forEach((line, idx) => {
+      // Fast check: Skip lines that do not contain the root keyword substring
+      if (!line.toLowerCase().includes(rootLower)) {
+        return;
+      }
+
       const lineNum = idx + 1;
-      const lineRegex = buildBrandRegex(def);
+      lineRegex.lastIndex = 0;
       const matches = [...line.matchAll(lineRegex)].map(m => m[0].trim());
 
       if (matches.length > 0) {

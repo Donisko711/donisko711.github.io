@@ -868,43 +868,65 @@ async function startServer() {
       }
     }
 
-    // 3. Gunakan Google Gemini 3.8 Flash (Pilihan Utama & Resmi)
+    // 3. Gunakan Google Gemini (dengan auto-fallback jika kuota model tertentu penuh)
     if (ai) {
-      try {
-        const selectedModel = modelName || "gemini-3.8-flash";
+      const candidateModels = [
+        modelName || "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash"
+      ];
 
-        // Transform messages into contents for @google/genai
-        const contents = messages.map((m: { role: string; content: string }) => ({
-          role: m.role === "user" ? "user" : "model",
-          parts: [{ text: m.content }],
-        }));
+      let streamSuccess = false;
+      let lastAiError: any = null;
 
-        const fullSystemInstruction = systemPrompt 
-          ? `${SYSTEM_INSTRUCTION}\n\nInstruksi Khusus Mode: ${systemPrompt}`
-          : SYSTEM_INSTRUCTION;
+      for (const mName of candidateModels) {
+        try {
+          // Transform messages into contents for @google/genai
+          const contents = messages.map((m: { role: string; content: string }) => ({
+            role: m.role === "user" ? "user" : "model",
+            parts: [{ text: m.content }],
+          }));
 
-        const responseStream = await ai.models.generateContentStream({
-          model: selectedModel,
-          contents,
-          config: {
-            systemInstruction: fullSystemInstruction,
-            temperature: 0.7,
-          },
-        });
+          const fullSystemInstruction = systemPrompt 
+            ? `${SYSTEM_INSTRUCTION}\n\nInstruksi Khusus Mode: ${systemPrompt}`
+            : SYSTEM_INSTRUCTION;
 
-        for await (const chunk of responseStream) {
-          const text = chunk.text || "";
-          if (text) {
-            res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
+          const responseStream = await ai.models.generateContentStream({
+            model: mName,
+            contents,
+            config: {
+              systemInstruction: fullSystemInstruction,
+              temperature: 0.7,
+            },
+          });
+
+          for await (const chunk of responseStream) {
+            const text = chunk.text || "";
+            if (text) {
+              res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
+            }
           }
-        }
 
-        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-        res.end();
-        return;
-      } catch (error: any) {
-        console.error("Gemini API Error:", error);
-        const errorMessage = error?.message || "Terjadi kesalahan saat memproses permintaan AI.";
+          res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          res.end();
+          streamSuccess = true;
+          return;
+        } catch (error: any) {
+          console.warn(`Gemini model ${mName} error:`, error?.message);
+          lastAiError = error;
+          // Continue to next model if quota/resource exhausted
+          if (error?.message?.includes("resource_exhausted") || error?.status === 429) {
+            continue;
+          }
+          break;
+        }
+      }
+
+      if (!streamSuccess) {
+        console.error("All Gemini API models failed:", lastAiError);
+        const errorMessage = lastAiError?.message?.includes("resource_exhausted")
+          ? "Kuota penggunaan AI model sedang penuh/mencapai batas. Silakan tunggu 1 menit atau gunakan akun API Key baru."
+          : (lastAiError?.message || "Terjadi kesalahan saat memproses permintaan AI.");
         res.write(`data: ${JSON.stringify({ error: errorMessage, done: true })}\n\n`);
         res.end();
         return;

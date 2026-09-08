@@ -112,6 +112,12 @@ export const PhisingChecker: React.FC = () => {
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedSummary, setCopiedSummary] = useState<boolean>(false);
 
+  // High-performance display state: 'findings' (only lines with phishing findings) or 'all' (paginated)
+  const [scriptFilterMode, setScriptFilterMode] = useState<'findings' | 'all'>('findings');
+  const [codeCurrentPage, setCodeCurrentPage] = useState<number>(1);
+  const [jumpPageInput, setJumpPageInput] = useState<string>('');
+  const LINES_PER_PAGE = 200;
+
   const codeContainerRef = useRef<HTMLDivElement>(null);
 
   // Quick preset domains
@@ -279,6 +285,8 @@ export const PhisingChecker: React.FC = () => {
         throw new Error(primaryErr || 'Gagal membaca domain. Target domain memblokir koneksi server/crawler atau hosting tidak mendukung crawler.');
       }
 
+      setCodeCurrentPage(1);
+      setScriptFilterMode('findings');
       setResult(data);
     } catch (err: any) {
       console.error('Error inspecting domain:', err);
@@ -298,6 +306,8 @@ export const PhisingChecker: React.FC = () => {
 
     setErrorMsg(null);
     setSelectedHighlightLine(null);
+    setCodeCurrentPage(1);
+    setScriptFilterMode('findings');
 
     const syntheticResponse: DomainCheckResponse = {
       success: true,
@@ -552,17 +562,82 @@ export const PhisingChecker: React.FC = () => {
     };
   }, [result, activeHtml, activeKeywords, manualKeyword]);
 
+  // Set of all line numbers where brand phishing was found
+  const findingLinesSet = useMemo(() => {
+    if (!parsedData) return new Set<number>();
+    const set = new Set<number>();
+    parsedData.detectedKeywords.forEach(dk => {
+      dk.lines.forEach(l => set.add(l));
+    });
+    return set;
+  }, [parsedData]);
+
+  // Total pages for paginated script mode
+  const totalCodePages = useMemo(() => {
+    if (!parsedData) return 1;
+    return Math.max(1, Math.ceil(parsedData.lines.length / LINES_PER_PAGE));
+  }, [parsedData]);
+
+  // High-performance displayed lines: filters or paginates to prevent rendering thousands of DOM nodes
+  const displayedLineItems = useMemo(() => {
+    if (!parsedData) return [];
+    const allLines = parsedData.lines;
+
+    // 1. Search Query Mode (max 250 matches for instant response)
+    const trimmedSearch = scriptSearch.trim().toLowerCase();
+    if (trimmedSearch) {
+      const matches: { lineNum: number; line: string }[] = [];
+      for (let i = 0; i < allLines.length; i++) {
+        if (allLines[i].toLowerCase().includes(trimmedSearch)) {
+          matches.push({ lineNum: i + 1, line: allLines[i] });
+          if (matches.length >= 250) break;
+        }
+      }
+      return matches;
+    }
+
+    // 2. Findings Mode (Super Fast & Light): Show only finding lines + context
+    if (scriptFilterMode === 'findings' && findingLinesSet.size > 0) {
+      const sortedFindingLines = Array.from(findingLinesSet).sort((a, b) => a - b);
+      const linesToInclude = new Set<number>();
+      sortedFindingLines.forEach(l => {
+        if (l > 1) linesToInclude.add(l - 1);
+        linesToInclude.add(l);
+        if (l < allLines.length) linesToInclude.add(l + 1);
+      });
+      const sorted = Array.from(linesToInclude).sort((a, b) => a - b);
+      return sorted.map(l => ({ lineNum: l, line: allLines[l - 1] || '' }));
+    }
+
+    // 3. Paginated Full Mode: Exactly LINES_PER_PAGE (200) lines
+    const page = Math.min(Math.max(1, codeCurrentPage), totalCodePages);
+    const startIndex = (page - 1) * LINES_PER_PAGE;
+    const endIndex = Math.min(startIndex + LINES_PER_PAGE, allLines.length);
+    const items: { lineNum: number; line: string }[] = [];
+    for (let i = startIndex; i < endIndex; i++) {
+      items.push({ lineNum: i + 1, line: allLines[i] });
+    }
+    return items;
+  }, [parsedData, scriptSearch, scriptFilterMode, findingLinesSet, codeCurrentPage, totalCodePages]);
+
   // Jump to specific line in script viewer
   const scrollToLine = (lineNum: number) => {
     setActiveTab('script');
     setSelectedHighlightLine(lineNum);
+
+    // If viewing full script, navigate to target page
+    if (scriptFilterMode !== 'findings' || !findingLinesSet.has(lineNum)) {
+      setScriptFilterMode('all');
+      const targetPage = Math.max(1, Math.ceil(lineNum / LINES_PER_PAGE));
+      setCodeCurrentPage(targetPage);
+    }
     
     setTimeout(() => {
       const lineElem = document.getElementById(`code-line-${lineNum}`);
       if (lineElem) {
         lineElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    }, 100);
+    }, 120);
   };
 
   const handleCopyScript = () => {
@@ -1504,54 +1579,195 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
                 </div>
               </div>
 
+              {/* View Filter Mode & Pagination Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#0A0A0E] border-b border-white/10 text-xs font-mono">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-gray-400 font-bold">Mode Tampilan:</span>
+                  {findingLinesSet.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setScriptFilterMode('findings')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        scriptFilterMode === 'findings' && !scriptSearch
+                          ? 'bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.4)]'
+                          : 'bg-white/5 hover:bg-white/10 text-gray-300'
+                      }`}
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                      <span>🚨 Hanya Baris Temuan Phising ({findingLinesSet.size} Baris) - Super Ringan</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setScriptFilterMode('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      scriptFilterMode === 'all' && !scriptSearch
+                        ? 'bg-[#00F3FF] text-black font-black shadow-[0_0_12px_rgba(0,243,255,0.4)]'
+                        : 'bg-white/5 hover:bg-white/10 text-gray-300'
+                    }`}
+                  >
+                    <Code2 className="w-3.5 h-3.5" />
+                    <span>📄 Seluruh Script ({parsedData.totalLines.toLocaleString()} Baris)</span>
+                  </button>
+                </div>
+
+                {/* Pagination Controls when in All Lines mode and no active search */}
+                {!scriptSearch && scriptFilterMode === 'all' && totalCodePages > 1 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={codeCurrentPage <= 1}
+                      onClick={() => setCodeCurrentPage(p => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-[11px]"
+                    >
+                      ◀ Sebelumnya
+                    </button>
+                    <span className="text-gray-300 text-[11px] font-bold">
+                      Hal. {codeCurrentPage} / {totalCodePages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={codeCurrentPage >= totalCodePages}
+                      onClick={() => setCodeCurrentPage(p => Math.min(totalCodePages, p + 1))}
+                      className="px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-[11px]"
+                    >
+                      Selanjutnya ▶
+                    </button>
+
+                    {/* Quick jump to line input */}
+                    <div className="flex items-center gap-1 pl-2 border-l border-white/15">
+                      <input
+                        type="number"
+                        placeholder="Lompat Baris..."
+                        value={jumpPageInput}
+                        onChange={(e) => setJumpPageInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const val = parseInt(jumpPageInput, 10);
+                            if (!isNaN(val) && val > 0 && val <= parsedData.totalLines) {
+                              scrollToLine(val);
+                              setJumpPageInput('');
+                            }
+                          }
+                        }}
+                        className="w-24 px-2 py-0.5 rounded bg-black/60 border border-white/20 text-white text-[10px] focus:outline-none focus:border-[#00F3FF]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = parseInt(jumpPageInput, 10);
+                          if (!isNaN(val) && val > 0 && val <= parsedData.totalLines) {
+                            scrollToLine(val);
+                            setJumpPageInput('');
+                          }
+                        }}
+                        className="px-2 py-0.5 rounded bg-[#00F3FF]/20 hover:bg-[#00F3FF]/30 text-[#00F3FF] border border-[#00F3FF]/40 text-[10px] font-bold"
+                      >
+                        Go
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {scriptSearch && (
+                  <span className="text-yellow-300 text-[11px] font-bold">
+                    Ditemukan {displayedLineItems.length} baris cocok untuk &quot;{scriptSearch}&quot;
+                  </span>
+                )}
+              </div>
+
               {/* Script Source Code Display with Exact Line Numbers */}
               <div 
                 ref={codeContainerRef}
                 className="max-h-[650px] overflow-y-auto p-4 font-mono text-xs bg-[#060609] text-gray-300 selection:bg-[#00F3FF] selection:text-black"
               >
                 <div className="font-mono text-xs leading-relaxed space-y-0.5">
-                  {parsedData.lines.map((line, idx) => {
-                    const lineNum = idx + 1;
-                    const highlightInfo = parsedData.lineHighlightMap.get(lineNum);
-                    const isSearchMatch = scriptSearch.trim() && line.toLowerCase().includes(scriptSearch.trim().toLowerCase());
-                    const isSelected = selectedHighlightLine === lineNum;
+                  {displayedLineItems.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500 font-mono text-xs">
+                      Tidak ada baris yang sesuai dengan filter tampilan saat ini.
+                    </div>
+                  ) : (
+                    displayedLineItems.map((item) => {
+                      const lineNum = item.lineNum;
+                      const line = item.line;
+                      const highlightInfo = parsedData.lineHighlightMap.get(lineNum);
+                      const isSearchMatch = scriptSearch.trim() && line.toLowerCase().includes(scriptSearch.trim().toLowerCase());
+                      const isSelected = selectedHighlightLine === lineNum;
 
-                    return (
-                      <div 
-                        key={idx}
-                        id={`code-line-${lineNum}`}
-                        className={`flex items-start py-0.5 px-1 rounded transition-colors ${
-                          isSelected
-                            ? 'bg-purple-500/30 border-l-4 border-purple-400 text-white font-bold'
-                            : highlightInfo
-                              ? 'bg-rose-950/50 border-l-4 border-rose-500 text-rose-200 font-semibold'
-                              : isSearchMatch
-                                ? 'bg-yellow-400/20 border-l-4 border-yellow-400 text-yellow-200 font-bold'
-                                : 'hover:bg-white/5'
-                        }`}
-                      >
-                        {/* Line number */}
-                        <span className="w-14 text-right pr-4 select-none text-gray-600 text-[10px] flex-shrink-0 pt-0.5">
-                          {lineNum}
-                        </span>
+                      return (
+                        <div 
+                          key={lineNum}
+                          id={`code-line-${lineNum}`}
+                          className={`flex items-start py-0.5 px-1 rounded transition-colors ${
+                            isSelected
+                              ? 'bg-purple-500/30 border-l-4 border-purple-400 text-white font-bold'
+                              : highlightInfo
+                                ? 'bg-rose-950/50 border-l-4 border-rose-500 text-rose-200 font-semibold'
+                                : isSearchMatch
+                                  ? 'bg-yellow-400/20 border-l-4 border-yellow-400 text-yellow-200 font-bold'
+                                  : 'hover:bg-white/5'
+                          }`}
+                        >
+                          {/* Line number */}
+                          <span className="w-14 text-right pr-4 select-none text-gray-600 text-[10px] flex-shrink-0 pt-0.5">
+                            {lineNum}
+                          </span>
 
-                        {/* Code line content */}
-                        <div className="flex-1 whitespace-pre-wrap break-all overflow-x-auto">
-                          {highlightInfo && (
-                            <span className="mr-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500 text-white font-black text-[9px] uppercase tracking-wider">
-                              <ShieldAlert className="w-3 h-3 flex-shrink-0" />
-                              <span>
-                                PHISING [{highlightInfo.brandNames.join(', ')}: {highlightInfo.variants.slice(0, 2).map(v => `"${v}"`).join(', ')}]
+                          {/* Code line content */}
+                          <div className="flex-1 whitespace-pre-wrap break-all overflow-x-auto">
+                            {highlightInfo && (
+                              <span className="mr-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500 text-white font-black text-[9px] uppercase tracking-wider">
+                                <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+                                <span>
+                                  PHISING [{highlightInfo.brandNames.join(', ')}: {highlightInfo.variants.slice(0, 2).map(v => `"${v}"`).join(', ')}]
+                                </span>
                               </span>
-                            </span>
-                          )}
-                          <code>{line}</code>
+                            )}
+                            <code>{line}</code>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
+
+              {/* Bottom Pagination Bar when in All Lines mode */}
+              {!scriptSearch && scriptFilterMode === 'all' && totalCodePages > 1 && (
+                <div className="flex items-center justify-between p-3 bg-[#0A0A0E] border-t border-white/10 text-xs font-mono text-gray-400">
+                  <span>
+                    Menampilkan baris {(codeCurrentPage - 1) * LINES_PER_PAGE + 1} - {Math.min(codeCurrentPage * LINES_PER_PAGE, parsedData.totalLines)} dari {parsedData.totalLines.toLocaleString()} baris
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={codeCurrentPage <= 1}
+                      onClick={() => {
+                        setCodeCurrentPage(p => Math.max(1, p - 1));
+                        if (codeContainerRef.current) codeContainerRef.current.scrollTop = 0;
+                      }}
+                      className="px-3 py-1 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold"
+                    >
+                      ◀ Halaman Sebelumnya
+                    </button>
+                    <span className="text-white font-bold">
+                      {codeCurrentPage} / {totalCodePages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={codeCurrentPage >= totalCodePages}
+                      onClick={() => {
+                        setCodeCurrentPage(p => Math.min(totalCodePages, p + 1));
+                        if (codeContainerRef.current) codeContainerRef.current.scrollTop = 0;
+                      }}
+                      className="px-3 py-1 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold"
+                    >
+                      Halaman Selanjutnya ▶
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
