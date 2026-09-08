@@ -35,6 +35,11 @@ export interface PromoItem {
   deskripsi: string;
   syaratKetentuan: string[];
   csScriptReply: string;
+  contohPerhitungan?: {
+    skenario: string;
+    rincian: string[];
+    hasil: string;
+  };
 }
 
 export const PROMO_DATA: PromoItem[] = [
@@ -191,11 +196,54 @@ export const PROMO_DATA: PromoItem[] = [
     csScriptReply: `Halo Bosku! Di situs kami hadiah TOGEL 4D mencapai *Rp 10.000.000* untuk Bet Full, serta diskon bet hingga 66% dengan minimal pasang hanya 100 perak saja. Pasaran lengkap Singapore, Hongkong, Sydney, Macau dan buka setiap hari! 🎯`
   },
   {
+    id: 'promo-referral-togel',
+    title: 'BONUS REFERRAL TOGEL 0.10%',
+    category: 'REFERRAL',
+    categoryLabel: 'Referral Togel',
+    brand: ['ALL BRAND', 'HSGROUP', 'HORAS711', 'ZEUS711', 'AYUTOGEL', 'BLACKTOGEL', 'SEMPOA4D', 'TEMA4D', 'HAES4D', 'BIGOTO4D'],
+    bannerUrl: 'https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?w=600&auto=format&fit=crop&q=80',
+    badge: '0.10% OTOMATIS',
+    badgeColor: 'bg-yellow-400 text-black',
+    minDepo: 'Rp 0 (Gratis / Tanpa Modal)',
+    maxBonus: 'Tanpa Batas (Unlimited)',
+    turnOver: 'Tanpa TO (Otomatis Result)',
+    targetGame: 'Togel Online (Kekalahan Line Bettingan)',
+    deskripsi: 'Peluang usaha tanpa modal atau gratis dengan menyebarkan link referral di situs HSGROUP. Dapatkan bonus komisi 0.10% dari setiap line taruhan togel downline yang berstatus kalah, bonus langsung otomatis masuk ke akun sesaat setelah pasaran result.',
+    syaratKetentuan: [
+      'Daftar menjadi member di salah satu situs resmi HSGROUP.',
+      'Setelah mendapatkan userId, langkah selanjutnya lakukan login dan masuk ke menu REFERRAL.',
+      'Di menu REFERRAL Anda akan menemukan sebuah link unik yang nantinya digunakan untuk melakukan pendaftaran downline baru.',
+      'Mulailah berpromosi menyebarkan link REFERRAL yang kalian dapatkan ke forum, website, media sosial, dan lainnya. Setiap bet yang dilakukan oleh member atau downline kalian, maka kalian berhak mendapatkan bonus sebesar 0.10%.',
+      'Downline yang kalian dapatkan atau yang telah melakukan registrasi dengan mengklik link yang kalian sebarkan akan dapat kalian lihat di menu REFERRAL dan klik Anggota REFERRAL.',
+      'Bonus kalian juga dapat dicek secara transparan melalui menu Bonus_Referral yang terdapat di menu REFERRAL.',
+      'Bonus Referral untuk permainan togel langsung otomatis masuk ke saldo akun, begitu pasaran togel yang dibetting oleh downline telah result.',
+      'Bonus dihitung dari line bettingan yang dipasang downline dengan status kalah.'
+    ],
+    contohPerhitungan: {
+      skenario: 'Contoh: Downline memasang Pasaran Dubai 10 Line untuk 2D Belakang dengan Total Betting Rp 100.000 (masing-masing line Rp 10.000):',
+      rincian: [
+        'Hasil Result Pasaran: 1 Line Menang, dan 9 Line Kalah.',
+        'Total Nominal Betting yang Kalah: 9 Line x Rp 10.000 = Rp 90.000.',
+        'Perhitungan Komisi Bonus Referral: Rp 90.000 x 0.10%'
+      ],
+      hasil: '= Rp 90 Perak bonus referral yang otomatis masuk ke saldo Upline!'
+    },
+    csScriptReply: `Halo Bosku! 🎉 Ingin usaha sampingan TANPA MODAL & GRATIS?
+
+Yuk ikuti promo *BONUS REFERRAL TOGEL 0.10%* di situs HSGROUP:
+1. Login akun Bosku dan masuk ke menu *REFERRAL*.
+2. Ambil dan sebarkan link referral Bosku ke forum, website, atau media sosial.
+3. Setiap downline bermain Togel, Bosku mendapatkan komisi *0.10%* dari seluruh line taruhan yang kalah.
+4. Bonus *LANGSUNG OTOMATIS MASUK* begitu pasaran togel selesai result!
+
+📌 Contoh: Downline pasang 10 line (@10k) total 100k di pasaran Dubai. Jika 1 line menang & 9 line kalah (90k), maka komisi referral Bosku: 90.000 x 0.10% = Rp 90 Perak langsung masuk ke akun! 💰`
+  },
+  {
     id: 'promo-8',
     title: 'BONUS REFERRAL SEUMUR HIDUP 1% - 2.5% TANPA MODAL',
     category: 'REFERRAL',
     categoryLabel: 'Referral',
-    brand: ['ALL BRAND', 'HORAS711', 'ZEUS711', 'AYUTOGEL', 'BLACKTOGEL', 'SEMPOA4D'],
+    brand: ['ALL BRAND', 'HSGROUP', 'HORAS711', 'ZEUS711', 'AYUTOGEL', 'BLACKTOGEL', 'SEMPOA4D'],
     bannerUrl: 'https://images.unsplash.com/photo-1556742049-0a67e55722c0?w=600&auto=format&fit=crop&q=80',
     badge: 'PASIF INCOME',
     badgeColor: 'bg-yellow-500 text-black',
@@ -234,6 +282,7 @@ export const ModulPromoSitus: React.FC = () => {
 
   const brands = [
     'ALL BRAND',
+    'HSGROUP',
     'HORAS711',
     'ZEUS711',
     'AYUTOGEL',
@@ -392,7 +441,13 @@ export const ModulPromoSitus: React.FC = () => {
                   {promo.deskripsi}
                 </p>
 
-                <div className="flex flex-wrap gap-1 pt-1">
+                <div className="flex flex-wrap gap-1 pt-1 items-center">
+                  {promo.contohPerhitungan && (
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 font-bold">
+                      <Coins className="w-2.5 h-2.5" />
+                      Ada Simulasi Hitung
+                    </span>
+                  )}
                   {promo.brand.map(b => (
                     <span key={b} className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
                       {b}
@@ -493,6 +548,31 @@ export const ModulPromoSitus: React.FC = () => {
                 ))}
               </ul>
             </div>
+
+            {/* Contoh & Simulasi Perhitungan Bonus jika tersedia */}
+            {activeModalPromo.contohPerhitungan && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Coins className="w-4 h-4 text-amber-400" />
+                  Contoh &amp; Simulasi Perhitungan Bonus:
+                </h4>
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/30 text-xs space-y-2.5">
+                  <p className="text-amber-200 font-bold leading-relaxed">{activeModalPromo.contohPerhitungan.skenario}</p>
+                  <ul className="space-y-1.5 text-gray-300 pl-1">
+                    {activeModalPromo.contohPerhitungan.rincian.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-amber-400 font-bold">•</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="pt-2 border-t border-amber-500/20 text-emerald-400 font-bold text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{activeModalPromo.contohPerhitungan.hasil}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Template Balasan CS */}
             <div className="space-y-2">

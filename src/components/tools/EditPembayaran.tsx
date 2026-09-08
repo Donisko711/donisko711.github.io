@@ -29,6 +29,7 @@ import { MandiriStrukEditor } from './struk/MandiriStrukEditor';
 import { BriStrukEditor } from './struk/BriStrukEditor';
 import { TransaksiSlotEditor } from './struk/TransaksiSlotEditor';
 import { TransaksiTogelEditor } from './struk/TransaksiTogelEditor';
+import { TransaksiLivegameEditor } from './struk/TransaksiLivegameEditor';
 import { SlipBetTogelEditor } from './struk/SlipBetTogelEditor';
 
 export type PaymentSubMode = 
@@ -607,68 +608,7 @@ export const EditPembayaran: React.FC = () => {
       {/* MODE 5: EDIT TRANSAKSI LIVEGAME                                           */}
       {/* ========================================================================= */}
       {subMode === 'TRANSAKSI_LIVEGAME' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in">
-          <div className="lg:col-span-7 p-6 rounded-3xl bg-[#0a0f18] border border-cyan-500/30 space-y-4 font-mono">
-            <h3 className="text-sm font-black text-cyan-300 uppercase flex items-center gap-2 border-b border-white/10 pb-3">
-              <Repeat className="w-4 h-4" /> Form Detail Livegame Casino
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Jenis Game:</label>
-                <input
-                  type="text"
-                  value={liveGameType}
-                  onChange={e => setLiveGameType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-cyan-500/40 text-xs text-yellow-400 font-bold"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Meja &amp; Dealer:</label>
-                <input
-                  type="text"
-                  value={liveTable}
-                  onChange={e => setLiveTable(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Pilihan Taruhan:</label>
-                <input
-                  type="text"
-                  value={liveBetChoice}
-                  onChange={e => setLiveChoice(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-cyan-300 font-bold"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Total Payout (Rp):</label>
-                <input
-                  type="number"
-                  value={livePayout}
-                  onChange={e => setLivePayout(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-[#050811] border border-white/10 text-xs text-emerald-400 font-black"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 space-y-4">
-            <div className="p-6 rounded-3xl bg-gradient-to-b from-[#1c0d24] to-[#0a050d] border-2 border-purple-400 shadow-xl space-y-3 font-mono">
-              <div className="flex items-center justify-between border-b border-purple-400/30 pb-2">
-                <span className="text-xs font-black text-purple-300 uppercase">LIVE CASINO WIN TICKET</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-purple-400 text-black font-black">VALID RESULT</span>
-              </div>
-              <div className="space-y-1 text-center py-2">
-                <span className="text-[10px] text-gray-400 uppercase">TOTAL BAYARAN CASINO</span>
-                <div className="text-2xl font-black text-purple-300">Rp {livePayout.toLocaleString('id-ID')}</div>
-              </div>
-              <div className="p-3 rounded-2xl bg-black/60 border border-white/10 space-y-1.5 text-xs">
-                <div className="flex justify-between"><span className="text-gray-400">Meja:</span><span className="text-white font-bold">{liveTable}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Bet / Result:</span><span className="text-yellow-300 font-bold">{liveBetChoice}</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TransaksiLivegameEditor />
       )}
 
       {/* ========================================================================= */}
