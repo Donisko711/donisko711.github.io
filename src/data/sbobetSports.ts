@@ -483,7 +483,19 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
       country: 'Indonesia',
       hdp: '-0.5',
       ou: '6.5',
-      odds: { home: '1.82', away: '2.02', draw: '4.50', over: '1.90', under: '1.90' }
+      odds: { home: '1.82', away: '2.02', draw: '4.50', over: '1.90', under: '1.90' },
+      events: [
+        { minute: "8'", type: 'goal', player: 'Singgih Romana', team: 'home', detail: 'Assist: Iqbal Iskandar' },
+        { minute: "14'", type: 'goal', player: 'Evan Soumilena', team: 'away', detail: 'Tendangan Roket' },
+        { minute: "16'", type: 'yellow_card', player: 'Pieter Marchelino', team: 'away', detail: 'Pelanggaran Keras' },
+        { minute: "19'", type: 'goal', player: 'Samuel Eko', team: 'home', detail: 'Sepakan Kaki Kiri' },
+        { minute: "22'", type: 'yellow_card', player: 'Rio Pangestu', team: 'home', detail: 'Pelanggaran Taktis' },
+        { minute: "25'", type: 'goal', player: 'Henrique', team: 'away', detail: 'Assist: Ardiansyah Nur' },
+        { minute: "27'", type: 'goal', player: 'Iqbal Iskandar', team: 'home', detail: 'Counter Attack Cepat' },
+        { minute: "31'", type: 'goal', player: 'Ardiansyah Nur', team: 'away', detail: 'Second Penalty' },
+        { minute: "33'", type: 'goal', player: 'Dieguinho', team: 'home', detail: 'Finishing Pivot' },
+        { minute: "34'", type: 'yellow_card', player: 'Wendy Brian', team: 'away', detail: 'Pelanggaran' }
+      ]
     },
 
     // 17. Rugbi (Rugby)
@@ -690,6 +702,14 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
     wibTime: item.wibTime,
     wibDate: `${queryDate.slice(0, 4)}-${queryDate.slice(4, 6)}-${queryDate.slice(6, 8)}`,
     venue: item.venue,
+    events: ((item as any).events || []).map((e: any) => ({
+      type: e.type,
+      minute: e.minute,
+      player: e.player,
+      team: e.team,
+      detail: e.detail,
+      cardType: e.type === 'yellow_card' ? 'yellow' : e.type === 'red_card' ? 'red' : undefined
+    })),
     sbobetOdds: {
       handicap: item.hdp,
       homeOdds: item.odds.home,
