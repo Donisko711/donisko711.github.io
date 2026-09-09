@@ -188,9 +188,63 @@ export const PhisingChecker: React.FC = () => {
 </body>
 </html>`;
 
+  // Helper to sanitize & validate domain/URL input on client
+  const cleanClientUrl = (inputStr: string): { valid: boolean; url: string; error?: string } => {
+    if (!inputStr || typeof inputStr !== 'string') {
+      return { valid: false, url: '', error: 'Harap masukkan URL domain target.' };
+    }
+    let cleaned = inputStr
+      .trim()
+      .replace(/^["'`]|["'`]$/g, '')
+      .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+      .trim();
+
+    if (!cleaned) {
+      return { valid: false, url: '', error: 'URL tidak boleh kosong.' };
+    }
+
+    // Fix duplicated protocols like https://https://
+    cleaned = cleaned.replace(/^https?:\/\/(https?:\/\/)+/i, (_m, g1) => g1);
+    cleaned = cleaned.replace(/^(https?):\/\/+/i, '$1://');
+
+    if (!/^https?:\/\//i.test(cleaned)) {
+      cleaned = `https://${cleaned}`;
+    }
+
+    try {
+      const parsed = new URL(cleaned);
+      if (!parsed.hostname || parsed.hostname.length < 3 || !parsed.hostname.includes('.')) {
+        return { 
+          valid: false, 
+          url: '', 
+          error: 'Format domain tidak valid. Pastikan domain memiliki ekstensi TLD yang benar (contoh: domain.com atau https://domain.com/path).' 
+        };
+      }
+      return { valid: true, url: parsed.href };
+    } catch {
+      try {
+        const parsed = new URL(encodeURI(cleaned));
+        if (!parsed.hostname || parsed.hostname.length < 3 || !parsed.hostname.includes('.')) {
+          return { valid: false, url: '', error: 'Format domain tidak valid.' };
+        }
+        return { valid: true, url: parsed.href };
+      } catch {
+        return { valid: false, url: '', error: 'URL mengandung karakter yang tidak valid.' };
+      }
+    }
+  };
+
   const handleInspect = async (overrideUrl?: string) => {
-    const target = (overrideUrl || urlInput).trim();
-    if (!target) return;
+    const rawTarget = (overrideUrl || urlInput).trim();
+    if (!rawTarget) return;
+
+    // Validate and clean input
+    const validation = cleanClientUrl(rawTarget);
+    if (!validation.valid) {
+      setErrorMsg(validation.error || 'Format domain tidak valid.');
+      return;
+    }
+    const target = validation.url;
 
     setIsLoading(true);
     setErrorMsg(null);
@@ -221,16 +275,16 @@ export const PhisingChecker: React.FC = () => {
             primaryErr = json.error || `Gagal membaca domain (${res.status})`;
           }
         } else {
-          // Jika di-hosting di platform static (Vercel static/Netlify) yang mengembalikan 404 HTML
-          primaryErr = `Server backend API tidak merespons JSON (HTTP ${res.status}). Proyek kemungkinan berjalan dalam mode hosting statis.`;
+          // Jika di-hosting di platform static yang mengembalikan HTML
+          primaryErr = `Server backend API tidak merespons JSON (HTTP ${res.status}).`;
         }
       } catch (backendFetchErr: any) {
-        primaryErr = backendFetchErr.message || 'Server backend tidak dapat dihubungi.';
+        primaryErr = backendFetchErr?.message || 'Server backend tidak dapat dihubungi.';
       }
 
       // 2. Jika backend gagal (misal diblokir Cloudflare/WAF hosting atau deployment static), coba fallback via CORS Proxy publik
       if (!data) {
-        const proxyTarget = target.startsWith('http') ? target : `https://${target}`;
+        const proxyTarget = target;
         const proxyList = [
           `https://api.allorigins.win/get?url=${encodeURIComponent(proxyTarget)}`,
           `https://corsproxy.io/?url=${encodeURIComponent(proxyTarget)}`,
@@ -240,7 +294,7 @@ export const PhisingChecker: React.FC = () => {
         for (const proxyUrl of proxyList) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 7500);
             const proxyRes = await fetch(proxyUrl, { signal: controller.signal });
             clearTimeout(timeoutId);
 
@@ -282,15 +336,16 @@ export const PhisingChecker: React.FC = () => {
       }
 
       if (!data) {
-        throw new Error(primaryErr || 'Gagal membaca domain. Target domain memblokir koneksi server/crawler atau hosting tidak mendukung crawler.');
+        setErrorMsg(primaryErr || 'Gagal membaca domain. Target domain memblokir koneksi crawler atau hosting sedang tidak dapat dijangkau. Anda dapat menggunakan tab "Tempel Script HTML dari Google Search Console" di atas untuk menganalisis langsung source code tanpa koneksi crawler.');
+        return;
       }
 
       setCodeCurrentPage(1);
       setScriptFilterMode('findings');
       setResult(data);
     } catch (err: any) {
-      console.error('Error inspecting domain:', err);
-      setErrorMsg(err.message || 'Gagal menghubungi server untuk inspeksi domain. Pastikan domain aktif dan dapat diakses.');
+      console.warn('Inspect error:', err);
+      setErrorMsg(err?.message || 'Gagal menghubungi server untuk inspeksi domain. Pastikan domain aktif dan dapat diakses.');
     } finally {
       setIsLoading(false);
     }

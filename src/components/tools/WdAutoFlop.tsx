@@ -29,17 +29,20 @@ export interface ParsedWdRow {
   rawTime?: string;
 }
 
-const EXAMPLE_FORMAT_1 = `No\t\tUser\tDate\tAmount\tBalance\tBank Asal\tInfo\tTools
-1\t\tmenang1000
-Withdraw\t2026-07-30 11:02:59\t455,000 \t159,208
-G1
-DANA, 0882005684416, Ahmad Bayu Prasetyo
-2\t\tsiregar001
-Withdraw\t2026-07-30 11:04:47\t1,000,000 \t50,358
+const EXAMPLE_FORMAT_1 = `1 188888
+Withdraw 2026-09-09 00:19:24 1,000,000 145
 G4
-BRI, 814801004844531, ADATUA SIREGAR`;
+MANDIRI, 1140033394092, Sugiyanto
+2 menang1000
+Withdraw 2026-07-30 11:02:59 455,000 159,208
+G1
+DANA, 0882005684416, Ahmad Bayu Prasetyo`;
 
-const EXAMPLE_FORMAT_2 = `3\t\tzenroel
+const EXAMPLE_FORMAT_2 = `96\t2026-09-09 00:19:24\t188888\tWithdraw\tSugiyanto, 1140033394092, MANDIRI\t-\t1,000,000\tACCEPT\tjvsaaautowd
+97\t2026-08-30 03:49:02\tframudya\tWithdraw\tRAFLY FRAMUDYA, 082216135887, DANA\t-\t250,000\tACCEPT\tjvsaaautowd
+98\t2026-08-30 03:43:46\tmontu78\tWithdraw\tKristian Adinegoro Simanjuntak, 1916107801, BNI\t-\t100,000\tACCEPT\tjvsaaautowd`;
+
+const EXAMPLE_FORMAT_3 = `3\t\tzenroel
 Withdraw\t2026-07-30 11:06:02\t400,000 \t18,243.62
 G5
 BCA, 4212336428, CHAIRUL ZEIN prioritas
@@ -47,12 +50,6 @@ BCA, 4212336428, CHAIRUL ZEIN prioritas
 Withdraw\t2026-07-30 11:07:08\t80,000 \t302.75
 G3
 DANA, 081292396707, Leon`;
-
-const EXAMPLE_FORMAT_3 = `7\t2026-08-30 03:49:02\tframudya\tWithdraw\tRAFLY FRAMUDYA, 082216135887, DANA\t-\t250,000\tACCEPT\tjvsaaautowd
-8\t2026-08-30 03:43:46\tmontu78\tWithdraw\tKristian Adinegoro Simanjuntak, 1916107801, BNI\t-\t100,000\tACCEPT\tjvsaaautowd
-9\t2026-08-30 03:40:52\tsuramadu90\tWithdraw\tBayu candra, 08213631084, GOPAY\t-\t1,000,000\tACCEPT\tjvsaaautowd
-10\t2026-08-30 03:38:49\teriawan123\tWithdraw\tSILVI, 087872052126, DANA\t-\t50,000\tACCEPT\tjvsaaautowd
-11\t2026-08-30 03:38:09\tawan17\tWithdraw\tSetiyawan, 666701018687539, BRI\t-\t600,000\tACCEPT\tjvsaaautowd`;
 
 export const WdAutoFlop: React.FC = () => {
   const [rawText, setRawText] = useState<string>('');
@@ -74,20 +71,24 @@ export const WdAutoFlop: React.FC = () => {
   const KNOWN_BANKS = [
     'BCA', 'BRI', 'BNI', 'MANDIRI', 'DANA', 'OVO', 'GOPAY', 'LINKAJA', 'QRIS', 
     'CIMB', 'PERMATA', 'BSI', 'PANIN', 'DANAMON', 'SEABANK', 'JAGO', 'NEO', 
-    'BNC', 'MAYBANK', 'BTPN', 'JENIUS', 'SINARMAS', 'OCBC', 'BJB', 'BANK'
+    'BNC', 'MAYBANK', 'BTPN', 'JENIUS', 'SINARMAS', 'OCBC', 'BJB', 'BANK',
+    'BTN', 'MEGA', 'ALLO', 'SHOPEEPAY', 'SAKUKU'
   ];
 
-  // Helper to standardize Bank Format: "Nama, NoRek, Bank"
+  // Helper to standardize Bank Format to "Nama, NoRek, Bank"
   const standardizeBankFormat = (rawBankStr: string): string => {
     if (!rawBankStr) return '';
-    const parts = rawBankStr.split(',').map(p => p.trim()).filter(Boolean);
+    const parts = rawBankStr.includes(',') 
+      ? rawBankStr.split(',').map(p => p.trim()).filter(Boolean)
+      : rawBankStr.split(/\t+/).map(p => p.trim()).filter(Boolean);
+
     if (parts.length < 2) return rawBankStr.trim();
 
     if (parts.length >= 3) {
       const part0Upper = parts[0].toUpperCase();
       const isPart0Bank = KNOWN_BANKS.some(b => part0Upper.startsWith(b) || part0Upper === b);
       
-      // If starts with Bank: "DANA, 0882005684416, Ahmad Bayu Prasetyo" -> "Ahmad Bayu Prasetyo, 0882005684416, DANA"
+      // If starts with Bank: "MANDIRI, 1140033394092, Sugiyanto" -> "Sugiyanto, 1140033394092, MANDIRI"
       if (isPart0Bank) {
         const bankName = parts[0];
         const accountNo = parts[1];
@@ -98,102 +99,48 @@ export const WdAutoFlop: React.FC = () => {
     return parts.join(', ');
   };
 
-  // Main Parser Engine
+  // Helper to format hour: strip leading zero for single-digit hours (e.g. 00:19:24 -> 0:19:24, 03:49:02 -> 3:49:02)
+  const formatTime = (timeVal: string): string => {
+    if (!timeVal) return '-';
+    return timeVal.replace(/^0(\d:)/, '$1');
+  };
+
+  // Main Parser Engine supporting both Format 1 (multi-line) and Format 2 (single-line tab/space)
+  // Even when user ID contains purely digits (e.g. "188888")
   const parsedData = useMemo<ParsedWdRow[]>(() => {
     if (!rawText.trim()) return [];
 
     const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
     const results: ParsedWdRow[] = [];
 
-    // Check if Single-Line Format (Format 3)
-    const isSingleLineFormat = lines.some(l => {
-      const tabs = l.split(/\t+/);
-      return tabs.length >= 5 && (l.includes('Withdraw') || l.includes('ACCEPT') || l.includes('jvsaaautowd'));
-    });
+    // Helper to identify single-line records (Format 2: Date + Withdraw + Bank + Status/Tabs on one line)
+    const isSingleLineRecord = (line: string): boolean => {
+      const hasDate = /\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}:\d{2}/.test(line);
+      if (!hasDate) return false;
+      if (!/withdraw/i.test(line)) return false;
+      const upper = line.toUpperCase();
+      const hasBank = KNOWN_BANKS.some(b => upper.includes(b)) && line.includes(',');
+      const hasStatusOrTabs = /ACCEPT|REJECT|PENDING|CANCEL|jvsaaautowd/i.test(line) || line.split(/\t+/).length >= 5;
+      return hasBank && hasStatusOrTabs;
+    };
 
-    if (isSingleLineFormat) {
-      // Parse Format 3: "7 \t 2026-08-30 03:49:02 \t framudya \t Withdraw \t RAFLY FRAMUDYA, 082216135887, DANA \t - \t 250,000 \t ACCEPT \t jvsaaautowd"
-      lines.forEach((line, idx) => {
-        // Skip header if any
-        if (line.toLowerCase().includes('date') && line.toLowerCase().includes('user')) return;
+    let currentBlock: Partial<ParsedWdRow> = {};
 
-        const parts = line.split(/\t+/).map(p => p.trim()).filter(Boolean);
-        if (parts.length >= 4) {
-          let timeVal = '';
-          let userVal = '';
-          let bankVal = '';
-          let amountVal = '';
-
-          // Look for date-time pattern "YYYY-MM-DD HH:mm:ss" or "HH:mm:ss"
-          for (let i = 0; i < parts.length; i++) {
-            const part = parts[i];
-            const dateTimeMatch = part.match(/\d{4}-\d{2}-\d{2}\s+(\d{1,2}:\d{2}:\d{2})/);
-            if (dateTimeMatch) {
-              timeVal = dateTimeMatch[1];
-            } else if (/^\d{1,2}:\d{2}:\d{2}$/.test(part)) {
-              timeVal = part;
-            }
-          }
-
-          // In Format 3: Col 0 is No, Col 1 is Date, Col 2 is Username, Col 4 is Bank info, Col 6 is Amount
-          if (parts.length >= 7 && (parts[3] === 'Withdraw' || parts[2] === 'Withdraw' || parts[1]?.includes(':'))) {
-            // Finding username:
-            if (parts[2] && parts[2] !== 'Withdraw') {
-              userVal = parts[2];
-            } else if (parts[1] && !parts[1].includes(':') && !parts[1].includes('-')) {
-              userVal = parts[1];
-            }
-
-            // Finding Bank:
-            const bankPart = parts.find(p => p.includes(',') && (p.includes('BCA') || p.includes('BRI') || p.includes('BNI') || p.includes('MANDIRI') || p.includes('DANA') || p.includes('GOPAY') || p.includes('OVO')));
-            if (bankPart) {
-              bankVal = standardizeBankFormat(bankPart);
-            }
-
-            // Finding Amount:
-            const amountPart = parts.find(p => /^\d{1,3}(,\d{3})+(\.\d+)?$/.test(p) || (/^\d{4,}$/.test(p) && p !== 'Withdraw'));
-            if (amountPart) {
-              amountVal = amountPart;
-            }
-          }
-
-          // Fallback parsing if exact columns not matched
-          if (!userVal && parts[2]) userVal = parts[2];
-          if (!bankVal && parts[4]) bankVal = standardizeBankFormat(parts[4]);
-          if (!amountVal && parts[6]) amountVal = parts[6];
-
-          if (userVal || bankVal || amountVal) {
-            // Trim leading 0 from single digit hour if needed (e.g. 03:49:02 -> 3:49:02)
-            const formattedTime = timeVal ? timeVal.replace(/^0(\d:)/, '$1') : '-';
-            results.push({
-              id: `f3-${idx}-${Date.now()}`,
-              time: formattedTime,
-              username: userVal || 'User',
-              bankInfo: bankVal || '-',
-              emptyCol: '',
-              amount: amountVal || '0',
-              rawTime: timeVal
-            });
-          }
-        }
-      });
-
-      // Sort Format 3 chronological ascending (e.g. 03:38:09 before 03:49:02)
-      if (sortByTime && results.length > 0) {
-        results.sort((a, b) => (a.rawTime || a.time).localeCompare(b.rawTime || b.time));
+    const flushBlock = () => {
+      if (currentBlock.username || currentBlock.amount || currentBlock.bankInfo) {
+        results.push({
+          id: `block-${results.length}-${Date.now()}-${Math.random()}`,
+          time: formatTime(currentBlock.time || ''),
+          rawTime: currentBlock.time || '',
+          username: currentBlock.username || '-',
+          bankInfo: currentBlock.bankInfo || '-',
+          emptyCol: '',
+          amount: currentBlock.amount || '0'
+        });
+        currentBlock = {};
       }
+    };
 
-      return results;
-    }
-
-    // Parse Format 1 & 2: Multi-line blocks
-    // Pattern:
-    // 1 \t\t menang1000
-    // Withdraw \t 2026-07-30 11:02:59 \t 455,000 \t 159,208
-    // G1
-    // DANA, 0882005684416, Ahmad Bayu Prasetyo
-    let currentRecord: Partial<ParsedWdRow> = {};
-    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
@@ -202,76 +149,153 @@ export const WdAutoFlop: React.FC = () => {
         continue;
       }
 
-      // Check for User line: "1 \t\t menang1000" or "3 \t zenroel" or just "1 menang1000"
-      const userMatch = line.match(/^(\d+)\s+([a-zA-Z0-9_\-\.]+)/);
-      if (userMatch && !line.includes('Withdraw') && !line.includes(':') && !line.includes(',')) {
-        if (currentRecord.username && (currentRecord.amount || currentRecord.bankInfo)) {
-          results.push({
-            id: `f12-${results.length}-${Date.now()}`,
-            time: currentRecord.time || '-',
-            username: currentRecord.username || '-',
-            bankInfo: currentRecord.bankInfo || '-',
-            emptyCol: '',
-            amount: currentRecord.amount || '0'
-          });
-          currentRecord = {};
+      // 1. Check if Single-line record (Format 2: "96 \t 2026-09-09 00:19:24 \t 188888 \t Withdraw \t Sugiyanto, 1140033394092, MANDIRI \t - \t 1,000,000 \t ACCEPT \t jvsaaautowd")
+      if (isSingleLineRecord(line)) {
+        flushBlock();
+
+        let timeVal = '';
+        let userVal = '';
+        let bankVal = '';
+        let amountVal = '';
+
+        const dtMatch = line.match(/\d{4}-\d{2}-\d{2}\s+(\d{1,2}:\d{2}:\d{2})/);
+        if (dtMatch) timeVal = dtMatch[1];
+
+        const tabs = line.split(/\t+/).map(p => p.trim()).filter(Boolean);
+        if (tabs.length >= 5) {
+          const dateIdx = tabs.findIndex(p => /\d{4}-\d{2}-\d{2}/.test(p));
+          const withdrawIdx = tabs.findIndex(p => /^withdraw$/i.test(p));
+
+          // User ID is between date and withdraw (supports pure digits like "188888")
+          if (dateIdx !== -1 && withdrawIdx !== -1 && withdrawIdx > dateIdx) {
+            userVal = tabs.slice(dateIdx + 1, withdrawIdx).join(' ').trim();
+          } else if (withdrawIdx !== -1 && withdrawIdx >= 2) {
+            userVal = tabs[withdrawIdx - 1];
+          } else if (dateIdx !== -1 && tabs[dateIdx + 1] && !/^withdraw$/i.test(tabs[dateIdx + 1])) {
+            userVal = tabs[dateIdx + 1];
+          }
+
+          // Bank part:
+          let bankPart = '';
+          if (withdrawIdx !== -1 && tabs[withdrawIdx + 1] && tabs[withdrawIdx + 1].includes(',')) {
+            bankPart = tabs[withdrawIdx + 1];
+          } else {
+            bankPart = tabs.find(p => p.includes(',') && !p.includes('Withdraw') && !p.includes(':')) || '';
+          }
+          bankVal = standardizeBankFormat(bankPart);
+
+          // Find amount: search AFTER the bank part or from right to avoid confusing with numeric User ID
+          const bankIdx = tabs.indexOf(bankPart);
+          const searchParts = bankIdx !== -1 ? tabs.slice(bankIdx + 1) : tabs;
+          for (const p of searchParts) {
+            if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(p)) {
+              amountVal = p;
+              break;
+            }
+          }
+          if (!amountVal) {
+            for (const p of searchParts) {
+              if (/^\d{4,}$/.test(p) && p !== userVal) {
+                amountVal = p;
+                break;
+              }
+            }
+          }
+        } else {
+          // Space-separated single line
+          const userBeforeWithdraw = line.match(/\s+([a-zA-Z0-9_\-\.]+)\s+Withdraw\b/i);
+          if (userBeforeWithdraw) {
+            userVal = userBeforeWithdraw[1];
+          }
+
+          const afterWithdraw = line.slice(line.toLowerCase().indexOf('withdraw') + 8);
+          const amountMatch = afterWithdraw.match(/-\s+([0-9,]+(?:\.\d+)?)/) || afterWithdraw.match(/\b([0-9]{1,3}(?:,[0-9]{3})+(?:\.\d+)?)\b/);
+          if (amountMatch) {
+            amountVal = amountMatch[1];
+          }
+
+          const bankMatch = afterWithdraw.match(/^\s*([\s\S]+?)\s+(?:-\s+|[0-9]{1,3}(?:,[0-9]{3})+)/);
+          if (bankMatch) {
+            bankVal = standardizeBankFormat(bankMatch[1].trim());
+          }
         }
-        currentRecord.username = userMatch[2].trim();
+
+        results.push({
+          id: `single-${results.length}-${Date.now()}-${Math.random()}`,
+          time: formatTime(timeVal),
+          rawTime: timeVal,
+          username: userVal || '-',
+          bankInfo: bankVal || '-',
+          emptyCol: '',
+          amount: amountVal || '0'
+        });
+
         continue;
       }
 
-      // Check for Withdraw line: "Withdraw \t 2026-07-30 11:02:59 \t 455,000 \t 159,208"
-      if (line.includes('Withdraw') || /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(line)) {
-        const timeMatch = line.match(/\d{4}-\d{2}-\d{2}\s+(\d{2}:\d{2}:\d{2})/);
-        if (timeMatch) {
-          currentRecord.time = timeMatch[1];
-        }
+      // 2. Multi-line block parsing (Format 1: "1 188888\nWithdraw 2026-09-09 00:19:24 1,000,000 145\nG4\nMANDIRI, 1140033394092, Sugiyanto")
+      // Skip group indicators like G1, G4, G5
+      if (/^G\d+$/i.test(line)) {
+        continue;
+      }
 
-        // Amount is typically the first number with commas after date
-        const amountMatch = line.match(/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+([0-9,]+)/);
+      // Bank line: "MANDIRI, 1140033394092, Sugiyanto"
+      if (line.includes(',') && !line.includes('Withdraw') && !line.includes(':')) {
+        currentBlock.bankInfo = standardizeBankFormat(line);
+        continue;
+      }
+
+      // Withdraw line: "Withdraw 2026-09-09 00:19:24 1,000,000 145"
+      if (/withdraw/i.test(line) || /\d{4}-\d{2}-\d{2}/.test(line)) {
+        const timeMatch = line.match(/\d{4}-\d{2}-\d{2}\s+(\d{1,2}:\d{2}:\d{2})/);
+        if (timeMatch) {
+          currentBlock.time = timeMatch[1];
+        }
+        const amountMatch = line.match(/\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}:\d{2}\s+([0-9,]+(?:\.\d+)?)/);
         if (amountMatch) {
-          currentRecord.amount = amountMatch[1].trim();
+          currentBlock.amount = amountMatch[1].trim();
         } else {
-          // Look for any comma-separated money number
           const nums = line.match(/(\d{1,3}(,\d{3})+(\.\d+)?)/g);
           if (nums && nums.length > 0) {
-            currentRecord.amount = nums[0];
+            currentBlock.amount = nums[0];
           }
         }
         continue;
       }
 
-      // Check for Bank line: "DANA, 0882005684416, Ahmad Bayu Prasetyo" or "BCA, 4212336428, CHAIRUL ZEIN prioritas"
-      if (line.includes(',') && !line.includes('Withdraw')) {
-        currentRecord.bankInfo = standardizeBankFormat(line);
-        continue;
+      // User line (e.g. "1 188888", "1\t\tmenang1000", or standalone "188888")
+      // If we already have a previous record with data, flush it
+      if (currentBlock.username && (currentBlock.amount || currentBlock.bankInfo)) {
+        flushBlock();
       }
 
-      // Skip Group lines like "G1", "G4", "G5"
-      if (/^G\d+$/i.test(line)) {
-        continue;
+      const seqAndUser = line.match(/^(\d+)\s+([a-zA-Z0-9_\-\.]+)/);
+      if (seqAndUser) {
+        // First token is sequence number, second token is username (even if purely numeric like 188888)
+        currentBlock.username = seqAndUser[2].trim();
+      } else {
+        // Standalone user ID
+        const singleUser = line.match(/^([a-zA-Z0-9_\-\.]+)/);
+        if (singleUser && !/^withdraw$/i.test(singleUser[1])) {
+          currentBlock.username = singleUser[1].trim();
+        }
       }
     }
 
-    // Push the last record
-    if (currentRecord.username || currentRecord.amount || currentRecord.bankInfo) {
-      results.push({
-        id: `f12-${results.length}-${Date.now()}`,
-        time: currentRecord.time || '-',
-        username: currentRecord.username || '-',
-        bankInfo: currentRecord.bankInfo || '-',
-        emptyCol: '',
-        amount: currentRecord.amount || '0'
-      });
+    // Flush final block
+    flushBlock();
+
+    // Chronological ascending sorting if enabled
+    if (sortByTime && results.length > 0) {
+      results.sort((a, b) => (a.rawTime || a.time).padStart(8, '0').localeCompare((b.rawTime || b.time).padStart(8, '0')));
     }
 
     return results;
   }, [rawText, sortByTime]);
 
-  // Generate output string for single row
+  // Generate output string for single row:
+  // "0:19:24\t188888\tSugiyanto, 1140033394092, MANDIRI\t\t1,000,000"
   const formatSingleRow = (row: ParsedWdRow, format: 'tab' | 'pipe' | 'comma'): string => {
-    // Exact user requirement format:
-    // "11:02:59 \t menang1000 \t Ahmad Bayu Prasetyo, 0882005684416, DANA \t\t 455,000"
     if (format === 'tab') {
       return `${row.time}\t${row.username}\t${row.bankInfo}\t\t${row.amount}`;
     }
@@ -447,22 +471,22 @@ export const WdAutoFlop: React.FC = () => {
                     onClick={() => loadExample(1)}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
                   >
-                    <span className="font-semibold">Format 1 (menang1000)</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-yellow-400">G1/G4</span>
+                    <span className="font-semibold">Format 1 (1 188888)</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-yellow-400">Multi-Baris</span>
                   </button>
                   <button
                     onClick={() => loadExample(2)}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
                   >
-                    <span className="font-semibold">Format 2 (zenroel/kecakal)</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-cyan-400">G3/G5</span>
+                    <span className="font-semibold">Format 2 (Single-Line 188888)</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-emerald-400">Tab / Baris</span>
                   </button>
                   <button
                     onClick={() => loadExample(3)}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
                   >
-                    <span className="font-semibold">Format 3 (Single Line Tab)</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-emerald-400">ACCEPT</span>
+                    <span className="font-semibold">Format 3 (zenroel / BCA)</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-cyan-400">G5 Prioritas</span>
                   </button>
                 </div>
               )}
@@ -595,34 +619,40 @@ export const WdAutoFlop: React.FC = () => {
           </div>
         </div>
 
-        {/* 4 Column Table */}
+        {/* 5 Column Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse font-mono">
             <thead>
               <tr className="bg-[#181818]/90 text-gray-300 border-b border-white/10 uppercase text-[10px] tracking-wider">
                 <th className="py-3 px-3.5 text-center w-12 text-gray-400">#</th>
-                <th className="py-3 px-4 min-w-[200px]">
+                <th className="py-3 px-4 min-w-[130px]">
                   <div className="flex items-center gap-1.5 text-white">
-                    <span className="px-1.5 py-0.2 rounded bg-white/10 text-cyan-400 font-bold">A</span>
-                    <span>Kolom 1: User ID / Waktu</span>
+                    <span className="px-1.5 py-0.2 rounded bg-white/10 text-yellow-400 font-bold">A</span>
+                    <span>Waktu</span>
+                  </div>
+                </th>
+                <th className="py-3 px-4 min-w-[140px]">
+                  <div className="flex items-center gap-1.5 text-white">
+                    <span className="px-1.5 py-0.2 rounded bg-white/10 text-cyan-400 font-bold">B</span>
+                    <span>User ID</span>
                   </div>
                 </th>
                 <th className="py-3 px-4 min-w-[280px]">
                   <div className="flex items-center gap-1.5 text-white">
-                    <span className="px-1.5 py-0.2 rounded bg-white/10 text-yellow-400 font-bold">B</span>
-                    <span>Kolom 2: Bank Asal (Nama, Rek, Bank)</span>
+                    <span className="px-1.5 py-0.2 rounded bg-white/10 text-purple-400 font-bold">C</span>
+                    <span>Bank Asal (Nama, Rek, Bank)</span>
                   </div>
                 </th>
                 <th className="py-3 px-4 w-28 text-center">
                   <div className="flex items-center justify-center gap-1.5 text-gray-400">
-                    <span className="px-1.5 py-0.2 rounded bg-white/5 text-gray-500 font-bold">C</span>
-                    <span>Kolom 3</span>
+                    <span className="px-1.5 py-0.2 rounded bg-white/5 text-gray-500 font-bold">D</span>
+                    <span>(Kosong)</span>
                   </div>
                 </th>
                 <th className="py-3 px-4 min-w-[160px]">
                   <div className="flex items-center gap-1.5 text-white">
-                    <span className="px-1.5 py-0.2 rounded bg-white/10 text-emerald-400 font-bold">D</span>
-                    <span>Kolom 4: Amount / Nominal</span>
+                    <span className="px-1.5 py-0.2 rounded bg-white/10 text-emerald-400 font-bold">E</span>
+                    <span>Amount / Nominal</span>
                   </div>
                 </th>
                 <th className="py-3 px-3 text-center w-16 text-gray-400">Aksi</th>
@@ -631,7 +661,7 @@ export const WdAutoFlop: React.FC = () => {
             <tbody className="divide-y divide-white/5">
               {parsedData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-500">
+                  <td colSpan={7} className="py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <AlertCircle className="w-8 h-8 text-gray-600" />
                       <p className="text-xs font-sans">Belum ada data yang diparsing. Tempel data di kolom atas atau klik tombol Contoh.</p>
@@ -651,32 +681,34 @@ export const WdAutoFlop: React.FC = () => {
                         {index + 1}
                       </td>
 
-                      {/* Kolom 1: Jam & User ID */}
+                      {/* Kolom 1 (A): Waktu */}
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-cyan-400 font-bold tracking-wide">
-                            {row.username}
-                          </span>
-                          <span className="text-[10px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded border border-white/5 flex items-center gap-1">
-                            <Clock className="w-2.5 h-2.5 text-yellow-400" />
-                            {row.time}
-                          </span>
-                        </div>
+                        <span className="text-xs font-bold text-yellow-400 font-mono flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-yellow-400/80" />
+                          {row.time}
+                        </span>
                       </td>
 
-                      {/* Kolom 2: Bank Asal (Nama, Rek, Bank) */}
+                      {/* Kolom 2 (B): User ID */}
+                      <td className="py-3 px-4">
+                        <span className="text-cyan-400 font-bold font-mono tracking-wide px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+                          {row.username}
+                        </span>
+                      </td>
+
+                      {/* Kolom 3 (C): Bank Asal (Nama, Rek, Bank) */}
                       <td className="py-3 px-4 text-gray-200">
                         <span className="font-semibold text-white">
                           {row.bankInfo}
                         </span>
                       </td>
 
-                      {/* Kolom 3: (Kosong) */}
+                      {/* Kolom 4 (D): (Kosong) */}
                       <td className="py-3 px-4 text-center text-gray-500 italic text-[11px]">
                         (Kosong)
                       </td>
 
-                      {/* Kolom 4: Amount / Nominal */}
+                      {/* Kolom 5 (E): Amount / Nominal */}
                       <td className="py-3 px-4 text-emerald-400 font-extrabold text-sm">
                         {row.amount}
                       </td>

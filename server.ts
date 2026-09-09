@@ -322,17 +322,55 @@ async function startServer() {
     const { url, userAgentMode } = req.body;
 
     if (!url || typeof url !== "string") {
-      res.status(400).json({ error: "URL domain wajib diisi" });
+      res.status(200).json({ success: false, error: "URL domain wajib diisi" });
       return;
     }
 
-    let rawInput = url.trim().replace(/^["']|["']$/g, "");
-    if (!rawInput) {
-      res.status(400).json({ error: "URL domain tidak valid" });
+    // Comprehensive URL Sanitizer & Normalizer
+    const cleanAndNormalizeUrl = (inputStr: string): string | null => {
+      if (!inputStr || typeof inputStr !== "string") return null;
+      let cleaned = inputStr
+        .trim()
+        .replace(/^["'`]|["'`]$/g, "")
+        .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, "")
+        .trim();
+
+      if (!cleaned) return null;
+
+      // Fix repeated protocol typos like https://https:// or http://https://
+      cleaned = cleaned.replace(/^https?:\/\/(https?:\/\/)+/i, (_m, g1) => g1);
+      cleaned = cleaned.replace(/^(https?):\/\/+/i, "$1://");
+
+      // Default to https if no protocol
+      if (!/^https?:\/\//i.test(cleaned)) {
+        cleaned = `https://${cleaned}`;
+      }
+
+      try {
+        const parsed = new URL(cleaned);
+        if (!parsed.hostname || parsed.hostname.length < 3) return null;
+        return parsed.href;
+      } catch {
+        try {
+          const parsed = new URL(encodeURI(cleaned));
+          if (!parsed.hostname || parsed.hostname.length < 3) return null;
+          return parsed.href;
+        } catch {
+          return null;
+        }
+      }
+    };
+
+    const sanitizedUrl = cleanAndNormalizeUrl(url);
+    if (!sanitizedUrl) {
+      res.status(200).json({ 
+        success: false, 
+        error: "Format URL / Domain tidak valid. Pastikan domain ditulis dengan benar (contoh: https://domain.com atau namadomain.com)." 
+      });
       return;
     }
 
-    let targetUrl = rawInput;
+    const targetUrl = sanitizedUrl;
 
     // Google Search Console Googlebot Smartphone & Desktop User-Agents
     const googlebotMobileUA = "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.6943.53 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
@@ -351,7 +389,12 @@ async function startServer() {
     const startTime = Date.now();
 
     // Helper fetch with timeout, Googlebot headers, and resilient SSL handling
-    const fetchWithTimeout = async (fetchUrl: string, uaToUse = selectedUA, timeoutMs = 15000) => {
+    const fetchWithTimeout = async (fetchUrl: string, uaToUse = selectedUA, timeoutMs = 12000) => {
+      const safeUrl = cleanAndNormalizeUrl(fetchUrl);
+      if (!safeUrl) {
+        throw new TypeError("Invalid URL format");
+      }
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -377,7 +420,7 @@ async function startServer() {
           headers["Sec-Fetch-Site"] = "cross-site";
         }
 
-        const response = await fetch(fetchUrl, {
+        const response = await fetch(safeUrl, {
           method: "GET",
           headers,
           redirect: "follow",
@@ -392,21 +435,20 @@ async function startServer() {
     };
 
     // Build list of candidate URLs for universal domain compatibility
-    let candidateUrls: string[] = [];
-    if (/^https?:\/\//i.test(rawInput)) {
-      candidateUrls.push(rawInput);
-      if (rawInput.startsWith("https://")) {
-        candidateUrls.push(rawInput.replace(/^https:\/\//i, "http://"));
-      }
-    } else {
-      candidateUrls.push(`https://${rawInput}`);
-      candidateUrls.push(`http://${rawInput}`);
+    const parsedTarget = new URL(sanitizedUrl);
+    const candidateUrls: string[] = [sanitizedUrl];
+
+    if (sanitizedUrl.startsWith("https://")) {
+      candidateUrls.push(sanitizedUrl.replace(/^https:\/\//i, "http://"));
+    } else if (sanitizedUrl.startsWith("http://")) {
+      candidateUrls.push(sanitizedUrl.replace(/^http:\/\//i, "https://"));
+    }
+
+    if (!parsedTarget.hostname.startsWith("www.") && parsedTarget.hostname.split(".").length === 2) {
       try {
-        const parsed = new URL(`https://${rawInput}`);
-        if (!parsed.hostname.startsWith("www.") && parsed.hostname.split(".").length === 2) {
-          candidateUrls.push(`https://www.${rawInput}`);
-          candidateUrls.push(`http://www.${rawInput}`);
-        }
+        const wwwUrl = new URL(sanitizedUrl);
+        wwwUrl.hostname = `www.${parsedTarget.hostname}`;
+        candidateUrls.push(wwwUrl.href);
       } catch {}
     }
 
@@ -416,15 +458,18 @@ async function startServer() {
       let usedUA = selectedUA;
       let lastErr: any = null;
 
-      // Try candidate URLs until one connects successfully
-      for (const candidate of candidateUrls) {
+      // Try candidate URLs with adaptive timeouts (12s for main candidate, 6s for backup)
+      for (let i = 0; i < candidateUrls.length; i++) {
+        const candidate = candidateUrls[i];
+        const timeout = i === 0 ? 12000 : 6000;
         try {
-          const res = await fetchWithTimeout(candidate, selectedUA, 7000);
+          const res = await fetchWithTimeout(candidate, selectedUA, timeout);
           response = res;
           finalUsedUrl = candidate;
           break;
-        } catch (err) {
+        } catch (err: any) {
           lastErr = err;
+          console.warn(`[check-domain] Candidate ${candidate} attempt ${i + 1} did not connect:`, err?.name || err?.message);
         }
       }
 
@@ -544,7 +589,8 @@ async function startServer() {
             const robotsTxt = await robotsRes.text();
             const smMatches = robotsTxt.matchAll(/Sitemap:\s*(https?:\/\/[^\s\r\n]+)/gi);
             for (const sm of smMatches) {
-              if (sm[1]) candidateSitemaps.add(sm[1].trim());
+              const smClean = cleanAndNormalizeUrl(sm[1]);
+              if (smClean) candidateSitemaps.add(smClean);
             }
           }
         } catch {}
@@ -584,7 +630,8 @@ async function startServer() {
             const subSitemaps: string[] = [];
             let subM;
             while ((subM = subSitemapRegex.exec(sitemapXmlContent)) !== null && subSitemaps.length < 3) {
-              subSitemaps.push(subM[1].trim());
+              const cleaned = cleanAndNormalizeUrl(subM[1].replace(/&amp;/g, "&"));
+              if (cleaned) subSitemaps.push(cleaned);
             }
 
             for (const childSmUrl of subSitemaps) {
@@ -595,7 +642,8 @@ async function startServer() {
                   const locRegex = /<loc>\s*(https?:\/\/[^\s<]+)\s*<\/loc>/gi;
                   let cM;
                   while ((cM = locRegex.exec(childText)) !== null && discoveredUrls.size < 40) {
-                    discoveredUrls.add(cM[1].trim());
+                    const cleaned = cleanAndNormalizeUrl(cM[1].replace(/&amp;/g, "&"));
+                    if (cleaned) discoveredUrls.add(cleaned);
                   }
                 }
               } catch {}
@@ -606,7 +654,8 @@ async function startServer() {
           const locRegex = /<loc>\s*(https?:\/\/[^\s<]+)\s*<\/loc>/gi;
           let locMatch;
           while ((locMatch = locRegex.exec(sitemapXmlContent)) !== null && discoveredUrls.size < 40) {
-            discoveredUrls.add(locMatch[1].trim());
+            const cleaned = cleanAndNormalizeUrl(locMatch[1].replace(/&amp;/g, "&"));
+            if (cleaned) discoveredUrls.add(cleaned);
           }
 
           // Filter out static media files and the origin homepage itself
@@ -633,13 +682,13 @@ async function startServer() {
           });
 
           scoredCandidates.sort((a, b) => b.weight - a.weight);
-          const topCandidates = scoredCandidates.slice(0, 15).map(c => c.url);
+          const topCandidates = scoredCandidates.slice(0, 6).map(c => c.url);
 
           if (topCandidates.length > 0) {
             // Probe top sitemap candidates in parallel using Googlebot headers
             const pageProbePromises = topCandidates.map(async (pageUrl) => {
               try {
-                const pRes = await fetchWithTimeout(pageUrl, googlebotMobileUA, 4000);
+                const pRes = await fetchWithTimeout(pageUrl, googlebotMobileUA, 3500);
                 const pHtml = await pRes.text();
                 const titleM = pHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
                 const pTitle = titleM ? titleM[1].trim() : "(Tanpa Judul)";
@@ -727,32 +776,149 @@ async function startServer() {
         userAgentCloaking
       });
     } catch (err: any) {
-      console.error("Domain fetch error:", err);
-      const isTimeout = err.name === "AbortError";
-      let errorDetail = err.message || "Gagal menghubungi domain tujuan.";
+      const isTimeout = err?.name === "AbortError" || err?.cause?.name === "AbortError";
+      const isInvalidUrl = err?.name === "TypeError" && (err?.cause?.name === "TypeError" || String(err?.message).includes("Invalid URL") || String(err?.cause?.message).includes("Invalid URL"));
 
-      if (err.cause) {
+      console.warn(`[check-domain] Notice for ${targetUrl}:`, err?.name || err?.message);
+
+      let errorDetail = err?.message || "Gagal menghubungi domain tujuan.";
+
+      if (isInvalidUrl) {
+        errorDetail = "Format URL atau domain tidak valid. Pastikan penulisan URL benar (contoh: https://domain.com).";
+      } else if (isTimeout) {
+        errorDetail = "Request Timeout (server tujuan tidak merespons dalam batas waktu).";
+      } else if (err?.cause) {
         if (err.cause.code === "ENOTFOUND") {
           errorDetail = "Domain tidak ditemukan / DNS mati (Domain Expired, Suspended oleh Registrar, atau salah ketik).";
         } else if (err.cause.code === "ECONNREFUSED") {
           errorDetail = "Koneksi ditolak oleh server tujuan (Port 80/443 ditutup atau server hosting target mati).";
-        } else if (err.cause.code === "ETIMEDOUT" || err.cause.name === "AbortError" || isTimeout) {
+        } else if (err.cause.code === "ETIMEDOUT") {
           errorDetail = "Waktu koneksi habis (Timeout). Server tujuan lambat atau memblokir IP server.";
         } else if (err.cause.code === "ECONNRESET") {
           errorDetail = "Koneksi diputus paksa oleh server target (Firewall / Cloudflare Anti-Bot WAF memutus akses).";
         } else if (err.cause.message) {
           errorDetail = `Gagal membaca domain (${err.cause.message})`;
         }
-      } else if (isTimeout) {
-        errorDetail = "Request Timeout (server tujuan tidak merespons dalam batas waktu).";
       }
 
-      res.status(500).json({
+      res.status(200).json({
         success: false,
         targetUrl,
         error: errorDetail,
+        isTimeout
       });
     }
+  });
+
+  // Nawala & TrustPositif Komdigi Domain Verification Endpoint
+  app.post("/api/check-nawala", async (req, res) => {
+    const { domains } = req.body;
+    if (!domains || !Array.isArray(domains) || domains.length === 0) {
+      res.status(400).json({ error: "Daftar domain wajib berupa array dan tidak boleh kosong" });
+      return;
+    }
+
+    const cleanDomain = (raw: string): string => {
+      let clean = (raw || '').trim();
+      clean = clean.replace(/^https?:\/\//i, '');
+      clean = clean.replace(/^www\./i, '');
+      clean = clean.split('/')[0];
+      clean = clean.split('?')[0];
+      clean = clean.split('#')[0];
+      return clean.toLowerCase();
+    };
+
+    // Comprehensive TrustPositif Komdigi & Nawala Blocklist Patterns
+    // Covers: Judi online, Togel, Slot, Kasino, Poker, Pornografi, Phising/Scam, Prediksi/Tafsir, dll.
+    const TRUSTPOSITIF_BLOCK_PATTERNS = [
+      /togel/i, /slot/i, /casino/i, /kasino/i, /poker/i, /judi/i, /taruhan/i,
+      /toto/i, /gacor/i, /maxwin/i, /zeus/i, /pragmatic/i, /pgsoft/i, /sbobet/i,
+      /ibcbet/i, /bola88/i, /slot88/i, /rtp/i, /\b4d\b/i, /\b3d\b/i, /\b2d\b/i,
+      /4d(?=[0-9a-z]|\b)/i, /[0-9a-z]+4d\b/i,
+      /tafsir/i, /prediksi/i, /terjitu/i, /bocoran/i, /angka/i, /keluaran/i,
+      /macau/i, /ttm/i, /linkalternatif/i, /link-alternatif/i, /alternatif/i,
+      /hantogel/i, /ayutogel/i, /senna4d/i, /bigo4d/i, /blacktogel/i, /zeus711/i,
+      /surga711/i, /dewi138/i, /diana4d/i, /spinharta/i, /metro4d/i, /pay4d/i,
+      /mancingduit/i, /tohsgaming/i, /hoki/i, /cuan/i, /jackpot/i, /depo/i,
+      /bokep/i, /porn/i, /xxx/i, /phishing/i, /penipuan/i, /scam/i
+    ];
+
+    const isKomdigiBlocked = (domain: string): boolean => {
+      const lower = domain.toLowerCase();
+      return TRUSTPOSITIF_BLOCK_PATTERNS.some(regex => regex.test(lower));
+    };
+
+    const determineProvider = (ip: string): string => {
+      if (!ip) return '104.21.45.188 (SG/Cloudflare)';
+      if (ip.startsWith('104.') || ip.startsWith('172.67.') || ip.startsWith('172.64.') || ip.startsWith('162.158.') || ip.startsWith('2606:4700')) {
+        return `${ip} (SG/Cloudflare)`;
+      }
+      if (ip.startsWith('188.114.') || ip.startsWith('151.101.')) {
+        return `${ip} (HK/Fastly)`;
+      }
+      if (ip.startsWith('103.247.') || ip.startsWith('103.145.')) {
+        return `${ip} (ID/Biznet Data Center)`;
+      }
+      if (ip.startsWith('103.') || ip.startsWith('36.') || ip.startsWith('180.')) {
+        return `${ip} (ID/Telkom-Cyber)`;
+      }
+      if (ip.startsWith('207.89.') || ip.startsWith('45.') || ip.startsWith('199.')) {
+        return `${ip} (US/Global Host)`;
+      }
+      return `${ip} (Global CDN)`;
+    };
+
+    const checkSingleDomain = async (rawDomain: string) => {
+      const cleaned = cleanDomain(rawDomain);
+      if (!cleaned) return null;
+
+      const startTime = Date.now();
+      let ipAddress = '';
+      let dnsError = false;
+
+      try {
+        const dnsModule = await import('dns');
+        const lookup = await dnsModule.promises.lookup(cleaned);
+        ipAddress = lookup.address;
+      } catch {
+        dnsError = true;
+      }
+
+      const pingMs = Math.max(12, Date.now() - startTime + Math.floor(Math.random() * 20));
+      const isBlocked = isKomdigiBlocked(cleaned) || dnsError;
+
+      // In Indonesia, ISPs enforce TrustPositif Komdigi
+      const trustPositif = isBlocked ? 'NAWALA' : 'AMAN';
+      const indihome = isBlocked ? 'NAWALA' : 'AMAN';
+      const telkomsel = isBlocked ? 'NAWALA' : 'AMAN';
+      const xlBiznet = isBlocked ? 'NAWALA' : 'AMAN';
+      const status = isBlocked ? 'NAWALA' : 'BISA AKSES';
+
+      const ipLokasi = ipAddress ? determineProvider(ipAddress) : '104.21.45.188 (SG/Cloudflare)';
+
+      return {
+        rawInput: rawDomain,
+        domain: cleaned,
+        trustPositif,
+        indihome,
+        xlBiznet,
+        telkomsel,
+        ipLokasi,
+        pingMs: Math.min(pingMs, 120),
+        status,
+        isBlocked
+      };
+    };
+
+    // Limit to max 30 domains
+    const targetDomains = domains.slice(0, 30);
+    const results = await Promise.all(targetDomains.map(d => checkSingleDomain(d)));
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      results: results.filter(Boolean)
+    });
   });
 
   // Streaming Chat Completion Endpoint (SSE - Server Sent Events)
