@@ -66,7 +66,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
     { label: 'AUTO WD FLOP', view: 'wd-auto-flop' as ActiveView },
     { label: 'DEPOSIT MANUAL', view: 'edit-pembayaran' as ActiveView },
     { label: 'SALDO WD', view: 'info-wd' as ActiveView },
-    { label: 'TEMPLATE MEMO', view: 'sc-memo' as ActiveView }
+    { label: 'LIVESCORE & PASARAN', view: 'livescore' as ActiveView }
   ];
 
   const filteredCards = useMemo(() => {

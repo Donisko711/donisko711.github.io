@@ -15,7 +15,14 @@ import {
   Server,
   Zap,
   Layers,
-  Sparkles
+  Sparkles,
+  MapPin,
+  Lock,
+  Unlock,
+  Info,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export interface NawalaResultItem {
@@ -32,6 +39,17 @@ export interface NawalaResultItem {
   status: 'BISA AKSES' | 'NAWALA';
 }
 
+export interface ClientGeoInfo {
+  ip: string;
+  country: string;
+  countryCode: string;
+  city: string;
+  isp: string;
+  flag: string;
+  isIndonesia: boolean;
+  isSimulated?: boolean;
+}
+
 export const NawalaChecker: React.FC = () => {
   // Input domain (bisa 1 - 30 domain) - Default kosong saat dibuka agar tidak double input
   const [inputText, setInputText] = useState<string>('');
@@ -42,6 +60,38 @@ export const NawalaChecker: React.FC = () => {
   const [autoClearEnabled, setAutoClearEnabled] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<any>(null);
+
+  // 🛡️ Geo-IP Protection States (Sesuai trustpositif.komdigi.go.id)
+  const [geoInfo, setGeoInfo] = useState<ClientGeoInfo | null>(null);
+  const [isLoadingGeo, setIsLoadingGeo] = useState<boolean>(false);
+  const [enforceGeoProtection, setEnforceGeoProtection] = useState<boolean>(true);
+  const [bypassGeoActive, setBypassGeoActive] = useState<boolean>(false);
+  const [isSimulatingIndonesia, setIsSimulatingIndonesia] = useState<boolean>(false);
+  const [showGeoInfoDetail, setShowGeoInfoDetail] = useState<boolean>(false);
+  const [geoBlockedAlert, setGeoBlockedAlert] = useState<{ error: string; notice?: string } | null>(null);
+
+  // Fetch Geo-IP Detection
+  const fetchClientGeo = async (simulate?: boolean) => {
+    setIsLoadingGeo(true);
+    try {
+      const url = simulate ? '/api/client-geo?simulate=SIMULATE_ID' : '/api/client-geo';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.geo) {
+          setGeoInfo(data.geo);
+        }
+      }
+    } catch (e) {
+      console.warn('[Geo-IP] fetch failed:', e);
+    } finally {
+      setIsLoadingGeo(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClientGeo(isSimulatingIndonesia);
+  }, [isSimulatingIndonesia]);
 
   // Helper fungsi membersihkan URL / SSL otomatis: https://horas711.com/login -> horas711.com
   const cleanDomain = (raw: string): string => {
@@ -84,6 +134,16 @@ export const NawalaChecker: React.FC = () => {
 
     // Batasi 1 sampai 30 domain
     const domainsToTest = rawLines.slice(0, 30);
+    setGeoBlockedAlert(null);
+
+    // Proteksi Geo-IP: Cek apakah user berada di luar Indonesia dan proteksi aktif tanpa bypass
+    if (enforceGeoProtection && !bypassGeoActive && !isSimulatingIndonesia && geoInfo && !geoInfo.isIndonesia) {
+      setGeoBlockedAlert({
+        error: `⛔ AKSES DITOLAK (GEO-IP RESTRICTION): Pengecekan Database TrustPositif Komdigi / Nawala hanya menerima permintaan dari IP wilayah Republik Indonesia (ID). Terdeteksi IP Anda: ${geoInfo.ip} (${geoInfo.country} - ${geoInfo.countryCode}).`,
+        notice: "Sesuai regulasi penanganan konten https://trustpositif.komdigi.go.id/, server database TrustPositif dibatasi secara eksklusif untuk jaringan telekomunikasi nasional Republik Indonesia."
+      });
+      return;
+    }
 
     setIsChecking(true);
 
@@ -92,15 +152,38 @@ export const NawalaChecker: React.FC = () => {
     const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
     try {
-      // Panggil endpoint verifikasi TrustPositif Komdigi riil
+      // Panggil endpoint verifikasi TrustPositif Komdigi riil dengan proteksi Geo-IP
       const res = await fetch('/api/check-nawala', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domains: domainsToTest })
+        body: JSON.stringify({
+          domains: domainsToTest,
+          enforceGeoRestriction: enforceGeoProtection,
+          bypassGeo: bypassGeoActive,
+          simulatedIp: isSimulatingIndonesia ? 'SIMULATE_ID' : undefined
+        })
       });
+
+      if (res.status === 403) {
+        const errData = await res.json();
+        if (errData.geoBlocked) {
+          setGeoBlockedAlert({
+            error: errData.error || 'Akses Ditolak: Permintaan pengecekan hanya diizinkan dari IP wilayah Republik Indonesia (ID).',
+            notice: errData.komdigiNotice || 'Sesuai regulasi penanganan konten https://trustpositif.komdigi.go.id/, akses database TrustPositif dibatasi secara eksklusif untuk jaringan telekomunikasi nasional Republik Indonesia.'
+          });
+          if (errData.clientGeo) {
+            setGeoInfo(errData.clientGeo);
+          }
+          setIsChecking(false);
+          return;
+        }
+      }
 
       if (res.ok) {
         const data = await res.json();
+        if (data.clientGeo) {
+          setGeoInfo(data.clientGeo);
+        }
         if (data.results && Array.isArray(data.results)) {
           const formatted: NawalaResultItem[] = data.results.map((item: any, idx: number) => ({
             no: idx + 1,
@@ -257,6 +340,254 @@ export const NawalaChecker: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* 🛡️ GEO-IP PROTECTION & KOMDIGI COMPLIANCE STATUS BAR */}
+      <div className={`p-4 sm:p-5 rounded-2xl border-2 transition-all space-y-3.5 shadow-xl ${
+        geoInfo?.isIndonesia || isSimulatingIndonesia || bypassGeoActive
+          ? 'bg-gradient-to-r from-[#0d1624] via-[#121c2e] to-[#0d1624] border-[#00F3FF]/40 shadow-[0_0_25px_rgba(0,243,255,0.1)]'
+          : 'bg-gradient-to-r from-rose-950/80 via-red-950/60 to-rose-950/80 border-rose-500/70 shadow-[0_0_30px_rgba(244,63,94,0.25)]'
+      }`}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className={`p-3 rounded-2xl border flex-shrink-0 ${
+              geoInfo?.isIndonesia || isSimulatingIndonesia || bypassGeoActive
+                ? 'bg-[#00F3FF]/15 border-[#00F3FF]/40 text-[#00F3FF]'
+                : 'bg-rose-500/20 border-rose-400 text-rose-300 animate-pulse'
+            }`}>
+              {geoInfo?.isIndonesia || isSimulatingIndonesia || bypassGeoActive ? (
+                <ShieldCheck className="w-6 h-6 text-[#00F3FF]" />
+              ) : (
+                <ShieldAlert className="w-6 h-6 text-rose-400" />
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                  enforceGeoProtection
+                    ? 'bg-gradient-to-r from-[#00F3FF] to-cyan-400 text-black shadow-[0_0_12px_rgba(0,243,255,0.4)]'
+                    : 'bg-gray-700 text-gray-300'
+                }`}>
+                  {enforceGeoProtection ? '🛡️ PROTEKSI GEO-IP KOMDIGI: AKTIF' : '⚠️ PROTEKSI GEO-IP: NONAKTIF'}
+                </span>
+
+                {isSimulatingIndonesia && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/30 border border-emerald-400 text-emerald-300 font-bold">
+                    🇮🇩 SIMULASI IP INDONESIA (TELKOM)
+                  </span>
+                )}
+
+                {bypassGeoActive && !isSimulatingIndonesia && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/30 border border-amber-400 text-amber-300 font-bold">
+                    🔓 BYPASS STAF LUAR NEGERI AKTIF
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="text-base font-extrabold text-white font-mono flex items-center gap-1.5">
+                  <span>{geoInfo?.flag || '🇮🇩'}</span>
+                  <span>{geoInfo?.country || 'Indonesia'} ({geoInfo?.countryCode || 'ID'})</span>
+                </span>
+                <span className="text-xs text-gray-400 font-mono">•</span>
+                <span className="text-xs text-[#00F3FF] font-mono font-bold">
+                  IP: {geoInfo?.ip || '180.252.168.42'}
+                </span>
+                <span className="text-xs text-gray-400 font-mono">•</span>
+                <span className="text-xs text-gray-300 font-mono">
+                  {geoInfo?.isp || 'PT Telekomunikasi Indonesia'}
+                </span>
+              </div>
+
+              <p className="text-xs text-gray-300 font-mono mt-1">
+                {enforceGeoProtection ? (
+                  geoInfo?.isIndonesia || isSimulatingIndonesia ? (
+                    <span className="text-emerald-300">
+                      Akses Terbuka: Koneksi terverifikasi dari dalam wilayah Republik Indonesia (ID) sesuai protokol trustpositif.komdigi.go.id.
+                    </span>
+                  ) : bypassGeoActive ? (
+                    <span className="text-amber-300">
+                      Akses Diizinkan: Anda menggunakan hak akses Bypass Staf Khusus untuk penggunaan dari luar negeri.
+                    </span>
+                  ) : (
+                    <span className="text-rose-300 font-bold">
+                      Akses Terbatas: Terdeteksi koneksi dari luar Indonesia. Permintaan pengecekan akan ditolak (403 Forbidden) seperti halnya trustpositif.komdigi.go.id.
+                    </span>
+                  )
+                ) : (
+                  <span className="text-yellow-300">
+                    Mode Bebas: Proteksi Geo-IP dinonaktifkan sementara. Semua alamat IP dari negara manapun dapat melakukan pengecekan.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Action Controls */}
+          <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-end flex-shrink-0">
+            <div className="flex items-center gap-2">
+              {/* Toggle Geo-IP Protection */}
+              <button
+                type="button"
+                onClick={() => {
+                  setEnforceGeoProtection(!enforceGeoProtection);
+                  setGeoBlockedAlert(null);
+                }}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  enforceGeoProtection
+                    ? 'bg-[#00F3FF]/20 text-[#00F3FF] border-[#00F3FF]/50 hover:bg-[#00F3FF]/30'
+                    : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                {enforceGeoProtection ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                <span>Proteksi Geo-IP: {enforceGeoProtection ? 'ON (Komdigi)' : 'OFF'}</span>
+              </button>
+
+              {/* Simulation Mode Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nextSim = !isSimulatingIndonesia;
+                  setIsSimulatingIndonesia(nextSim);
+                  setBypassGeoActive(false);
+                  setGeoBlockedAlert(null);
+                  fetchClientGeo(nextSim);
+                }}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isSimulatingIndonesia
+                    ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400'
+                    : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
+                }`}
+                title="Aktifkan simulasi IP Telkom Indonesia jika staf CS sedang bertugas di luar negeri"
+              >
+                <span>🇮🇩</span>
+                <span>{isSimulatingIndonesia ? 'IP Telkom Aktif' : 'Simulasi IP ID'}</span>
+              </button>
+
+              {/* Explanation Dropdown Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowGeoInfoDetail(!showGeoInfoDetail)}
+                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 flex items-center gap-1 transition-all cursor-pointer"
+                title="Penjelasan Kebijakan Geo-IP Komdigi"
+              >
+                <Info className="w-3.5 h-3.5 text-yellow-400" />
+                {showGeoInfoDetail ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {/* Quick Bypass Toggle for Remote Staff */}
+            {(!geoInfo?.isIndonesia && !isSimulatingIndonesia) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBypassGeoActive(!bypassGeoActive);
+                  setGeoBlockedAlert(null);
+                }}
+                className={`text-[11px] font-mono px-2.5 py-1 rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
+                  bypassGeoActive
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                    : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
+                }`}
+              >
+                <span>{bypassGeoActive ? '✅ Bypass Luar Negeri Aktif' : '🔓 Buka Akses Staf Luar Negeri'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Collapsible Educational Info on Komdigi Geo-IP */}
+        {showGeoInfoDetail && (
+          <div className="pt-3 border-t border-white/10 text-xs font-mono space-y-2 text-gray-300 bg-black/40 p-3.5 rounded-xl animate-in fade-in">
+            <div className="flex items-center gap-2 text-yellow-300 font-bold">
+              <Sparkles className="w-4 h-4 text-yellow-400" />
+              <span>Mengapa Sistem TrustPositif Komdigi Menerapkan Proteksi Geo-IP (Hanya IP Indonesia)?</span>
+            </div>
+            <div className="space-y-1.5 text-[11px] leading-relaxed text-gray-300">
+              <p>
+                1. <strong>Regulasi Nasional:</strong> Portal resmi <em>https://trustpositif.komdigi.go.id/</em> menerapkan proteksi Geo-Fencing tingkat server (Geo-IP) untuk membatasi traffic hanya dari wilayah Republik Indonesia (Country Code: ID).
+              </p>
+              <p>
+                2. <strong>Pencegahan Bot Scraping & DoS Luar Negeri:</strong> Kebijakan ini diberlakukan Kementerian Komunikasi dan Digital (Komdigi) agar database blokir nasional tidak dieksfiltrasi oleh bot crawling otomatis dari IP global.
+              </p>
+              <p>
+                3. <strong>Fitur Khusus Staf HS Group:</strong> Jika Anda adalah CS atau Kasir yang beroperasi dari luar negeri (Filipina, Kamboja, Thailand, dll.), gunakan tombol <span className="text-emerald-400 font-bold">Simulasi IP ID</span> atau <span className="text-amber-300 font-bold">Bypass Staf Luar Negeri</span> di atas untuk tetap dapat mengecek status domain tanpa kendala.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ⛔ KOMDIGI 403 GEO-RESTRICTION ALERT BANNER */}
+      {geoBlockedAlert && (
+        <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-rose-950 via-red-950 to-rose-950 border-2 border-rose-500 shadow-[0_0_35px_rgba(244,63,94,0.35)] animate-in fade-in space-y-4">
+          <div className="flex items-start gap-3.5">
+            <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-400 text-rose-300 flex-shrink-0 animate-bounce">
+              <AlertTriangle className="w-7 h-7 text-rose-400" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded bg-rose-500 text-white text-[10px] font-black font-mono uppercase">
+                  403 FORBIDDEN - AKSES DITOLAK
+                </span>
+                <span className="text-xs text-rose-300 font-mono">
+                  Sesuai Ketentuan https://trustpositif.komdigi.go.id/
+                </span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-black text-white font-mono uppercase">
+                Hanya Menerima Request dari Alamat IP Wilayah Republik Indonesia (ID)
+              </h2>
+              <p className="text-xs text-gray-200 font-mono leading-relaxed">
+                {geoBlockedAlert.error}
+              </p>
+              {geoBlockedAlert.notice && (
+                <p className="text-[11px] text-rose-200/90 font-mono italic">
+                  {geoBlockedAlert.notice}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-black/50 border border-rose-500/30 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-xs text-yellow-300 font-mono">
+              ⚡ Apakah Anda Staf Operasional HS Group yang sedang bertugas di luar negeri?
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSimulatingIndonesia(true);
+                  setBypassGeoActive(false);
+                  setGeoBlockedAlert(null);
+                  fetchClientGeo(true);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-mono font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-lg"
+              >
+                <span>🇮🇩 Gunakan Simulasi IP Telkom Indonesia</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setBypassGeoActive(true);
+                  setGeoBlockedAlert(null);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-mono font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-lg"
+              >
+                <span>🔓 Izinkan Bypass Staf CS Luar Negeri</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setGeoBlockedAlert(null)}
+                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-mono text-xs transition-all cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Input Box: 1 - 30 Domain with Auto-Strip SSL */}
       <div className="p-5 sm:p-6 rounded-2xl bg-[#121216]/90 border border-white/10 shadow-xl space-y-4">

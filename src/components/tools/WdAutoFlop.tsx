@@ -119,9 +119,9 @@ export const WdAutoFlop: React.FC = () => {
       if (!hasDate) return false;
       if (!/withdraw/i.test(line)) return false;
       const upper = line.toUpperCase();
-      const hasBank = KNOWN_BANKS.some(b => upper.includes(b)) && line.includes(',');
-      const hasStatusOrTabs = /ACCEPT|REJECT|PENDING|CANCEL|jvsaaautowd/i.test(line) || line.split(/\t+/).length >= 5;
-      return hasBank && hasStatusOrTabs;
+      const hasBankOrComma = KNOWN_BANKS.some(b => upper.includes(b)) || line.includes(',');
+      const hasStatusOrMultiFields = /ACCEPT|REJECT|PENDING|CANCEL|jvsaaautowd|approved|success|-/i.test(line) || line.split(/\t+/).length >= 4 || line.split(/\s+/).length >= 6;
+      return hasBankOrComma && hasStatusOrMultiFields;
     };
 
     let currentBlock: Partial<ParsedWdRow> = {};

@@ -47,8 +47,6 @@ const BbfsGenerator = safeLazy(() => import('./components/tools/BbfsGenerator').
 const EditPembayaran = safeLazy(() => import('./components/tools/EditPembayaran').then(m => ({ default: m.EditPembayaran })));
 const IsiRekapan = safeLazy(() => import('./components/tools/IsiRekapan').then(m => ({ default: m.IsiRekapan })));
 const LaporanCS = safeLazy(() => import('./components/tools/LaporanCS').then(m => ({ default: m.LaporanCS })));
-const ScriptChatMemo = safeLazy(() => import('./components/tools/ScriptChatMemo').then(m => ({ default: m.ScriptChatMemo })));
-const ScriptChatLC = safeLazy(() => import('./components/tools/ScriptChatLC').then(m => ({ default: m.ScriptChatLC })));
 const WdAutoFlop = safeLazy(() => import('./components/tools/WdAutoFlop').then(m => ({ default: m.WdAutoFlop })));
 const InfoWd = safeLazy(() => import('./components/tools/InfoWd').then(m => ({ default: m.InfoWd })));
 const InfoDataPL = safeLazy(() => import('./components/tools/InfoDataPL').then(m => ({ default: m.InfoDataPL })));
@@ -56,7 +54,6 @@ const ModulBelajar = safeLazy(() => import('./components/tools/ModulBelajar').th
 const AiIntelligence = safeLazy(() => import('./components/tools/AiIntelligence').then(m => ({ default: m.AiIntelligence })));
 const HadiahTogelOnline = safeLazy(() => import('./components/tools/HadiahTogelOnline').then(m => ({ default: m.HadiahTogelOnline })));
 const JadwalPasaranTogel = safeLazy(() => import('./components/tools/JadwalPasaranTogel').then(m => ({ default: m.JadwalPasaranTogel })));
-const ModulPromoSitus = safeLazy(() => import('./components/tools/ModulPromoSitus').then(m => ({ default: m.ModulPromoSitus })));
 
 function ToolLoadingFallback() {
   return (
@@ -234,15 +231,11 @@ export default function App() {
         'jobdesk-kasir',
         'info-wd', 
         'info-data-pl',
-        'modul-promo-situs',
         'modul-sportbooks',
         'modul-togel-cara',
         'modul-togel-hadiah',
         'modul-togel-jadwal',
-        'modul-slot',
-        'modul-casino',
-        'modul-cari-selisih',
-        'modul-ganti-docs'
+        'modul-slot'
       ];
       if (!allowedViews.includes(viewId)) {
         setActiveView('wd-auto-flop');
@@ -331,8 +324,6 @@ export default function App() {
       case 'isi-rekapan': return { category: 'TOOLS KERJA CS', title: 'Isi Rekapan & Validasi PL CS' };
       case 'laporan-cs-ganti-data': return { category: 'LAPORAN CS', title: 'Laporan Ganti Data' };
       case 'laporan-cs-locked': return { category: 'LAPORAN CS', title: 'Laporan Locked / Unlock' };
-      case 'sc-memo': return { category: 'SCRIPT CHAT', title: 'Script Chat MEMO' };
-      case 'sc-lc': return { category: 'SCRIPT CHAT', title: 'Script Chat LiveChat' };
       case 'jobdesk-kasir': return { category: 'KASIR & REKAPAN', title: `Jobdesk Kasir (${activeShift})` };
       case 'wd-auto-flop': return { category: 'KASIR & FINANSIAL', title: 'WD Auto Flop Engine' };
       case 'info-wd': return { category: 'KASIR & FINANSIAL', title: 'INFO DP / WD & Bank' };
@@ -342,9 +333,6 @@ export default function App() {
       case 'modul-togel-hadiah': return { category: 'INFO PRODUK & GAMES', title: 'HADIAH TOGEL ONLINE' };
       case 'modul-togel-jadwal': return { category: 'INFO PRODUK & GAMES', title: 'JADWAL PASARAN TOGEL' };
       case 'modul-slot': return { category: 'INFO PRODUK & GAMES', title: 'PANDUAN GAME SLOT' };
-      case 'modul-casino': return { category: 'INFO PRODUK & GAMES', title: 'PANDUAN LIVEGAME CASINO' };
-      case 'modul-cari-selisih': return { category: 'TRAINING & SOP', title: 'CARA CARI SELISIH SALDO' };
-      case 'modul-ganti-docs': return { category: 'TRAINING & SOP', title: 'CARA GANTI DOKUMEN' };
       default: return { category: 'TOOLS', title: 'Menu Utama' };
     }
   };
@@ -529,19 +517,11 @@ export default function App() {
                 <LaporanCS initialTab="LOCKED" currentUser={currentUser} />
               )}
 
-              {activeView === 'sc-memo' && <ScriptChatMemo />}
-
-              {activeView === 'sc-lc' && <ScriptChatLC />}
-
               {activeView === 'wd-auto-flop' && <WdAutoFlop />}
 
               {activeView === 'info-wd' && <InfoWd currentUser={currentUser} />}
 
               {activeView === 'info-data-pl' && <InfoDataPL currentUser={currentUser} />}
-
-              {activeView === 'modul-promo-situs' && (
-                <ModulPromoSitus />
-              )}
 
               {activeView === 'modul-sportbooks' && (
                 <ModulBelajar initialModuleId="sop-games-1" />
@@ -561,18 +541,6 @@ export default function App() {
 
               {activeView === 'modul-slot' && (
                 <ModulBelajar initialCategory="Slot" />
-              )}
-
-              {activeView === 'modul-casino' && (
-                <ModulBelajar initialCategory="Casino" />
-              )}
-
-              {activeView === 'modul-cari-selisih' && (
-                <ModulBelajar initialModuleId="sop-kasir-1" />
-              )}
-
-              {activeView === 'modul-ganti-docs' && (
-                <ModulBelajar initialModuleId="sop-keamanan-1" />
               )}
             </Suspense>
           </ErrorBoundary>

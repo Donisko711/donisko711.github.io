@@ -1,6 +1,7 @@
 import { LiveMatch, MatchEventItem, SportType } from '../types';
 import { getSeAsiaMatches } from './localSeAsiaService';
 import { getSbobetWorldMatches } from './sbobetWorldService';
+import { generateSbobetSpecialtyMatches } from '../data/sbobetSports';
 
 export interface EspnCompetitor {
   id?: string;
@@ -724,6 +725,14 @@ export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<Li
         if (!isDuplicated) {
           results.push(swm);
         }
+      }
+    }
+
+    // 4. Incorporate specialty sports matches for all 26 SBOBET sports
+    const specialtyMatches = generateSbobetSpecialtyMatches(options.dateStr);
+    for (const spec of specialtyMatches) {
+      if (!options.sport || options.sport === 'all' || options.sport === spec.sport) {
+        results.push(spec);
       }
     }
   } catch (err) {

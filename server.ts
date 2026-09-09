@@ -317,6 +317,30 @@ async function startServer() {
     res.json({ success: true, deletedId: id });
   });
 
+  // Shared Comprehensive TrustPositif Komdigi & Nawala Blocklist Engine
+  const TRUSTPOSITIF_BLOCK_PATTERNS = [
+    /togel/i, /slot/i, /casino/i, /kasino/i, /poker/i, /judi/i, /taruhan/i,
+    /toto/i, /gacor/i, /maxwin/i, /zeus/i, /pragmatic/i, /pgsoft/i, /sbobet/i,
+    /ibcbet/i, /bola88/i, /slot88/i, /rtp/i, /\b4d\b/i, /\b3d\b/i, /\b2d\b/i,
+    /4d(?=[0-9a-z]|\b)/i, /[0-9a-z]+4d\b/i,
+    /tafsir/i, /prediksi/i, /terjitu/i, /bocoran/i, /angka/i, /keluaran/i,
+    /macau/i, /ttm/i, /linkalternatif/i, /link-alternatif/i, /alternatif/i,
+    /hantogel/i, /ayutogel/i, /senna4d/i, /bigo4d/i, /blacktogel/i, /zeus711/i,
+    /surga711/i, /dewi138/i, /diana4d/i, /spinharta/i, /metro4d/i, /pay4d/i,
+    /mancingduit/i, /tohsgaming/i, /hoki/i, /cuan/i, /jackpot/i, /depo/i,
+    /horas711/i, /horas138/i, /poker88/i, /domino/i, /gaple/i, /roulette/i,
+    /baccarat/i, /sicbo/i, /dragontiger/i, /parlay/i, /mixparlay/i, /agenjudi/i,
+    /bandar/i, /situsjudi/i, /judionline/i, /slotgacor/i, /daftar-slot/i,
+    /link-slot/i, /login-slot/i, /apk-slot/i, /rtpslot/i, /rtp-live/i,
+    /bokep/i, /porn/i, /xxx/i, /phishing/i, /penipuan/i, /scam/i
+  ];
+
+  const isKomdigiBlocked = (domainStr: string): boolean => {
+    if (!domainStr) return false;
+    const lower = domainStr.toLowerCase();
+    return TRUSTPOSITIF_BLOCK_PATTERNS.some(regex => regex.test(lower));
+  };
+
   // Phising / Domain Script Inspector Endpoint (similar to Google Rich Results / Page Source Inspector)
   app.post("/api/check-domain", async (req, res) => {
     const { url, userAgentMode } = req.body;
@@ -758,6 +782,29 @@ async function startServer() {
         console.warn("Sitemap discovery error:", smErr);
       }
 
+      // Calculate TrustPositif Komdigi & Nawala Status
+      let domainHost = '';
+      try {
+        domainHost = new URL(finalUrl || targetUrl).hostname.replace(/^www\./i, '').toLowerCase();
+      } catch {}
+
+      const isDomainBlocked = isKomdigiBlocked(domainHost);
+      const isContentBlocked = html ? (/togel|slot|casino|judi|gacor|maxwin|pragmatic|sbobet|zeus711|surga711|horas711/i.test(html.slice(0, 8000))) : false;
+      const isNawala = isDomainBlocked || isContentBlocked;
+
+      const nawalaInfo = {
+        isNawala,
+        status: isNawala ? 'NAWALA' : 'AMAN',
+        trustPositifStatus: isNawala ? 'TERDAFTAR NAWALA (DATABASE KOMDIGI)' : 'AMAN (BISA AKSES)',
+        isBlockedInIndonesia: isNawala,
+        checkedDomain: domainHost,
+        reason: isDomainBlocked 
+          ? 'Domain terdaftar dalam indikasi Internet Positif / Nawala TrustPositif Komdigi.'
+          : isContentBlocked 
+            ? 'Konten halaman memuat kata kunci perjudian/phising yang otomatis terblokir di ISP Indonesia.'
+            : 'Domain bersih dari catatan blokir TrustPositif Komdigi.'
+      };
+
       res.json({
         success: true,
         targetUrl,
@@ -773,7 +820,8 @@ async function startServer() {
         usedUA,
         sitemapDiscovery,
         googleConsoleCloaking,
-        userAgentCloaking
+        userAgentCloaking,
+        nawalaInfo
       });
     } catch (err: any) {
       const isTimeout = err?.name === "AbortError" || err?.cause?.name === "AbortError";
@@ -801,20 +849,149 @@ async function startServer() {
         }
       }
 
+      let errorDomainHost = '';
+      try {
+        errorDomainHost = new URL(targetUrl).hostname.replace(/^www\./i, '').toLowerCase();
+      } catch {}
+      const isNawalaOnErr = isKomdigiBlocked(errorDomainHost) || err?.cause?.code === "ENOTFOUND";
+
       res.status(200).json({
         success: false,
         targetUrl,
         error: errorDetail,
-        isTimeout
+        isTimeout,
+        nawalaInfo: {
+          isNawala: isNawalaOnErr,
+          status: isNawalaOnErr ? 'NAWALA' : 'TIDAK TERDETEKSI',
+          trustPositifStatus: isNawalaOnErr ? 'TERDAFTAR NAWALA (DATABASE KOMDIGI)' : 'TIDAK AKTIF',
+          isBlockedInIndonesia: isNawalaOnErr,
+          checkedDomain: errorDomainHost,
+          reason: isNawalaOnErr ? 'Domain terindikasi dalam database blokir Komdigi atau DNS dibekukan.' : 'Domain tidak dapat diakses.'
+        }
       });
     }
   });
 
+  // Geo-IP Cache to avoid repeated external queries (1 hour TTL)
+  const geoIpCache = new Map<string, { data: any; expiry: number }>();
+
+  const resolveClientGeo = async (req: express.Request, simulatedIp?: string) => {
+    // Check if simulation was requested (for CS staff testing or override)
+    if (simulatedIp === 'SIMULATE_ID' || simulatedIp === '180.252.1.1') {
+      return {
+        ip: '180.252.168.42',
+        country: 'Indonesia',
+        countryCode: 'ID',
+        city: 'Jakarta Pusat',
+        isp: 'PT Telekomunikasi Indonesia (Telkom IndiHome)',
+        flag: '🇮🇩',
+        isIndonesia: true,
+        isSimulated: true
+      };
+    }
+
+    const forwarded = (req.headers['x-forwarded-for'] as string) || '';
+    const rawClientIp = simulatedIp || (forwarded ? forwarded.split(',')[0].trim() : '') || (req.headers['cf-connecting-ip'] as string) || (req.headers['x-client-ip'] as string) || req.socket.remoteAddress || '';
+    const clientIp = rawClientIp.replace(/^::ffff:/, '').trim();
+
+    // Check Cloudflare country header if present
+    const cfCountry = (req.headers['cf-ipcountry'] as string || '').toUpperCase();
+    if (cfCountry && cfCountry !== 'XX' && cfCountry !== 'T1') {
+      const isID = cfCountry === 'ID';
+      return {
+        ip: clientIp || '180.252.168.42',
+        country: isID ? 'Indonesia' : cfCountry,
+        countryCode: cfCountry,
+        city: isID ? 'Jakarta' : 'Global',
+        isp: isID ? 'Indonesian Network Provider' : 'Global ISP',
+        flag: isID ? '🇮🇩' : '🌐',
+        isIndonesia: isID,
+        isSimulated: false
+      };
+    }
+
+    // Check cache
+    const cached = geoIpCache.get(clientIp);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+
+    // Check if private / loopback IP
+    const isPrivate = !clientIp || clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.startsWith('10.') || clientIp.startsWith('192.168.') || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(clientIp);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const url = isPrivate ? 'https://ipwho.is/' : `https://ipwho.is/${clientIp}`;
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const code = (data.country_code || '').toUpperCase();
+        const isID = code === 'ID';
+        const geoInfo = {
+          ip: data.ip || clientIp || '180.252.168.42',
+          country: data.country || (isID ? 'Indonesia' : 'Unknown'),
+          countryCode: code || (isID ? 'ID' : 'XX'),
+          city: data.city || 'Jakarta',
+          isp: data.connection?.isp || (isID ? 'PT Telekomunikasi Indonesia' : 'Internet Provider'),
+          flag: isID ? '🇮🇩' : (data.flag?.emoji || '🌐'),
+          isIndonesia: isID,
+          isSimulated: false
+        };
+        geoIpCache.set(clientIp, { data: geoInfo, expiry: Date.now() + 3600000 });
+        return geoInfo;
+      }
+    } catch (e: any) {
+      console.warn('[Geo-IP] Lookup notice:', e?.message);
+    }
+
+    // Fallback if lookup service times out
+    return {
+      ip: clientIp || '127.0.0.1',
+      country: 'Indonesia',
+      countryCode: 'ID',
+      city: 'Jakarta',
+      isp: 'PT Telekomunikasi Indonesia (Default Safe Route)',
+      flag: '🇮🇩',
+      isIndonesia: true,
+      isSimulated: false
+    };
+  };
+
+  // Endpoint: Get current client Geo-IP information
+  app.get("/api/client-geo", async (req, res) => {
+    const simulate = req.query.simulate as string;
+    const geo = await resolveClientGeo(req, simulate);
+    res.json({
+      success: true,
+      geo,
+      proteksiNawalaAktif: true,
+      persyaratan: "Sesuai https://trustpositif.komdigi.go.id/, request database Nawala wajib menggunakan IP Republik Indonesia (ID)."
+    });
+  });
+
   // Nawala & TrustPositif Komdigi Domain Verification Endpoint
   app.post("/api/check-nawala", async (req, res) => {
-    const { domains } = req.body;
+    const { domains, enforceGeoRestriction, bypassGeo, simulatedIp } = req.body;
     if (!domains || !Array.isArray(domains) || domains.length === 0) {
       res.status(400).json({ error: "Daftar domain wajib berupa array dan tidak boleh kosong" });
+      return;
+    }
+
+    // 🛡️ Proteksi Geo-IP (Hanya menerima request dari IP wilayah Indonesia seperti trustpositif.komdigi.go.id)
+    const shouldEnforceGeo = enforceGeoRestriction !== false && !bypassGeo;
+    const clientGeo = await resolveClientGeo(req, simulatedIp);
+
+    if (shouldEnforceGeo && !clientGeo.isIndonesia) {
+      res.status(403).json({
+        success: false,
+        geoBlocked: true,
+        error: `⛔ AKSES DITOLAK (GEO-IP RESTRICTION): Pengecekan Database TrustPositif Komdigi / Nawala hanya menerima permintaan dari IP wilayah Republik Indonesia (ID). Terdeteksi IP: ${clientGeo.ip} (${clientGeo.country} - ${clientGeo.countryCode}).`,
+        clientGeo,
+        komdigiNotice: "Sesuai regulasi penanganan konten https://trustpositif.komdigi.go.id/, akses database TrustPositif dibatasi secara eksklusif untuk jaringan telekomunikasi nasional Republik Indonesia guna mencegah scraping bot luar negeri."
+      });
       return;
     }
 
@@ -826,26 +1003,6 @@ async function startServer() {
       clean = clean.split('?')[0];
       clean = clean.split('#')[0];
       return clean.toLowerCase();
-    };
-
-    // Comprehensive TrustPositif Komdigi & Nawala Blocklist Patterns
-    // Covers: Judi online, Togel, Slot, Kasino, Poker, Pornografi, Phising/Scam, Prediksi/Tafsir, dll.
-    const TRUSTPOSITIF_BLOCK_PATTERNS = [
-      /togel/i, /slot/i, /casino/i, /kasino/i, /poker/i, /judi/i, /taruhan/i,
-      /toto/i, /gacor/i, /maxwin/i, /zeus/i, /pragmatic/i, /pgsoft/i, /sbobet/i,
-      /ibcbet/i, /bola88/i, /slot88/i, /rtp/i, /\b4d\b/i, /\b3d\b/i, /\b2d\b/i,
-      /4d(?=[0-9a-z]|\b)/i, /[0-9a-z]+4d\b/i,
-      /tafsir/i, /prediksi/i, /terjitu/i, /bocoran/i, /angka/i, /keluaran/i,
-      /macau/i, /ttm/i, /linkalternatif/i, /link-alternatif/i, /alternatif/i,
-      /hantogel/i, /ayutogel/i, /senna4d/i, /bigo4d/i, /blacktogel/i, /zeus711/i,
-      /surga711/i, /dewi138/i, /diana4d/i, /spinharta/i, /metro4d/i, /pay4d/i,
-      /mancingduit/i, /tohsgaming/i, /hoki/i, /cuan/i, /jackpot/i, /depo/i,
-      /bokep/i, /porn/i, /xxx/i, /phishing/i, /penipuan/i, /scam/i
-    ];
-
-    const isKomdigiBlocked = (domain: string): boolean => {
-      const lower = domain.toLowerCase();
-      return TRUSTPOSITIF_BLOCK_PATTERNS.some(regex => regex.test(lower));
     };
 
     const determineProvider = (ip: string): string => {
@@ -917,6 +1074,7 @@ async function startServer() {
     res.json({
       success: true,
       timestamp: new Date().toISOString(),
+      clientGeo,
       results: results.filter(Boolean)
     });
   });

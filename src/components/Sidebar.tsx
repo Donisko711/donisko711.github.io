@@ -5,20 +5,14 @@ import {
   ShieldAlert, 
   FileText, 
   Calculator, 
-  Gift, 
   Dices, 
   CreditCard, 
   FileSpreadsheet, 
-  MessageSquare, 
-  Headphones, 
   Bot, 
   TrendingUp, 
   Trophy, 
   Sparkles, 
-  Gamepad2, 
   Flame, 
-  SearchCheck, 
-  FileBadge, 
   ChevronDown, 
   ChevronRight,
   Laptop,
@@ -30,7 +24,8 @@ import {
   Code2,
   Table,
   Radio,
-  Activity
+  Activity,
+  Gift
 } from 'lucide-react';
 import { ShiftType, UserProfile } from '../types';
 
@@ -52,8 +47,6 @@ export type ActiveView =
   | 'isi-rekapan'
   | 'laporan-cs-ganti-data'
   | 'laporan-cs-locked'
-  | 'sc-memo'
-  | 'sc-lc'
   | 'jobdesk-kasir'
   | 'wd-auto-flop'
   | 'info-wd'
@@ -62,11 +55,7 @@ export type ActiveView =
   | 'modul-togel-cara'
   | 'modul-togel-hadiah'
   | 'modul-togel-jadwal'
-  | 'modul-slot'
-  | 'modul-casino'
-  | 'modul-cari-selisih'
-  | 'modul-ganti-docs'
-  | 'modul-promo-situs';
+  | 'modul-slot';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -101,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (['generate-artikel', 'bbfs-angka-tarung', 'kalkulator-parlay'].includes(activeView)) {
       return 'alat-generate';
     }
-    if (['jobdesk-cs', 'bagi-bonus-slot', 'bagi-bonus-parlay', 'edit-pembayaran', 'laporan-cs-ganti-data', 'laporan-cs-locked', 'sc-memo', 'sc-lc'].includes(activeView)) {
+    if (['jobdesk-cs', 'bagi-bonus-slot', 'bagi-bonus-parlay', 'edit-pembayaran', 'laporan-cs-ganti-data', 'laporan-cs-locked'].includes(activeView)) {
       return 'tools-cs';
     }
     if (['jobdesk-kasir', 'wd-auto-flop', 'info-wd', 'info-data-pl'].includes(activeView)) {
@@ -719,40 +708,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   )}
                 </div>
-
-                {/* 5. SC MEMO */}
-                <button
-                  onClick={() => handleSelectView('sc-memo', undefined, 'tools-cs')}
-                  id="menu-sc-memo"
-                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                    activeView === 'sc-memo'
-                      ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <MessageSquare className="w-4 h-4 text-gray-400" />
-                    {isOpen && <span className="font-semibold text-xs">SC MEMO</span>}
-                  </div>
-                  {isOpen && <span className="text-[10px] text-[#00F3FF] font-mono">+ Add</span>}
-                </button>
-
-                {/* 6. SC LC */}
-                <button
-                  onClick={() => handleSelectView('sc-lc', undefined, 'tools-cs')}
-                  id="menu-sc-lc"
-                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                    activeView === 'sc-lc'
-                      ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Headphones className="w-4 h-4 text-gray-400" />
-                    {isOpen && <span className="font-semibold text-xs">SC LC (LIVECHAT)</span>}
-                  </div>
-                  {isOpen && <span className="text-[10px] text-[#00F3FF] font-mono">+ Add</span>}
-                </button>
               </div>
             )}
           </div>
@@ -977,27 +932,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {openCategory === 'modul-sop' && (
             <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
-              {/* PROMO SITUS */}
-              <button
-                onClick={() => handleSelectView('modul-promo-situs', undefined, 'modul-sop')}
-                id="menu-modul-promo-situs"
-                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                  activeView === 'modul-promo-situs'
-                    ? 'bg-[#1F1F1F] border border-amber-400 text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)] font-semibold'
-                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Gift className="w-4 h-4 text-yellow-400" />
-                  {isOpen && <span className="font-semibold text-xs text-yellow-400">PROMO SITUS</span>}
-                </div>
-                {isOpen && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-400/20 text-yellow-300 font-bold border border-yellow-400/30">
-                    HOT
-                  </span>
-                )}
-              </button>
-
               {/* MODUL SPORTBOOKS */}
               <button
                 onClick={() => handleSelectView('modul-sportbooks', undefined, 'modul-sop')}
@@ -1083,54 +1017,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className="flex items-center gap-2.5">
                   <Flame className="w-4 h-4 text-emerald-400" />
                   {isOpen && <span className="font-semibold text-xs">MODUL SLOT</span>}
-                </div>
-              </button>
-
-              {/* MODUL CASINO */}
-              <button
-                onClick={() => handleSelectView('modul-casino', undefined, 'modul-sop')}
-                id="menu-modul-casino"
-                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                  activeView === 'modul-casino'
-                    ? 'bg-[#1F1F1F] border border-emerald-500 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)] font-semibold'
-                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Gamepad2 className="w-4 h-4 text-emerald-400" />
-                  {isOpen && <span className="font-semibold text-xs">MODUL CASINO</span>}
-                </div>
-              </button>
-
-              {/* MODUL CARI SELISIH */}
-              <button
-                onClick={() => handleSelectView('modul-cari-selisih', undefined, 'modul-sop')}
-                id="menu-modul-cari-selisih"
-                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                  activeView === 'modul-cari-selisih'
-                    ? 'bg-[#1F1F1F] border border-emerald-500 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)] font-semibold'
-                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <SearchCheck className="w-4 h-4 text-emerald-400" />
-                  {isOpen && <span className="font-semibold text-xs">CARA CARI SELISIH</span>}
-                </div>
-              </button>
-
-              {/* MODUL GANTI DOKUMEN */}
-              <button
-                onClick={() => handleSelectView('modul-ganti-docs', undefined, 'modul-sop')}
-                id="menu-modul-ganti-docs"
-                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                  activeView === 'modul-ganti-docs'
-                    ? 'bg-[#1F1F1F] border border-emerald-500 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)] font-semibold'
-                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <FileBadge className="w-4 h-4 text-emerald-400" />
-                  {isOpen && <span className="font-semibold text-xs">CARA GANTI DOKUMEN</span>}
                 </div>
               </button>
             </div>

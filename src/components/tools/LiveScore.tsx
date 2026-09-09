@@ -40,6 +40,8 @@ import { NotificationDrawer } from './livescore/NotificationDrawer';
 import { SeasonMatchArchiveView } from './livescore/SeasonMatchArchiveView';
 import { LeagueStandingsView } from './livescore/LeagueStandingsView';
 import { playRefereeWhistle, playGoalCelebration } from '../../utils/audioAlert';
+import { SbobetSportsSidebar } from './livescore/SbobetSportsSidebar';
+import { SBOBET_SPORTS_LIST } from '../../data/sbobetSports';
 
 const INITIAL_ALERTS: LiveScoreAlertItem[] = [];
 
@@ -49,6 +51,7 @@ export const LiveScore: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [selectedSport, setSelectedSport] = useState<SportType>('all');
+  const [isMobileSportsSidebarOpen, setIsMobileSportsSidebarOpen] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<MatchStatusFilter>('ALL');
   const [regionFilter, setRegionFilter] = useState<MatchRegionFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -486,14 +489,34 @@ export const LiveScore: React.FC = () => {
     }, 2500);
   };
 
-  const sportsTabs: { id: SportType; label: string; icon: string; count?: number }[] = [
-    { id: 'all', label: 'SEMUA OLAHRAGA', icon: '🌟' },
-    { id: 'soccer', label: 'SEPAKBOLA', icon: '⚽' },
-    { id: 'basketball', label: 'BOLA BASKET', icon: '🏀' },
-    { id: 'badminton', label: 'BULU TANGKIS', icon: '🏸' },
-    { id: 'tennis', label: 'TENIS', icon: '🎾' },
-    { id: 'other', label: 'ESPORTS & LAINNYA', icon: '🎮' }
-  ];
+  // Real match counts per sport
+  const actualSportCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    matches.forEach(m => {
+      counts[m.sport] = (counts[m.sport] || 0) + 1;
+    });
+    return counts;
+  }, [matches]);
+
+  // Active SBOBET Sport Info
+  const activeSbobetSport = useMemo(() => {
+    return SBOBET_SPORTS_LIST.find(s => s.id === selectedSport);
+  }, [selectedSport]);
+
+  // SBOBET 26 Sports Navigation Tabs
+  const sportsTabs = useMemo(() => {
+    const totalCount = SBOBET_SPORTS_LIST.reduce((acc, curr) => acc + (actualSportCounts[curr.id] || curr.count), 0);
+    return [
+      { id: 'all' as SportType, label: 'SEMUA OLAHRAGA', icon: '🌐', count: totalCount, badgeColor: 'orange' as const },
+      ...SBOBET_SPORTS_LIST.map(s => ({
+        id: s.id,
+        label: s.name.toUpperCase(),
+        icon: s.icon,
+        count: actualSportCounts[s.id] || s.count,
+        badgeColor: s.badgeColor
+      }))
+    ];
+  }, [actualSportCounts]);
 
   return (
     <div className="space-y-5 animate-fade-in text-gray-100">
@@ -785,29 +808,87 @@ export const LiveScore: React.FC = () => {
       {/* View 3: Today Livescore & Schedules */}
       {activeMainTab === 'today' && (
         <>
-          {/* Sports Filter Tabs (Neon Box Style) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-        {sportsTabs.map((tab) => {
-          const isActive = selectedSport === tab.id;
-          return (
+          {/* SBOBET Quick Bar & Mobile Trigger */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {/* Mobile / Quick Access Button to SBOBET "Jenis Olahraga" Panel */}
             <button
-              key={tab.id}
               type="button"
-              onClick={() => {
-                setSelectedSport(tab.id);
-              }}
-              className={`px-4 py-2.5 rounded-2xl font-black text-xs whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-2 flex-shrink-0 border-2 ${
-                isActive
-                  ? 'bg-black border-yellow-400 text-yellow-300 shadow-[0_0_18px_rgba(250,204,21,0.4)]'
-                  : 'bg-[#0A0B12] hover:bg-[#121422] text-white border-[#00F3FF]/40 hover:border-[#00F3FF] shadow-sm'
-              }`}
+              onClick={() => setIsMobileSportsSidebarOpen(true)}
+              className="lg:hidden px-3.5 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 flex-shrink-0 bg-[#2E3C6B] text-white border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.3)]"
             >
-              <span className="text-base">{tab.icon}</span>
-              <span>{tab.label}</span>
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              <span>Menu Olahraga SBOBET (26)</span>
             </button>
-          );
-        })}
-      </div>
+
+            {/* Horizontal Sport Pills with SBOBET Counter Badges */}
+            {sportsTabs.map((tab) => {
+              const isActive = selectedSport === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSport(tab.id);
+                  }}
+                  className={`px-3 py-2 rounded-xl font-bold text-xs whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-2 flex-shrink-0 border ${
+                    isActive
+                      ? 'bg-[#253258] border-yellow-400 text-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.35)]'
+                      : 'bg-[#0E1424] hover:bg-[#162038] text-gray-200 border-[#2A3966]'
+                  }`}
+                >
+                  <span className="text-sm">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold text-white shadow-sm ${
+                    tab.badgeColor === 'orange' ? 'bg-[#E55333]' : 'bg-[#4B63AC]'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* SBOBET Two-Column Grid: Sticky SBOBET "Jenis Olahraga" Sidebar + Matches List */}
+          <div className="lg:grid lg:grid-cols-[255px_1fr] xl:grid-cols-[275px_1fr] gap-4 items-start">
+            {/* SBOBET Desktop Sidebar (Matching the user's reference image) */}
+            <div className="hidden lg:block sticky top-20">
+              <SbobetSportsSidebar
+                selectedSport={selectedSport}
+                onSelectSport={setSelectedSport}
+                actualSportCounts={actualSportCounts}
+              />
+            </div>
+
+            {/* Main Content Area */}
+            <div className="min-w-0 space-y-4">
+              {/* Active Sport Notification Banner */}
+              {selectedSport !== 'all' && activeSbobetSport && (
+                <div className="bg-[#10172A] border-2 border-[#2E3C6B] p-3 rounded-2xl flex items-center justify-between flex-wrap gap-2 shadow-lg animate-in fade-in">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{activeSbobetSport.icon}</span>
+                    <div>
+                      <div className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                        Pasaran Olahraga SBOBET Aktif
+                      </div>
+                      <div className="text-sm font-black text-white flex items-center gap-2">
+                        <span>{activeSbobetSport.name}</span>
+                        <span className={`text-[11px] px-2 py-0.5 rounded font-mono font-bold text-white shadow-sm ${
+                          activeSbobetSport.badgeColor === 'orange' ? 'bg-[#E55333]' : 'bg-[#4B63AC]'
+                        }`}>
+                          {actualSportCounts[activeSbobetSport.id] || activeSbobetSport.count} Pasaran
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSport('all')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#1C2642] hover:bg-[#27355B] text-gray-200 border border-[#3B4C82] cursor-pointer flex items-center gap-1.5 transition-all"
+                  >
+                    <span>✕ Tampilkan Semua Olahraga</span>
+                  </button>
+                </div>
+              )}
 
       {/* Filter & Search Bar (Neon Box Style) */}
       <div className="p-4 rounded-2xl bg-[#06070B] border-2 border-[#00F3FF]/60 shadow-[0_0_20px_rgba(0,243,255,0.18)] space-y-3">
@@ -1882,6 +1963,23 @@ export const LiveScore: React.FC = () => {
     })}
         </div>
       )}
+            </div>
+          </div>
+
+          {/* SBOBET Mobile Modal / Drawer (when user taps "Menu Olahraga SBOBET") */}
+          {isMobileSportsSidebarOpen && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 lg:hidden animate-in fade-in">
+              <div className="w-full max-w-sm max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl">
+                <SbobetSportsSidebar
+                  selectedSport={selectedSport}
+                  onSelectSport={setSelectedSport}
+                  isMobileModal={true}
+                  onCloseMobile={() => setIsMobileSportsSidebarOpen(false)}
+                  actualSportCounts={actualSportCounts}
+                />
+              </div>
+            </div>
+          )}
         </>
       )}
 

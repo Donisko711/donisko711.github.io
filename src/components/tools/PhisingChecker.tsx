@@ -83,6 +83,14 @@ interface DomainCheckResponse {
   } | null;
   googleConsoleCloaking?: GoogleConsoleCloakingInfo | null;
   userAgentCloaking?: UserAgentCloakingInfo | null;
+  nawalaInfo?: {
+    isNawala: boolean;
+    status: 'NAWALA' | 'AMAN' | 'TIDAK TERDETEKSI';
+    trustPositifStatus: string;
+    isBlockedInIndonesia: boolean;
+    checkedDomain: string;
+    reason: string;
+  } | null;
   error?: string;
 }
 
@@ -111,6 +119,7 @@ export const PhisingChecker: React.FC = () => {
   const [selectedHighlightLine, setSelectedHighlightLine] = useState<number | null>(null);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedSummary, setCopiedSummary] = useState<boolean>(false);
+  const [showNawalaExplanation, setShowNawalaExplanation] = useState<boolean>(false);
 
   // High-performance display state: 'findings' (only lines with phishing findings) or 'all' (paginated)
   const [scriptFilterMode, setScriptFilterMode] = useState<'findings' | 'all'>('findings');
@@ -1461,6 +1470,99 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
               </div>
             </div>
           )}
+
+          {/* 🛡️ STATUS NAWALA & TRUSTPOSITIF KOMDIGI VERIFICATION CARD */}
+          <div className={`p-4 sm:p-5 rounded-2xl border-2 transition-all space-y-3 shadow-xl ${
+            result.nawalaInfo?.isNawala
+              ? 'bg-gradient-to-r from-rose-950/70 via-red-950/50 to-rose-950/70 border-rose-500/80 shadow-[0_0_30px_rgba(244,63,94,0.25)]'
+              : 'bg-gradient-to-r from-emerald-950/60 via-emerald-900/30 to-emerald-950/60 border-emerald-500/60 shadow-[0_0_25px_rgba(16,185,129,0.2)]'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className={`p-2.5 rounded-xl border flex-shrink-0 ${
+                  result.nawalaInfo?.isNawala
+                    ? 'bg-rose-500/20 border-rose-400 text-rose-300'
+                    : 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                }`}>
+                  {result.nawalaInfo?.isNawala ? (
+                    <ShieldAlert className="w-6 h-6 text-rose-400 animate-pulse" />
+                  ) : (
+                    <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-black uppercase tracking-wider ${
+                      result.nawalaInfo?.isNawala
+                        ? 'bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.5)]'
+                        : 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.4)]'
+                    }`}>
+                      STATUS: {result.nawalaInfo?.isNawala ? 'TERBLOKIR NAWALA / KOMDIGI' : 'AMAN (BISA DIAKSES)'}
+                    </span>
+                    <span className="text-xs text-gray-300 font-mono">
+                      Database Penanganan Internet Negatif Komdigi RI
+                    </span>
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold text-white font-mono mt-1">
+                    {result.nawalaInfo?.isNawala ? (
+                      <span className="text-rose-300">
+                        Domain <span className="text-white underline font-extrabold">{result.nawalaInfo.checkedDomain || result.targetUrl}</span> terdaftar dalam status NAWALA (Internet Positif).
+                      </span>
+                    ) : (
+                      <span className="text-emerald-300">
+                        Domain <span className="text-white underline font-extrabold">{result.nawalaInfo?.checkedDomain || result.targetUrl}</span> bersih dari catatan blokir TrustPositif Komdigi.
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-gray-300 font-mono mt-0.5 leading-relaxed">
+                    {result.nawalaInfo?.reason || 'Pengecekan disinkronkan dengan database TrustPositif Komdigi dan deteksi konten terlarang.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowNawalaExplanation(!showNawalaExplanation)}
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-mono text-gray-200 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Info className="w-3.5 h-3.5 text-yellow-400" />
+                  <span>Kenapa Hasil Bisa Berbeda?</span>
+                  {showNawalaExplanation ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Collapsible Technical Explanation */}
+            {showNawalaExplanation && (
+              <div className="pt-3 mt-2 border-t border-white/10 text-xs font-mono space-y-2.5 text-gray-300 bg-black/40 p-3.5 rounded-xl animate-in fade-in">
+                <div className="flex items-center gap-2 text-yellow-300 font-bold text-xs">
+                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                  <span>Penjelasan Teknis: Perbedaan Pengecekan Script Phising vs TrustPositif Komdigi</span>
+                </div>
+                <div className="space-y-2 text-[11px] leading-relaxed text-gray-300">
+                  <div className="p-2.5 rounded-lg bg-white/5 border border-white/10">
+                    <span className="text-[#00F3FF] font-bold block mb-0.5">1. Server Phising Inspector Berada di Luar Negeri (Global Cloud Run):</span>
+                    <span>
+                      Alat Phising Checker ini dirancang untuk membongkar script HTML mentah, cloaking, dan injeksi keyword brand yang disembunyikan peretas dari Googlebot. Karena server pengunduh kode berada di luar Indonesia, server tidak melewati firewall DNS Nawala ISP lokal, sehingga status HTTP tetap bisa merespons (200 OK) untuk mengunduh source code.
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white/5 border border-white/10">
+                    <span className="text-yellow-400 font-bold block mb-0.5">2. Database TrustPositif Komdigi Resmi (https://trustpositif.komdigi.go.id/):</span>
+                    <span>
+                      Komdigi menerapkan pemblokiran di tingkat DNS & IP provider telekomunikasi di Indonesia (Telkom/Indihome, XL, Biznet, Tri, dll.). Domain yang masuk database ini tidak dapat dibuka oleh pengguna di wilayah Indonesia. Situs resmi trustpositif juga menerapkan proteksi Geo-IP (hanya menerima request dari dalam negeri).
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white/5 border border-white/10">
+                    <span className="text-emerald-400 font-bold block mb-0.5">3. Solusi Sinkronisasi Otomatis Terpadu:</span>
+                    <span>
+                      Menu Phising Checker kini telah dipadukan dengan mesin pendeteksi signature TrustPositif Komdigi, sehingga Anda dapat melihat <strong>Status Nawala</strong> sekaligus <strong>Analisis Injeksi Script Phising</strong> dalam satu layar tanpa harus mengecek terpisah.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Metric Overview Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-[#141418]/90 border border-white/10 backdrop-blur-md">

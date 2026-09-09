@@ -125,7 +125,34 @@ export interface DashboardModuleCard {
   actionMenuId: string;
 }
 
-export type SportType = 'all' | 'soccer' | 'basketball' | 'badminton' | 'tennis' | 'other';
+export type SportType =
+  | 'all'
+  | 'soccer'
+  | 'basketball'
+  | 'table_tennis'
+  | 'baseball'
+  | 'tennis'
+  | 'esports'
+  | 'american_football'
+  | 'badminton'
+  | 'beach_soccer'
+  | 'boxing'
+  | 'cycling'
+  | 'darts'
+  | 'specials'
+  | 'field_hockey'
+  | 'ice_hockey'
+  | 'mma'
+  | 'motorsport'
+  | 'billiards'
+  | 'rugby'
+  | 'volleyball'
+  | 'water_polo'
+  | 'aussie_rules'
+  | 'other'
+  | 'golf'
+  | 'handball'
+  | 'futsal';
 export type MatchStatusFilter = 'ALL' | 'LIVE' | 'FINISHED' | 'SCHEDULED';
 
 export interface CompetitorTeam {

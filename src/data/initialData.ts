@@ -739,26 +739,6 @@ export const DASHBOARD_MODULE_CARDS: DashboardModuleCard[] = [
     icon: 'Lock',
     actionMenuId: 'laporan-cs-locked'
   },
-  {
-    id: 'mod-17',
-    title: 'SC MEMO (SCRIPT CHAT)',
-    category: 'CS',
-    categoryLabel: 'CUSTOMER SERVICE',
-    description: 'Koleksi template chat internal memo, penanganan kendala bank & jawaban standar 1-klik copy.',
-    badge: 'UTAMA',
-    icon: 'MessageSquareText',
-    actionMenuId: 'sc-memo'
-  },
-  {
-    id: 'mod-18',
-    title: 'SC LIVECHAT (TEMPLATES)',
-    category: 'CS',
-    categoryLabel: 'CUSTOMER SERVICE',
-    description: 'Kumpulan respon ramah LiveChat 24/7, salam pembuka, SOP verifikasi, dan salam penutup.',
-    badge: 'UTAMA',
-    icon: 'Headphones',
-    actionMenuId: 'sc-lc'
-  },
 
   // Modul Belajar & Produk
   {
@@ -790,36 +770,6 @@ export const DASHBOARD_MODULE_CARDS: DashboardModuleCard[] = [
     badge: 'BARU',
     icon: 'Gamepad2',
     actionMenuId: 'modul-slot'
-  },
-  {
-    id: 'mod-22',
-    title: 'LIVEGAME CASINO',
-    category: 'PRODUK',
-    categoryLabel: 'INFO PRODUK & GAMES',
-    description: 'SOP & panduan permainan Baccarat, Roulette 36 angka, Sicbo dadu kopyok, dan Dragon Tiger.',
-    badge: 'BARU',
-    icon: 'Flame',
-    actionMenuId: 'modul-casino'
-  },
-  {
-    id: 'mod-23',
-    title: 'CARA CARI SELISIH BANK',
-    category: 'PRODUK',
-    categoryLabel: 'INFO PRODUK & GAMES',
-    description: 'Tutorial langkah demi langkah menemukan selisih mutasi bank vs pencatatan deposit kasir.',
-    badge: 'UTAMA',
-    icon: 'SearchCheck',
-    actionMenuId: 'modul-cari-selisih'
-  },
-  {
-    id: 'mod-24',
-    title: 'CARA GANTI DOCS & REK',
-    category: 'PRODUK',
-    categoryLabel: 'INFO PRODUK & GAMES',
-    description: 'Standar Operasional Prosedur (SOP) verifikasi ketat pergantian data pribadi akun member.',
-    badge: 'UTAMA',
-    icon: 'FileBadge',
-    actionMenuId: 'modul-ganti-docs'
   }
 ];
 
