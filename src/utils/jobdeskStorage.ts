@@ -1,7 +1,8 @@
 import { JobdeskTask } from '../types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from '../data/initialData';
 
-const LOCAL_STORAGE_KEY = 'don_isko_jobdesk_tasks_v3';
+const LOCAL_STORAGE_KEY = 'don_isko_jobdesk_tasks_v4';
+const LEGACY_STORAGE_V3 = 'don_isko_jobdesk_tasks_v3';
 const LEGACY_STORAGE_V2 = 'don_isko_jobdesk_tasks_v2';
 const LEGACY_STORAGE_V1 = 'don_isko_jobdesk_tasks_v1';
 const SYNCED_AT_KEY = 'don_isko_jobdesk_synced_at';
@@ -15,12 +16,10 @@ export function getInitialJobdeskTasks(): JobdeskTask[] {
   if (typeof window === 'undefined') return defaultTasks;
 
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY) || 
-                localStorage.getItem(LEGACY_STORAGE_V2) || 
-                localStorage.getItem(LEGACY_STORAGE_V1);
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed) && parsed.length >= defaultTasks.length) {
         return parsed.map(t => ({
           ...t,
           taskType: t.taskType || 'UTAMA'

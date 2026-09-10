@@ -3,15 +3,24 @@ import { JobdeskTask, ScriptItem, TogelPasaran, DashboardModuleCard, LaporanGant
 export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
   // Shift Pagi CS
   {
-    id: 'cs-p-1',
-    title: 'Cek serah terima tugas & saldo awal kas dari Shift Malam',
+    id: 'cs-pagi-1788866207346-0',
+    title: 'Serah Terima Kepada Shift Sebelum / Selanjutnya',
     category: 'CS',
     shift: 'PAGI',
     taskType: 'UTAMA',
     completed: false,
-    order: 1,
-    timeNote: '07:00 WIB',
-    description: 'Pastikan memo operasional dibaca dan kendala member semalam ditindaklanjuti.'
+    order: 1
+  },
+  {
+    id: 'cs-p-6',
+    title: 'Rekap keluhan member & siapkan serah terima ke Shift Sore',
+    category: 'CS',
+    shift: 'PAGI',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 2,
+    timeNote: '14:30 WIB',
+    description: 'Tuliskan catatan khusus dan kendala unsolved pada grup serah terima.'
   },
   {
     id: 'cs-p-2',
@@ -20,9 +29,20 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     shift: 'PAGI',
     taskType: 'UTAMA',
     completed: false,
-    order: 2,
+    order: 3,
     timeNote: '07:15 WIB',
     description: 'Status akun aktif dan auto-response terpasang.'
+  },
+  {
+    id: 'cs-p-1',
+    title: 'Cek serah terima tugas & saldo awal kas dari Shift Malam',
+    category: 'CS',
+    shift: 'PAGI',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 4,
+    timeNote: '07:00 WIB',
+    description: 'Pastikan memo operasional dibaca dan kendala member semalam ditindaklanjuti.'
   },
   {
     id: 'cs-p-3',
@@ -31,7 +51,7 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     shift: 'PAGI',
     taskType: 'UTAMA',
     completed: false,
-    order: 3,
+    order: 5,
     timeNote: '07:30 WIB',
     description: 'Pastikan bank yang gangguan segera di-update di running text & memo.'
   },
@@ -42,9 +62,59 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     shift: 'PAGI',
     taskType: 'UTAMA',
     completed: false,
-    order: 4,
+    order: 6,
     timeNote: '09:00 WIB',
     description: 'Verifikasi mutasi pending dengan kasir atau mutasi bank.'
+  },
+  {
+    id: 'cs-pagi-1788867053642',
+    title: 'Kirim Memo Selesai Maintenance Apabila Hari Kamis Setelah Maintenance Selesai',
+    category: 'CS',
+    shift: 'PAGI',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 7,
+    description: 'Memastikan Member Mendapatkan Informasi Bahwa Situs Telah Selesai Melakukan Maintenance dan Bisa Bermain Kembali'
+  },
+  {
+    id: 'cs-pagi-1788867069779',
+    title: 'Kirim Memo Pembagian Bonus Cashback / Rollingan / Bonus Lainnya Apabila Ada Pembagian di Hari Kamis',
+    category: 'CS',
+    shift: 'PAGI',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 8,
+    description: 'Memastikan member mendapatkan informasi pembagian bonus'
+  },
+  {
+    id: 'cs-pagi-1788867780571',
+    title: 'Cek Saldo Pulsa Setiap Situs | Jual Pulsa',
+    category: 'CS',
+    shift: 'PAGI',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 9,
+    description: 'Jika Ada yang banyak infokan untuk jual ..'
+  },
+  {
+    id: 'cs-pagi-1788867817523',
+    title: 'Bikin Bukti Kemenangan TOGEL | SLOT | LIVEGAMES',
+    category: 'CS',
+    shift: 'PAGI',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 10,
+    description: 'Setiap Shift Wajib Membuat Minimal 3'
+  },
+  {
+    id: 'cs-pagi-1788867985651-0',
+    title: 'Cek Docs Laporan 0.0',
+    category: 'CS',
+    shift: 'PAGI',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 11,
+    description: 'Pastikan Kendala Yang Terjadi Dalam Shift Sudah DI Catat Di Laporan 0.0'
   },
   {
     id: 'cs-p-5',
@@ -53,20 +123,9 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     shift: 'PAGI',
     taskType: 'SAMBILAN',
     completed: false,
-    order: 5,
+    order: 7,
     timeNote: '11:00 WIB',
-    description: 'Kirim broadcast event harian ke channel promo resmi saat senggang.'
-  },
-  {
-    id: 'cs-p-6',
-    title: 'Rekap keluhan member & siapkan serah terima ke Shift Sore',
-    category: 'CS',
-    shift: 'PAGI',
-    taskType: 'UTAMA',
-    completed: false,
-    order: 6,
-    timeNote: '14:30 WIB',
-    description: 'Tuliskan catatan khusus dan kendala unsolved pada grup serah terima.'
+    description: 'Kirim broadcast event harian ke channel promo resmi.'
   },
 
   // Shift Sore CS
@@ -90,7 +149,7 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     completed: false,
     order: 2,
     timeNote: '15:30 WIB',
-    description: 'Cek jam tutup pasaran dan standby pertanyaan nomor result member saat senggang.'
+    description: 'Cek jam tutup pasaran dan standby pertanyaan nomor result member.'
   },
   {
     id: 'cs-s-3',
@@ -112,7 +171,7 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     completed: false,
     order: 4,
     timeNote: '19:30 WIB',
-    description: 'Cek keabsahan screenshot klaim scatter di grup klaim saat luang.'
+    description: 'Cek keabsahan screenshot klaim scatter di grup klaim.'
   },
   {
     id: 'cs-s-5',
@@ -124,6 +183,25 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     order: 5,
     timeNote: '22:30 WIB',
     description: 'Pastikan data ganti rekening sudah tervalidasi lengkap.'
+  },
+  {
+    id: 'cs-sore-1788866207346-1',
+    title: 'Serah Terima Kepada Shift Sebelum / Selanjutnya',
+    category: 'CS',
+    shift: 'SORE',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 6
+  },
+  {
+    id: 'cs-sore-1788867985651-1',
+    title: 'Cek Docs Laporan 0.0',
+    category: 'CS',
+    shift: 'SORE',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 7,
+    description: 'Pastikan Kendala Yang Terjadi Dalam Shift Sudah DI Catat Di Laporan 0.0'
   },
 
   // Shift Malam CS
@@ -147,7 +225,7 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     completed: false,
     order: 2,
     timeNote: '23:15 WIB',
-    description: 'Update result HK dan atasi pertanyaan klaim kemenangan member saat senggang.'
+    description: 'Update result HK dan atasi pertanyaan klaim kemenangan member.'
   },
   {
     id: 'cs-m-3',
@@ -169,7 +247,7 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     completed: false,
     order: 4,
     timeNote: '03:00 WIB',
-    description: 'Cek berkala saat senggang dan laporkan IP mencurigakan untuk dikunci sementara.'
+    description: 'Laporkan IP mencurigakan untuk dikunci sementara.'
   },
   {
     id: 'cs-m-5',
@@ -181,6 +259,25 @@ export const INITIAL_JOBDESK_CS: JobdeskTask[] = [
     order: 5,
     timeNote: '06:30 WIB',
     description: 'Rangkum total interaksi, keluhan terselesaikan, dan catatan pending.'
+  },
+  {
+    id: 'cs-malam-1788866207346-2',
+    title: 'Serah Terima Kepada Shift Sebelum / Selanjutnya',
+    category: 'CS',
+    shift: 'MALAM',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 6
+  },
+  {
+    id: 'cs-malam-1788867985651-2',
+    title: 'Cek Docs Laporan 0.0',
+    category: 'CS',
+    shift: 'MALAM',
+    taskType: 'UTAMA',
+    completed: false,
+    order: 8,
+    description: 'Pastikan Kendala Yang Terjadi Dalam Shift Sudah DI Catat Di Laporan 0.0'
   }
 ];
 

@@ -211,6 +211,17 @@ async function startServer() {
 
         // Standard object format with version & updatedAt
         if (parsed && Array.isArray(parsed.tasks)) {
+          const defaultTasks = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+          const existingIds = new Set(parsed.tasks.map((t: JobdeskTask) => t.id));
+          const missingDefaults = defaultTasks.filter(d => !existingIds.has(d.id));
+          if (missingDefaults.length > 0) {
+            parsed.tasks = [...parsed.tasks, ...missingDefaults];
+            parsed.version = (parsed.version || 1) + 1;
+            parsed.updatedAt = new Date().toISOString();
+            try {
+              fs.writeFileSync(JOBDESK_FILE, JSON.stringify(parsed, null, 2), "utf-8");
+            } catch {}
+          }
           return {
             version: typeof parsed.version === 'number' ? parsed.version : 1,
             updatedAt: parsed.updatedAt || new Date().toISOString(),
