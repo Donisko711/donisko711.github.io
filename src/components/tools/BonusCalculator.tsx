@@ -1250,6 +1250,14 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
         }
       }
 
+      // Check Explicit User ID line (e.g. User ID: 12345678, Username: 12345678)
+      const explicitUser = line.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i);
+      if (explicitUser) {
+        const u = explicitUser[1].trim();
+        allUsersSet.add(u);
+        if (!detectedUser) detectedUser = u;
+      }
+
       // Check Ext. ID line
       if (line.includes('Ext. ID :') || line.includes('Ext. ID:')) {
         const parts = line.split(':');
@@ -1260,7 +1268,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
           if (rId) allRoundIdsSet.add(rId);
         }
 
-        // Line right after Ext. ID is usually the User ID
+        // Line right after Ext. ID is usually the User ID (mendukung user ID full angka e.g. 12345678)
         if (i + 1 < lines.length) {
           const nextLine = lines[i + 1];
           const nextLower = nextLine.toLowerCase();
@@ -1268,9 +1276,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
             !nextLower.includes('credit') && 
             !nextLower.includes('debit') && 
             !nextLower.includes('ext.') &&
+            !nextLower.includes('balance') &&
             !nextLine.includes(':') &&
             !nextLine.includes(' - ') &&
-            !nextLine.match(/^\d{8,}$/) &&
+            !/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(nextLine) &&
             nextLine.length >= 3 &&
             nextLine.length <= 30
           ) {
@@ -1288,8 +1297,9 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
           !candLower.includes('credit') &&
           !candLower.includes('debit') &&
           !candLower.includes('ext.') &&
+          !candLower.includes('balance') &&
           !candidateUser.includes(':') &&
-          !candidateUser.match(/^\d{8,}$/) &&
+          !/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(candidateUser) &&
           candidateUser.length >= 3 &&
           candidateUser.length <= 30
         ) {

@@ -788,7 +788,7 @@ export function getBasketballMatches(dateStr?: string): LiveMatch[] {
       currentHomePeriods = fix.periodScores.home;
       currentAwayPeriods = fix.periodScores.away;
     } else if (isToday) {
-      if (diffMinutes < -15) {
+      if (diffMinutes < 0) {
         // Scheduled
         status = 'SCHEDULED';
         statusDetail = wibTime;

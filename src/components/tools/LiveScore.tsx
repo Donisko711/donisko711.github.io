@@ -343,6 +343,45 @@ export const LiveScore: React.FC = () => {
     return () => clearInterval(timer);
   }, [autoRefresh, loadMatches]);
 
+  // Helper to reliably check if a match has finished playing
+  const isFinishedMatch = (m: LiveMatch): boolean => {
+    if (m.status === 'FINISHED') return true;
+    const detail = (m.statusDetail || '').toLowerCase();
+    const clock = (m.displayClock || '').toLowerCase();
+    const desc = (m.elapsedDetail || '').toLowerCase();
+    if (
+      detail.includes('ft') ||
+      detail.includes('selesai') ||
+      detail.includes('final') ||
+      detail.includes('finished') ||
+      detail.includes('ended') ||
+      detail.includes('batal') ||
+      clock === 'ft' ||
+      clock === 'final' ||
+      desc.includes('selesai') ||
+      desc.includes('full time')
+    ) {
+      return true;
+    }
+    if (m.rawUtcDate) {
+      const kickoff = new Date(m.rawUtcDate).getTime();
+      if (!isNaN(kickoff)) {
+        const diffMins = (Date.now() - kickoff) / 60000;
+        if (m.sport === 'soccer' && diffMins > 125) return true;
+        if (m.sport === 'basketball' && diffMins > 140) return true;
+        if (['table_tennis', 'badminton', 'tennis', 'volleyball'].includes(m.sport) && diffMins > 105) return true;
+      }
+    }
+    return false;
+  };
+
+  // Helper to reliably check if a match is actively live in-play
+  const isLiveMatch = (m: LiveMatch): boolean => {
+    if (isFinishedMatch(m)) return false;
+    if (m.status === 'POSTPONED' || m.status === 'SCHEDULED') return false;
+    return m.status === 'LIVE';
+  };
+
   // Filter matches
   const filteredMatches = useMemo(() => {
     return matches.filter((m) => {
@@ -351,10 +390,16 @@ export const LiveScore: React.FC = () => {
         return false;
       }
 
-      // Status filter
-      if (statusFilter === 'LIVE' && m.status !== 'LIVE') return false;
-      if (statusFilter === 'FINISHED' && m.status !== 'FINISHED') return false;
-      if (statusFilter === 'SCHEDULED' && m.status !== 'SCHEDULED') return false;
+      // Status filter - Pastikan pertandingan yang telah selesai TIDAK PERNAH muncul di LIVE
+      if (statusFilter === 'LIVE') {
+        if (!isLiveMatch(m) || isFinishedMatch(m)) return false;
+      }
+      if (statusFilter === 'FINISHED') {
+        if (!isFinishedMatch(m)) return false;
+      }
+      if (statusFilter === 'SCHEDULED') {
+        if (isLiveMatch(m) || isFinishedMatch(m)) return false;
+      }
 
       // SBOBET Market Region filter
       if (regionFilter !== 'ALL') {
@@ -406,9 +451,9 @@ export const LiveScore: React.FC = () => {
   };
 
   // Summary counts
-  const liveCount = useMemo(() => matches.filter((m) => m.status === 'LIVE').length, [matches]);
-  const finishedCount = useMemo(() => matches.filter((m) => m.status === 'FINISHED').length, [matches]);
-  const scheduledCount = useMemo(() => matches.filter((m) => m.status === 'SCHEDULED').length, [matches]);
+  const liveCount = useMemo(() => matches.filter((m) => isLiveMatch(m)).length, [matches]);
+  const finishedCount = useMemo(() => matches.filter((m) => isFinishedMatch(m)).length, [matches]);
+  const scheduledCount = useMemo(() => matches.filter((m) => !isLiveMatch(m) && !isFinishedMatch(m)).length, [matches]);
 
   // SBOBET Region match counts
   const regionCounts = useMemo(() => {
@@ -429,15 +474,15 @@ export const LiveScore: React.FC = () => {
     text += `⚔️ Pertandingan : ${m.homeTeam.name} vs ${m.awayTeam.name}\n`;
     text += `📅 Jadwal / Waktu : ${m.wibDate} | ${m.wibTime}\n`;
     
-    if (m.status === 'LIVE') {
+    if (isFinishedMatch(m)) {
+      text += `✅ Status : Selesai (Full Time)\n`;
+      text += `🎯 Skor Akhir : ${m.homeTeam.score} - ${m.awayTeam.score}\n`;
+    } else if (isLiveMatch(m)) {
       text += `🔴 Status : LIVE (${m.statusDetail})\n`;
       if (m.elapsedDetail) {
         text += `⏱️ Durasi Laga : ${m.elapsedDetail}\n`;
       }
       text += `⚽ Skor Sementara : ${m.homeTeam.score} - ${m.awayTeam.score}\n`;
-    } else if (m.status === 'FINISHED') {
-      text += `✅ Status : Selesai (Full Time)\n`;
-      text += `🎯 Skor Akhir : ${m.homeTeam.score} - ${m.awayTeam.score}\n`;
     } else {
       text += `⏰ Status : Terjadwal (Belum Dimulai)\n`;
       text += `📌 Kick-off : ${m.wibTime}\n`;
@@ -1118,7 +1163,7 @@ export const LiveScore: React.FC = () => {
               <div className="flex items-center gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-yellow-400/50">
                 {groupedByLeague.map((g) => {
                   const isCurrentOpen = expandedLeague === g.league;
-                  const gHasLive = g.matches.some((m) => m.status === 'LIVE');
+                  const gHasLive = g.matches.some((m) => isLiveMatch(m));
                   return (
                     <button
                       key={g.league}
@@ -1163,8 +1208,8 @@ export const LiveScore: React.FC = () => {
           {/* League Accordion Cards */}
           {groupedByLeague.map((group) => {
             const isLeagueOpen = expandedLeague === group.league;
-            const hasLiveMatch = group.matches.some((m) => m.status === 'LIVE');
-            const liveMatchesCount = group.matches.filter((m) => m.status === 'LIVE').length;
+            const hasLiveMatch = group.matches.some((m) => isLiveMatch(m));
+            const liveMatchesCount = group.matches.filter((m) => isLiveMatch(m)).length;
 
             return (
               <div 
@@ -1292,9 +1337,9 @@ export const LiveScore: React.FC = () => {
                 {group.matches.map((match) => {
                   const isExpanded = expandedMatchId === match.id;
                   const isCopied = copiedMatchId === match.id;
-                  const isLive = match.status === 'LIVE';
-                  const isFinished = match.status === 'FINISHED';
-                  const isScheduled = match.status === 'SCHEDULED' || (!isLive && !isFinished);
+                  const isFinished = isFinishedMatch(match);
+                  const isLive = !isFinished && isLiveMatch(match);
+                  const isScheduled = !isFinished && !isLive;
                   const matchEvents = match.events || [];
                   const homeEvents = matchEvents.filter((e) => e.team === 'home');
                   const awayEvents = matchEvents.filter((e) => e.team === 'away');
@@ -1522,15 +1567,17 @@ export const LiveScore: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Desktop Live Events Strip (Pencetak Gol & Kartu Kuning/Merah Langsung Terlihat) */}
-                      {(hasEvents || isLive) && (
+                      {/* Desktop Live Events Strip (Pencetak Gol, Kartu Kuning/Merah & Poin Basket Langsung Terlihat) */}
+                      {(hasEvents || isLive || isFinished) && (
                         <div className="mt-2.5 pt-2.5 border-t border-white/10 flex items-center justify-between gap-3 text-xs">
                           {/* 1. Status / Badge Legend (w-48) */}
                           <div className="w-48 flex-shrink-0 flex items-center gap-1.5 text-[10px] font-mono text-gray-400">
                             <span className="px-1.5 py-0.5 rounded bg-yellow-400/15 text-yellow-300 border border-yellow-400/30 text-[9px] font-black uppercase tracking-wider">
                               Catatan Laga
                             </span>
-                            <span className="text-gray-300 font-bold truncate">Gol &amp; Kartu:</span>
+                            <span className="text-gray-300 font-bold truncate">
+                              {match.sport === 'basketball' ? 'Poin & Top Scorer:' : 'Gol & Kartu:'}
+                            </span>
                           </div>
 
                           {/* 2. Home Events (Right-aligned under Home Team) */}
@@ -1539,6 +1586,7 @@ export const LiveScore: React.FC = () => {
                               homeEvents.map((ev, idx) => {
                                 const isGoal = ev.type === 'goal';
                                 const isRed = ev.type === 'red_card' || ev.cardType === 'red';
+                                const isPoint = ev.type === 'point';
                                 return (
                                   <span
                                     key={`h-${idx}`}
@@ -1547,19 +1595,23 @@ export const LiveScore: React.FC = () => {
                                         ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
                                         : isRed
                                         ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.25)]'
+                                        : isPoint
+                                        ? 'bg-orange-950/80 border-orange-500/70 text-orange-300 shadow-[0_0_10px_rgba(249,115,22,0.25)]'
                                         : 'bg-amber-950/80 border-amber-400/70 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.25)]'
                                     }`}
-                                    title={`${ev.player} ${ev.minute ? `(${ev.minute})` : ''} - ${isGoal ? 'Gol' : isRed ? 'Kartu Merah' : 'Kartu Kuning'}${ev.detail ? ` (${ev.detail})` : ''}`}
+                                    title={`${ev.player} ${ev.minute ? `(${ev.minute})` : ''} - ${isGoal ? 'Gol' : isRed ? 'Kartu Merah' : isPoint ? 'Poin' : 'Kartu Kuning'}${ev.detail ? ` (${ev.detail})` : ''}`}
                                   >
-                                    <span className="text-xs">{isGoal ? '⚽' : isRed ? '🟥' : '🟨'}</span>
-                                    <span className="font-black text-white truncate max-w-[130px]">{ev.player}</span>
+                                    <span className="text-xs">{isGoal ? '⚽' : isRed ? '🟥' : isPoint ? '🏀' : '🟨'}</span>
+                                    <span className="font-black text-white truncate max-w-[140px]">{ev.player}</span>
                                     <span className="text-yellow-400 font-black bg-black/50 px-1 py-0.2 rounded">{ev.minute || ''}</span>
                                   </span>
                                 );
                               })
-                            ) : isLive ? (
-                              <span className="text-[10px] font-mono text-gray-500 italic">-</span>
-                            ) : null}
+                            ) : (
+                              <span className="text-[10px] font-mono text-gray-500 italic">
+                                {isLive ? 'Belum ada gol' : '-'}
+                              </span>
+                            )}
                           </div>
 
                           {/* 3. Center Divider / Midpoint (w-28) */}
@@ -1573,6 +1625,7 @@ export const LiveScore: React.FC = () => {
                               awayEvents.map((ev, idx) => {
                                 const isGoal = ev.type === 'goal';
                                 const isRed = ev.type === 'red_card' || ev.cardType === 'red';
+                                const isPoint = ev.type === 'point';
                                 return (
                                   <span
                                     key={`a-${idx}`}
@@ -1581,19 +1634,23 @@ export const LiveScore: React.FC = () => {
                                         ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
                                         : isRed
                                         ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.25)]'
+                                        : isPoint
+                                        ? 'bg-orange-950/80 border-orange-500/70 text-orange-300 shadow-[0_0_10px_rgba(249,115,22,0.25)]'
                                         : 'bg-amber-950/80 border-amber-400/70 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.25)]'
                                     }`}
-                                    title={`${ev.player} ${ev.minute ? `(${ev.minute})` : ''} - ${isGoal ? 'Gol' : isRed ? 'Kartu Merah' : 'Kartu Kuning'}${ev.detail ? ` (${ev.detail})` : ''}`}
+                                    title={`${ev.player} ${ev.minute ? `(${ev.minute})` : ''} - ${isGoal ? 'Gol' : isRed ? 'Kartu Merah' : isPoint ? 'Poin' : 'Kartu Kuning'}${ev.detail ? ` (${ev.detail})` : ''}`}
                                   >
-                                    <span className="text-xs">{isGoal ? '⚽' : isRed ? '🟥' : '🟨'}</span>
-                                    <span className="font-black text-white truncate max-w-[130px]">{ev.player}</span>
+                                    <span className="text-xs">{isGoal ? '⚽' : isRed ? '🟥' : isPoint ? '🏀' : '🟨'}</span>
+                                    <span className="font-black text-white truncate max-w-[140px]">{ev.player}</span>
                                     <span className="text-yellow-400 font-black bg-black/50 px-1 py-0.2 rounded">{ev.minute || ''}</span>
                                   </span>
                                 );
                               })
-                            ) : isLive ? (
-                              <span className="text-[10px] font-mono text-gray-500 italic">-</span>
-                            ) : null}
+                            ) : (
+                              <span className="text-[10px] font-mono text-gray-500 italic">
+                                {isLive ? 'Belum ada gol' : '-'}
+                              </span>
+                            )}
                           </div>
 
                           {/* 5. CS Spacer (w-44) */}
@@ -1716,13 +1773,13 @@ export const LiveScore: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Mobile Live Events Bar (Gol, Kartu Kuning & Merah Langsung Terlihat) */}
-                        {(hasEvents || isLive) && (
+                        {/* Mobile Live Events Bar (Gol, Kartu Kuning, Merah & Poin Basket Langsung Terlihat) */}
+                        {(hasEvents || isLive || isFinished) && (
                           <div className="pt-2 border-t border-white/10 space-y-1.5 bg-black/60 p-2.5 rounded-xl border border-white/10">
                             <div className="flex items-center justify-between text-[10px] font-mono text-gray-400">
                               <span className="flex items-center gap-1.5 text-yellow-300 font-bold">
-                                <span>⚽ 🟨 🟥</span>
-                                <span>Catatan Gol &amp; Kartu:</span>
+                                <span>{match.sport === 'basketball' ? '🏀' : '⚽ 🟨 🟥'}</span>
+                                <span>{match.sport === 'basketball' ? 'Catatan Top Scorer Basket:' : 'Catatan Gol & Kartu:'}</span>
                               </span>
                               {match.elapsedDetail && isLive && (
                                 <span className="text-[#00F3FF] text-[9px] font-bold">{match.elapsedDetail}</span>
@@ -1739,6 +1796,7 @@ export const LiveScore: React.FC = () => {
                                     {homeEvents.map((ev, idx) => {
                                       const isGoal = ev.type === 'goal';
                                       const isRed = ev.type === 'red_card' || ev.cardType === 'red';
+                                      const isPoint = ev.type === 'point';
                                       return (
                                         <span
                                           key={`mh-${idx}`}
@@ -1747,10 +1805,12 @@ export const LiveScore: React.FC = () => {
                                               ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-300 font-bold'
                                               : isRed
                                               ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 font-bold'
+                                              : isPoint
+                                              ? 'bg-orange-950/80 border-orange-500/70 text-orange-300 font-bold'
                                               : 'bg-amber-950/80 border-amber-400/70 text-amber-300 font-bold'
                                           }`}
                                         >
-                                          <span>{isGoal ? '⚽' : isRed ? '🟥' : '🟨'}</span>
+                                          <span>{isGoal ? '⚽' : isRed ? '🟥' : isPoint ? '🏀' : '🟨'}</span>
                                           <span className="text-white font-bold">{ev.player}</span>
                                           <span className="text-yellow-400 font-black">{ev.minute || ''}</span>
                                         </span>
@@ -1767,6 +1827,7 @@ export const LiveScore: React.FC = () => {
                                     {awayEvents.map((ev, idx) => {
                                       const isGoal = ev.type === 'goal';
                                       const isRed = ev.type === 'red_card' || ev.cardType === 'red';
+                                      const isPoint = ev.type === 'point';
                                       return (
                                         <span
                                           key={`ma-${idx}`}
@@ -1775,10 +1836,12 @@ export const LiveScore: React.FC = () => {
                                               ? 'bg-emerald-950/80 border-emerald-500/70 text-emerald-300 font-bold'
                                               : isRed
                                               ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 font-bold'
+                                              : isPoint
+                                              ? 'bg-orange-950/80 border-orange-500/70 text-orange-300 font-bold'
                                               : 'bg-amber-950/80 border-amber-400/70 text-amber-300 font-bold'
                                           }`}
                                         >
-                                          <span>{isGoal ? '⚽' : isRed ? '🟥' : '🟨'}</span>
+                                          <span>{isGoal ? '⚽' : isRed ? '🟥' : isPoint ? '🏀' : '🟨'}</span>
                                           <span className="text-white font-bold">{ev.player}</span>
                                           <span className="text-yellow-400 font-black">{ev.minute || ''}</span>
                                         </span>
@@ -1789,7 +1852,7 @@ export const LiveScore: React.FC = () => {
                               </div>
                             ) : (
                               <div className="text-[10px] font-mono text-gray-500 italic">
-                                Belum ada catatan gol atau kartu saat ini
+                                {isLive ? '⚽ Pertandingan berjalan • Belum ada gol atau kartu' : 'Belum ada catatan laga'}
                               </div>
                             )}
                           </div>

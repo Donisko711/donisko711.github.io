@@ -2,6 +2,82 @@
 <html lang="id" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        try {
+          var w = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : self);
+          if (!w) return;
+
+          // Safe reference to initial fetch
+          var _fetch = typeof w.fetch === 'function' ? w.fetch.bind(w) : w.fetch;
+
+          // Helper to define getter + setter on target
+          var defineGetterSetter = function(target, prop, enumerable) {
+            try {
+              Object.defineProperty(target, prop, {
+                get: function() { return _fetch; },
+                set: function(val) { _fetch = val; },
+                configurable: true,
+                enumerable: enumerable !== false
+              });
+              return true;
+            } catch (_) {
+              return false;
+            }
+          };
+
+          // 1. Define directly on window
+          defineGetterSetter(w, 'fetch', true);
+
+          // 2. Walk the entire prototype chain of window (Window.prototype, WindowProperties, EventTarget, etc.)
+          var curr = w;
+          while (curr) {
+            try {
+              var desc = Object.getOwnPropertyDescriptor(curr, 'fetch');
+              if (desc) {
+                defineGetterSetter(curr, 'fetch', desc.enumerable !== false);
+              }
+            } catch (_) {}
+            curr = Object.getPrototypeOf(curr);
+          }
+
+          // 3. Specifically ensure Window.prototype is covered if present
+          if (w.Window && w.Window.prototype) {
+            defineGetterSetter(w.Window.prototype, 'fetch', true);
+          }
+
+          // 4. Suppress any uncaught TypeError if window.fetch assignment is attempted on a non-configurable getter
+          var prevOnError = w.onerror;
+          w.onerror = function(msg, url, line, col, err) {
+            var text = (msg || (err && err.message) || '') + '';
+            if (text.indexOf('fetch') !== -1 && text.indexOf('getter') !== -1) {
+              return true; // suppresses uncaught error
+            }
+            if (typeof prevOnError === 'function') {
+              return prevOnError.apply(this, arguments);
+            }
+            return false;
+          };
+
+          w.addEventListener('error', function(e) {
+            var text = (e && (e.message || (e.error && e.error.message))) || '';
+            if (typeof text === 'string' && text.indexOf('fetch') !== -1 && text.indexOf('getter') !== -1) {
+              e.preventDefault();
+              if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+              else if (e.stopPropagation) e.stopPropagation();
+              return true;
+            }
+          }, true);
+
+          w.addEventListener('unhandledrejection', function(e) {
+            var text = (e && e.reason && (e.reason.message || e.reason + '')) || '';
+            if (typeof text === 'string' && text.indexOf('fetch') !== -1 && text.indexOf('getter') !== -1) {
+              e.preventDefault();
+            }
+          });
+        } catch (_) {}
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard Bantuan Kerja CS & Kasir</title>
     <link rel="icon" type="image/jpeg" href="https://ik.imagekit.io/donisko711/donisko711.jpg" />

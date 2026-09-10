@@ -204,12 +204,22 @@ export const InfoDataPL: React.FC<InfoDataPLProps> = () => {
       }
 
       let userId = '';
-      const userMatch = line.match(/change\s+user\s+info\s+([a-zA-Z0-9_\-]+)/i);
-      if (userMatch) {
-        userId = userMatch[1].trim();
+      const explicitUser = line.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i)
+        || line.match(/change\s+user\s+info\s+([a-zA-Z0-9_\-\.]+)/i);
+      if (explicitUser) {
+        userId = explicitUser[1].trim();
       } else {
-        const tokens = line.split(/\s+|\t/);
-        userId = tokens[tokens.length - 1] || `user_${count}`;
+        const tokens = line.split(/\s+|\t/).map(t => t.trim()).filter(Boolean);
+        const candidate = tokens.find(t => 
+          !/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(t) &&
+          !/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(t) &&
+          !/^\d{2}:\d{2}(:\d{2})?$/.test(t) &&
+          !/^(change|user|info|acc|bank|rek|done)$/i.test(t) &&
+          !t.includes('=>') &&
+          !t.includes(':') &&
+          t.length >= 3
+        );
+        userId = candidate || tokens[tokens.length - 1] || `user_${count}`;
       }
 
       let oldName = 'MEMBER';

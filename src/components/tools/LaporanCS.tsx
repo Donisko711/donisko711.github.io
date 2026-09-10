@@ -232,14 +232,25 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
     let detectedRawDate = '';
 
     lines.forEach((line, index) => {
-      // Find user ID
+      // Find user ID (mendukung user ID full angka maupun alfanumerik)
       let userId = '';
-      const userMatch = line.match(/change\s+user\s+info\s+([a-zA-Z0-9_\-]+)/i);
-      if (userMatch) {
-        userId = userMatch[1].trim();
+      const explicitUser = line.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i)
+        || line.match(/change\s+user\s+info\s+([a-zA-Z0-9_\-\.]+)/i);
+      if (explicitUser) {
+        userId = explicitUser[1].trim();
       } else {
-        const tokens = line.split(/\s+|\t/);
-        userId = tokens[tokens.length - 1] || `user_${index + 1}`;
+        const tokens = line.split(/\s+|\t/).map(t => t.trim()).filter(Boolean);
+        // Cari token kandidat user ID (bisa angka semua misal 88726155 atau huruf, bukan tanggal/jam/keyword)
+        const candidate = tokens.find(t => 
+          !/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(t) &&
+          !/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(t) &&
+          !/^\d{2}:\d{2}(:\d{2})?$/.test(t) &&
+          !/^(bca|bni|bri|mandiri|cimb|danamon|dana|ovo|gopay|linkaja|shopeepay|qris|change|user|info|done|rek|bank|acc)$/i.test(t) &&
+          !t.includes('=>') &&
+          !t.includes(':') &&
+          t.length >= 3
+        );
+        userId = candidate || tokens[tokens.length - 1] || `user_${index + 1}`;
       }
 
       // Date and Time
@@ -382,29 +393,39 @@ NB : Pergantian Dilakukan Pada Jenis Bank ${item.oldBank} To ${item.newBank}`;
       let kendala = 'Kendala Akun';
       let userId = '';
 
-      // Pattern: Action (reason) username
-      // e.g.: Locked (nomor rekening tidak valid ) rubicon
-      // or: Unlocked () rubicon
-      const detailedMatch = line.match(/(?:locked|unlocked)\s*\(([^)]*)\)\s+([^\s\t\r\n]+)$/i);
-      if (detailedMatch) {
-        const rawReason = detailedMatch[1].trim();
-        userId = detailedMatch[2].trim();
-        if (rawReason) {
-          kendala = cleanReason(rawReason);
-        } else if (isUnlocked) {
-          kendala = 'Buka Kunci Akun';
-        } else {
-          kendala = 'Kendala Akun';
-        }
+      // Ekstrak kendala/reason di dalam kurung (...)
+      const reasonMatch = line.match(/(?:locked|unlocked)\s*\(([^)]*)\)/i);
+      if (reasonMatch && reasonMatch[1].trim()) {
+        kendala = cleanReason(reasonMatch[1].trim());
+      } else if (isUnlocked) {
+        kendala = 'Buka Kunci Akun';
       } else {
-        const tokens = line.split(/\s+|\t/);
-        userId = tokens[tokens.length - 1] || `member${index + 1}`;
-        const reasonMatch = line.match(/(?:locked|unlocked)\s*\(([^)]*)\)/i);
-        if (reasonMatch && reasonMatch[1].trim()) {
-          kendala = cleanReason(reasonMatch[1].trim());
-        } else if (isUnlocked) {
-          kendala = 'Buka Kunci Akun';
-        }
+        kendala = 'Kendala Akun';
+      }
+
+      // Deteksi User ID (termasuk user id angka semua e.g. 12345678, 88726155)
+      const explicitUser = line.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i);
+      const afterActionMatch = line.match(/(?:locked|unlocked)\s*(?:\([^)]*\))?\s+([a-zA-Z0-9_\-\.]+)$/i);
+      const beforeActionMatch = line.match(/^([a-zA-Z0-9_\-\.]+)\s+(?:locked|unlocked)/i);
+
+      if (explicitUser) {
+        userId = explicitUser[1].trim();
+      } else if (afterActionMatch) {
+        userId = afterActionMatch[1].trim();
+      } else if (beforeActionMatch) {
+        userId = beforeActionMatch[1].trim();
+      } else {
+        const tokens = line.split(/\s+|\t/).map(t => t.trim()).filter(Boolean);
+        const candidate = tokens.find(t => 
+          !/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(t) &&
+          !/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(t) &&
+          !/^\d{2}:\d{2}(:\d{2})?$/.test(t) &&
+          !/^(locked|unlocked|jvsaacs\d+|jvsaaks\d+|staff\w+)$/i.test(t) &&
+          !t.startsWith('(') &&
+          !t.endsWith(')') &&
+          t.length >= 3
+        );
+        userId = candidate || tokens[tokens.length - 1] || `member${index + 1}`;
       }
 
       // Staff match

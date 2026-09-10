@@ -322,9 +322,9 @@ export const BonusParlayCalculator: React.FC = () => {
       }
     }
 
-    // 2. Ekstrak User ID
+    // 2. Ekstrak User ID (termasuk jika User ID full angka e.g. 12345678)
     let userId = '';
-    const userExplicit = trimmed.match(/(?:User\s*ID|Username|User)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i);
+    const userExplicit = trimmed.match(/(?:User\s*ID|Username|ID\s*User|ID\s*Member|User)\s*[:=]?\s*([a-zA-Z0-9_\-\.]+)/i);
     if (userExplicit) {
       userId = userExplicit[1].trim();
     } else {
@@ -332,7 +332,7 @@ export const BonusParlayCalculator: React.FC = () => {
       if (extMatch) {
         userId = extMatch[1].trim();
       } else {
-        const itwMatch = trimmed.match(/([a-zA-Z0-9_\-\.]+)\s*\n\s*ITWLFA/i);
+        const itwMatch = trimmed.match(/([a-zA-Z0-9_\-\.]+)\s*\n\s*(?:ITWLFA|ITWL|Keoaa|jvsaa)/i);
         if (itwMatch) {
           userId = itwMatch[1].trim();
         }
@@ -340,15 +340,18 @@ export const BonusParlayCalculator: React.FC = () => {
     }
     if (!userId) userId = 'panjol12';
 
-    // 3. Ekstrak Nomor Tiket
+    // 3. Ekstrak Nomor Tiket (pastikan tidak tertukar jika userId adalah angka semua)
     let noTiket = '';
     const ticketExplicit = trimmed.match(/(?:Details\s+|Tiket\s*(?:ID|No)?|Ticket\s*(?:ID|No)?|Kode\s*Tiket|Bill\s*ID|ID\s*Tiket)\s*[:=]?\s*([0-9a-zA-Z_\-]+)/i);
     if (ticketExplicit) {
       noTiket = ticketExplicit[1].trim();
     } else {
-      const digitMatch = trimmed.match(/\b\d{8,12}\b/);
-      if (digitMatch) {
-        noTiket = digitMatch[0];
+      const allDigits = trimmed.match(/\b\d{8,16}\b/g) || [];
+      const nonUserDigit = allDigits.find(d => d !== userId);
+      if (nonUserDigit) {
+        noTiket = nonUserDigit;
+      } else if (allDigits.length > 0) {
+        noTiket = allDigits[0];
       }
     }
     if (!noTiket) noTiket = '512729330';

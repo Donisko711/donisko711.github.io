@@ -69,6 +69,7 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
     hdp: string;
     ou: string;
     odds: { home: string; away: string; draw?: string; over: string; under: string };
+    events?: Array<{ minute: string; type: string; player: string; team: 'home' | 'away'; detail?: string }>;
   }> = [
     // 1. Tenis Meja (Table Tennis)
     {
@@ -675,49 +676,106 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
     }
   ];
 
-  return specialties.map((item, idx) => ({
-    id: `sbobet-spec-${item.sport}-${queryDate}-${idx}`,
-    sport: item.sport,
-    sportLabel: item.sportLabel,
-    league: item.league,
-    leagueCode: item.sport,
-    country: item.country,
-    homeTeam: {
-      name: item.home,
-      shortName: item.homeShort,
-      score: item.homeScore,
-      periodScores: item.periodScores
-    },
-    awayTeam: {
-      name: item.away,
-      shortName: item.awayShort,
-      score: item.awayScore,
-      periodScores: item.periodScores
-    },
-    status: item.status,
-    statusDetail: item.statusDetail,
-    displayClock: item.displayClock,
-    kickoffWib: item.wibTime,
-    rawUtcDate: `${queryDate.slice(0, 4)}-${queryDate.slice(4, 6)}-${queryDate.slice(6, 8)}T12:00:00.000Z`,
-    wibTime: item.wibTime,
-    wibDate: `${queryDate.slice(0, 4)}-${queryDate.slice(4, 6)}-${queryDate.slice(6, 8)}`,
-    venue: item.venue,
-    events: ((item as any).events || []).map((e: any) => ({
-      type: e.type,
-      minute: e.minute,
-      player: e.player,
-      team: e.team,
-      detail: e.detail,
-      cardType: e.type === 'yellow_card' ? 'yellow' : e.type === 'red_card' ? 'red' : undefined
-    })),
-    sbobetOdds: {
-      handicap: item.hdp,
-      homeOdds: item.odds.home,
-      awayOdds: item.odds.away,
-      drawOdds: item.odds.draw,
-      overUnder: item.ou,
-      overOdds: item.odds.over,
-      underOdds: item.odds.under
+  const currentWibHours = wibDateObj.getUTCHours();
+  const currentWibMinutes = wibDateObj.getUTCMinutes();
+  const currentTotalMins = currentWibHours * 60 + currentWibMinutes;
+
+  return specialties.map((item, idx) => {
+    const timeMatch = item.wibTime.match(/(\d{1,2}):(\d{2})/);
+    let effectiveStatus: 'LIVE' | 'FINISHED' | 'SCHEDULED' = item.status;
+    let effectiveDetail = item.statusDetail;
+    let effectiveClock = item.displayClock;
+    let matchH = 12;
+    let matchM = 0;
+
+    if (timeMatch) {
+      matchH = parseInt(timeMatch[1], 10);
+      matchM = parseInt(timeMatch[2], 10);
     }
-  }));
+
+    if (isPast) {
+      effectiveStatus = 'FINISHED';
+      effectiveDetail = 'FT (Selesai)';
+      effectiveClock = 'FT';
+    } else if (queryDate === todayWibDateStr && timeMatch) {
+      const matchTotalMins = matchH * 60 + matchM;
+      const diff = currentTotalMins - matchTotalMins;
+
+      // Typical match duration in minutes
+      const matchDuration = item.sport === 'table_tennis' ? 45 
+        : item.sport === 'badminton' ? 65 
+        : item.sport === 'volleyball' ? 80 
+        : item.sport === 'tennis' ? 95 
+        : item.sport === 'futsal' ? 60 
+        : 75;
+
+      if (diff < 0) {
+        effectiveStatus = 'SCHEDULED';
+        effectiveDetail = item.wibTime;
+        effectiveClock = '';
+      } else if (diff <= matchDuration) {
+        effectiveStatus = 'LIVE';
+        effectiveDetail = item.statusDetail.includes('FT') ? 'Sedang Berlangsung' : item.statusDetail;
+        effectiveClock = item.displayClock === 'FT' ? 'LIVE' : item.displayClock;
+      } else {
+        // Pertandingan telah selesai bermain -> FINISHED!
+        effectiveStatus = 'FINISHED';
+        effectiveDetail = 'FT (Selesai)';
+        effectiveClock = 'FT';
+      }
+    } else if (queryDate > todayWibDateStr) {
+      effectiveStatus = 'SCHEDULED';
+      effectiveDetail = item.wibTime;
+      effectiveClock = '';
+    }
+
+    const utcHour = (matchH - 7 + 24) % 24;
+    const rawUtcDate = `${queryDate.slice(0, 4)}-${queryDate.slice(4, 6)}-${queryDate.slice(6, 8)}T${String(utcHour).padStart(2, '0')}:${String(matchM).padStart(2, '0')}:00.000Z`;
+
+    return {
+      id: `sbobet-spec-${item.sport}-${queryDate}-${idx}`,
+      sport: item.sport,
+      sportLabel: item.sportLabel,
+      league: item.league,
+      leagueCode: item.sport,
+      country: item.country,
+      homeTeam: {
+        name: item.home,
+        shortName: item.homeShort,
+        score: item.homeScore,
+        periodScores: item.periodScores
+      },
+      awayTeam: {
+        name: item.away,
+        shortName: item.awayShort,
+        score: item.awayScore,
+        periodScores: item.periodScores
+      },
+      status: effectiveStatus,
+      statusDetail: effectiveDetail,
+      displayClock: effectiveClock,
+      kickoffWib: item.wibTime,
+      rawUtcDate,
+      wibTime: item.wibTime,
+      wibDate: `${queryDate.slice(0, 4)}-${queryDate.slice(4, 6)}-${queryDate.slice(6, 8)}`,
+      venue: item.venue,
+      events: ((item as any).events || []).map((e: any) => ({
+        type: e.type,
+        minute: e.minute,
+        player: e.player,
+        team: e.team,
+        detail: e.detail,
+        cardType: e.type === 'yellow_card' ? 'yellow' : e.type === 'red_card' ? 'red' : undefined
+      })),
+      sbobetOdds: {
+        handicap: item.hdp,
+        homeOdds: item.odds.home,
+        awayOdds: item.odds.away,
+        drawOdds: item.odds.draw,
+        overUnder: item.ou,
+        overOdds: item.odds.over,
+        underOdds: item.odds.under
+      }
+    };
+  });
 }

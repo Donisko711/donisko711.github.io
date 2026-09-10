@@ -262,9 +262,11 @@ export const InfoWd: React.FC<InfoWdProps> = () => {
 
       effectiveChunks.forEach((chunk, idx) => {
         let userId = 'member_user';
-        const userMatch = chunk.match(/(?:^\s*\d+[\s\t]+|^)([a-zA-Z0-9_\-]+)\s*\r?\n\s*Deposit/im) 
-          || chunk.match(/^([a-zA-Z0-9_\-]+)\s*\r?\n/m)
-          || chunk.match(/([a-zA-Z0-9_\-]+)/i);
+        const explicitUser = chunk.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i);
+        const userMatch = explicitUser
+          || chunk.match(/(?:^\s*\d{1,4}[\s\t]+|^)([a-zA-Z0-9_\-\.]+)\s*\r?\n\s*Deposit/im) 
+          || chunk.match(/^([a-zA-Z0-9_\-\.]+)\s*\r?\n/m)
+          || chunk.match(/([a-zA-Z0-9_\-\.]+)/i);
         if (userMatch) {
           userId = userMatch[1].trim();
         }
@@ -336,9 +338,11 @@ export const InfoWd: React.FC<InfoWdProps> = () => {
 
       effectiveChunks.forEach((chunk, idx) => {
         let userId = 'member_user';
-        const userMatch = chunk.match(/(?:^\s*\d+[\s\t]+|^)([a-zA-Z0-9_\-]+)\s*\r?\n\s*Withdraw/im)
-          || chunk.match(/^([a-zA-Z0-9_\-]+)\s*\r?\n/m)
-          || chunk.match(/([a-zA-Z0-9_\-]+)/i);
+        const explicitUser = chunk.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i);
+        const userMatch = explicitUser
+          || chunk.match(/(?:^\s*\d{1,4}[\s\t]+|^)([a-zA-Z0-9_\-\.]+)\s*\r?\n\s*Withdraw/im)
+          || chunk.match(/^([a-zA-Z0-9_\-\.]+)\s*\r?\n/m)
+          || chunk.match(/([a-zA-Z0-9_\-\.]+)/i);
         if (userMatch) {
           userId = userMatch[1].trim();
         }
@@ -410,8 +414,19 @@ export const InfoWd: React.FC<InfoWdProps> = () => {
       });
 
       flopEntries.forEach((entry, idx) => {
-        const tokens = entry.split(/\s+/);
-        const userId = tokens[0] || `user_${idx + 1}`;
+        const explicitUser = entry.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i);
+        let userId = '';
+        if (explicitUser) {
+          userId = explicitUser[1].trim();
+        } else {
+          const tokens = entry.split(/\s+/);
+          // Jika token 0 adalah nomor urut (misal "1" atau "1."), gunakan token 1
+          if (/^\d{1,3}[.)]?$/.test(tokens[0]) && tokens[1]) {
+            userId = tokens[1];
+          } else {
+            userId = tokens[0] || `user_${idx + 1}`;
+          }
+        }
 
         let bank = 'DANA';
         const bankMatch = entry.match(/\b(BCA|BNI|BRI|MANDIRI|DANAMON|CIMB|PERMATA|BSI|BNC|NEO|JAGO|SEABANK|DANA|OVO|GOPAY|LINKAJA|SHOPEEPAY|QRIS)\b/i);
@@ -485,11 +500,13 @@ export const InfoWd: React.FC<InfoWdProps> = () => {
         }
 
         let userId = '';
-        const userMatch = chunk.match(/(?:\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4})\s+\d{2}[:.]\d{2}[:.]\d{2}[\s\t]+([a-zA-Z0-9_\-]+)/i)
-          || chunk.match(/[\d-]+\s+[\d:]+\s+([a-zA-Z0-9_\-]+)\s+(?:Withdraw|Deposit|Accept)/i)
-          || chunk.match(/\b([a-zA-Z0-9_\-]+)\s+(?:Withdraw|Deposit)\b/i)
-          || chunk.match(/(?:^\s*\d+[\s\t]+|^)([a-zA-Z0-9_\-]+)\s+(?:Withdraw|Deposit)/im)
-          || chunk.match(/^\s*\d+\s+([a-zA-Z0-9_\-]+)/i);
+        const explicitUser = chunk.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i);
+        const userMatch = explicitUser
+          || chunk.match(/(?:\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4})\s+\d{2}[:.]\d{2}[:.]\d{2}[\s\t]+([a-zA-Z0-9_\-\.]+)/i)
+          || chunk.match(/[\d-]+\s+[\d:]+\s+([a-zA-Z0-9_\-\.]+)\s+(?:Withdraw|Deposit|Accept)/i)
+          || chunk.match(/\b([a-zA-Z0-9_\-\.]+)\s+(?:Withdraw|Deposit)\b/i)
+          || chunk.match(/(?:^\s*\d{1,4}[\s\t]+|^)([a-zA-Z0-9_\-\.]+)\s+(?:Withdraw|Deposit)/im)
+          || chunk.match(/^\s*\d{1,4}\s+([a-zA-Z0-9_\-\.]+)/i);
         if (userMatch) {
           userId = userMatch[1].trim();
         } else {

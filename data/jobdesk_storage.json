@@ -5,7 +5,7 @@
     "category": "CS",
     "shift": "PAGI",
     "completed": false,
-    "order": 1,
+    "order": 4,
     "timeNote": "07:00 WIB",
     "description": "Pastikan memo operasional dibaca dan kendala member semalam ditindaklanjuti.",
     "taskType": "UTAMA"
@@ -16,7 +16,7 @@
     "category": "CS",
     "shift": "PAGI",
     "completed": false,
-    "order": 2,
+    "order": 3,
     "timeNote": "07:15 WIB",
     "description": "Status akun aktif dan auto-response terpasang.",
     "taskType": "UTAMA"
@@ -27,7 +27,7 @@
     "category": "CS",
     "shift": "PAGI",
     "completed": false,
-    "order": 3,
+    "order": 5,
     "timeNote": "07:30 WIB",
     "description": "Pastikan bank yang gangguan segera di-update di running text & memo.",
     "taskType": "UTAMA"
@@ -38,7 +38,7 @@
     "category": "CS",
     "shift": "PAGI",
     "completed": false,
-    "order": 4,
+    "order": 6,
     "timeNote": "09:00 WIB",
     "description": "Verifikasi mutasi pending dengan kasir atau mutasi bank.",
     "taskType": "UTAMA"
@@ -49,7 +49,7 @@
     "category": "CS",
     "shift": "PAGI",
     "completed": false,
-    "order": 5,
+    "order": 7,
     "timeNote": "11:00 WIB",
     "description": "Kirim broadcast event harian ke channel promo resmi.",
     "taskType": "SAMBILAN"
@@ -60,7 +60,7 @@
     "category": "CS",
     "shift": "PAGI",
     "completed": false,
-    "order": 6,
+    "order": 2,
     "timeNote": "14:30 WIB",
     "description": "Tuliskan catatan khusus dan kendala unsolved pada grup serah terima.",
     "taskType": "UTAMA"
@@ -317,5 +317,112 @@
     "timeNote": "06:00 WIB",
     "description": "Hitung total Gross Deposit, Total Withdrawal, Net Revenue harian.",
     "taskType": "UTAMA"
+  },
+  {
+    "id": "cs-pagi-1788866207346-0",
+    "title": "Serah Terima Kepada Shift Sebelum / Selanjutnya",
+    "category": "CS",
+    "shift": "PAGI",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 1,
+    "createdAt": "2026-09-08T11:16:47.346Z"
+  },
+  {
+    "id": "cs-sore-1788866207346-1",
+    "title": "Serah Terima Kepada Shift Sebelum / Selanjutnya",
+    "category": "CS",
+    "shift": "SORE",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 6,
+    "createdAt": "2026-09-08T11:16:47.347Z"
+  },
+  {
+    "id": "cs-malam-1788866207346-2",
+    "title": "Serah Terima Kepada Shift Sebelum / Selanjutnya",
+    "category": "CS",
+    "shift": "MALAM",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 6,
+    "createdAt": "2026-09-08T11:16:47.347Z"
+  },
+  {
+    "id": "cs-pagi-1788867053642",
+    "title": "Kirim Memo Selesai Maintenance Apabila Hari Kamis Setelah Maintenance Selesai",
+    "category": "CS",
+    "shift": "PAGI",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 7,
+    "description": "Memastikan Member Mendapatkan Informasi Bahwa Situs Telah Selesai Melakukan Maintenance dan Bisa Bermain Kembali",
+    "createdAt": "2026-09-08T11:30:53.642Z"
+  },
+  {
+    "id": "cs-pagi-1788867069779",
+    "title": "Kirim Memo Pembagian Bonus Cashback / Rollingan / Bonus Lainnya Apabila Ada Pembagian di Hari Kamis",
+    "category": "CS",
+    "shift": "PAGI",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 8,
+    "description": "Memastikan member mendapatkan informasi pembagian bonus",
+    "createdAt": "2026-09-08T11:31:09.779Z"
+  },
+  {
+    "id": "cs-pagi-1788867780571",
+    "title": "Cek Saldo Pulsa Setiap Situs | Jual Pulsa",
+    "category": "CS",
+    "shift": "PAGI",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 9,
+    "description": "Jika Ada yang banyak infokan untuk jual ..",
+    "createdAt": "2026-09-08T11:43:00.571Z"
+  },
+  {
+    "id": "cs-pagi-1788867817523",
+    "title": "Bikin Bukti Kemenangan TOGEL | SLOT | LIVEGAMES",
+    "category": "CS",
+    "shift": "PAGI",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 10,
+    "description": "Setiap Shift Wajib Membuat Minimal 3",
+    "createdAt": "2026-09-08T11:43:37.523Z"
+  },
+  {
+    "id": "cs-pagi-1788867985651-0",
+    "title": "Cek Docs Laporan 0.0",
+    "category": "CS",
+    "shift": "PAGI",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 11,
+    "description": "Pastikan Kendala Yang Terjadi Dalam Shift Sudah DI Catat Di Laporan 0.0",
+    "createdAt": "2026-09-08T11:46:25.651Z"
+  },
+  {
+    "id": "cs-sore-1788867985651-1",
+    "title": "Cek Docs Laporan 0.0",
+    "category": "CS",
+    "shift": "SORE",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 7,
+    "description": "Pastikan Kendala Yang Terjadi Dalam Shift Sudah DI Catat Di Laporan 0.0",
+    "createdAt": "2026-09-08T11:46:25.651Z"
+  },
+  {
+    "id": "cs-malam-1788867985651-2",
+    "title": "Cek Docs Laporan 0.0",
+    "category": "CS",
+    "shift": "MALAM",
+    "taskType": "UTAMA",
+    "completed": false,
+    "order": 8,
+    "description": "Pastikan Kendala Yang Terjadi Dalam Shift Sudah DI Catat Di Laporan 0.0",
+    "createdAt": "2026-09-08T11:46:25.651Z"
   }
 ]

@@ -1,7 +1,9 @@
 import { LiveMatch, MatchEventItem, SportType } from '../types';
 import { getSeAsiaMatches } from './localSeAsiaService';
 import { getSbobetWorldMatches } from './sbobetWorldService';
+import { getBasketballMatches } from './basketballService';
 import { generateSbobetSpecialtyMatches } from '../data/sbobetSports';
+import { enrichMatchWithEvents } from './matchEventsService';
 
 export interface EspnCompetitor {
   id?: string;
@@ -238,7 +240,28 @@ function mapEspnEvent(
   const nowMs = Date.now();
   const diffMinutes = Math.floor((nowMs - kickoffMs) / 60000);
 
-  if (state === 'in') {
+  // Check if match has actually concluded / finished playing
+  const isConcluded = 
+    state === 'post' ||
+    statusDesc.includes('final') ||
+    statusDesc.includes('ft') ||
+    statusDesc.includes('selesai') ||
+    statusDesc.includes('finished') ||
+    statusDesc.includes('ended') ||
+    statusDesc.includes('after et') ||
+    statusDesc.includes('pen.') ||
+    shortDetail.includes('ft') ||
+    shortDetail.includes('final') ||
+    displayClock.toUpperCase() === 'FT' ||
+    displayClock.toUpperCase() === 'FINAL' ||
+    (sport === 'soccer' && diffMinutes > 125) ||
+    (sport === 'basketball' && diffMinutes > 140);
+
+  if (isConcluded) {
+    status = 'FINISHED';
+    statusDetail = ev.status?.type?.description?.toUpperCase() === 'FINAL' ? 'FT (Selesai)' : (ev.status?.type?.shortDetail || 'FT (Selesai)');
+    elapsedDetail = sport === 'soccer' ? "Pertandingan Selesai Penuh (Full Time 90')" : 'Pertandingan Selesai Penuh (Final)';
+  } else if (state === 'in') {
     status = 'LIVE';
     elapsedMinutes = diffMinutes > 0 ? diffMinutes : undefined;
 
@@ -270,10 +293,6 @@ function mapEspnEvent(
       statusDetail = displayClock || 'Sedang Main (LIVE)';
       elapsedDetail = `Sedang Bermain • Berjalan ~${Math.max(1, diffMinutes)} mnt`;
     }
-  } else if (state === 'post') {
-    status = 'FINISHED';
-    statusDetail = ev.status?.type?.description?.toUpperCase() === 'FINAL' ? 'FT (Selesai)' : (ev.status?.type?.shortDetail || 'FT');
-    elapsedDetail = 'Pertandingan Selesai Penuh (Full Time 90\')';
   } else if (ev.status?.type?.name?.includes('POSTPONED') || ev.status?.type?.name?.includes('CANCEL')) {
     status = 'POSTPONED';
     statusDetail = 'Ditunda';
@@ -728,7 +747,26 @@ export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<Li
       }
     }
 
-    // 4. Incorporate specialty sports matches for all 26 SBOBET sports
+    // 4. Incorporate comprehensive basketball fixtures (Laga Persahabatan, IBL, PBA, FIBA, Euroleague, ACB, CBA, B.League, WNBA & NBA)
+    if (!options.sport || options.sport === 'all' || options.sport === 'basketball') {
+      const bballMatches = getBasketballMatches(dateStr);
+      for (const bm of bballMatches) {
+        const isDuplicated = results.some((r) => {
+          if (r.id === bm.id) return true;
+          const sameHome = r.homeTeam.shortName.toLowerCase().includes(bm.homeTeam.shortName.toLowerCase()) ||
+                           bm.homeTeam.shortName.toLowerCase().includes(r.homeTeam.shortName.toLowerCase());
+          const sameAway = r.awayTeam.shortName.toLowerCase().includes(bm.awayTeam.shortName.toLowerCase()) ||
+                           bm.awayTeam.shortName.toLowerCase().includes(r.awayTeam.shortName.toLowerCase());
+          return sameHome && sameAway;
+        });
+
+        if (!isDuplicated) {
+          results.push(bm);
+        }
+      }
+    }
+
+    // 5. Incorporate specialty sports matches for all 26 SBOBET sports
     const specialtyMatches = generateSbobetSpecialtyMatches(options.dateStr);
     for (const spec of specialtyMatches) {
       if (!options.sport || options.sport === 'all' || options.sport === spec.sport) {
@@ -739,13 +777,13 @@ export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<Li
     console.error('Failed to fetch official live scores:', err);
   }
 
-  // Deduplicate matches by unique id
+  // Deduplicate matches by unique id and apply event enrichment (pencetak gol, kartu kuning, menit lengkap)
   const seenIds = new Set<string>();
   const uniqueMatches: LiveMatch[] = [];
   for (const m of results) {
     if (!seenIds.has(m.id)) {
       seenIds.add(m.id);
-      uniqueMatches.push(m);
+      uniqueMatches.push(enrichMatchWithEvents(m));
     }
   }
 
