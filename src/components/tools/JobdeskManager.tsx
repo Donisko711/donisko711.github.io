@@ -21,11 +21,12 @@ import {
   Clock,
   Filter,
   CheckCircle2,
-  Layers
+  Layers,
+  RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { JobdeskTask, JobdeskTaskType, ShiftType } from '../../types';
-import { saveLocalCustomTask, deleteJobdeskTask } from '../../utils/jobdeskStorage';
+import { deleteJobdeskTask } from '../../utils/jobdeskStorage';
 
 interface JobdeskManagerProps {
   tasks: JobdeskTask[];
@@ -33,6 +34,9 @@ interface JobdeskManagerProps {
   category: 'CS' | 'KASIR';
   activeShift: ShiftType;
   onShiftChange: (shift: ShiftType) => void;
+  onManualRefresh?: () => Promise<void>;
+  isSyncing?: boolean;
+  lastSyncedAt?: string | null;
 }
 
 export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
@@ -40,7 +44,10 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
   onUpdateTasks,
   category,
   activeShift,
-  onShiftChange
+  onShiftChange,
+  onManualRefresh,
+  isSyncing = false,
+  lastSyncedAt
 }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTime, setNewTaskTime] = useState('');
@@ -183,17 +190,12 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
       }];
     }
 
-    // Save each new task to custom backup immediately so it never disappears
-    newTasksToAdd.forEach(taskItem => {
-      saveLocalCustomTask(taskItem);
-    });
-
     onUpdateTasks([...tasks, ...newTasksToAdd]);
     setNewTaskTitle('');
     setNewTaskTime('');
     setNewTaskDesc('');
     setIsAdding(false);
-    showToast(`✅ ${newTaskType === 'UTAMA' ? '⚡ Tugas Utama' : '☕ Tugas Sambilan'} berhasil disimpan secara permanen ${newTaskShiftTarget === 'ALL' ? 'ke SEMUA SHIFT' : `ke Shift ${newTaskShiftTarget}`}!`);
+    showToast(`✅ ${newTaskType === 'UTAMA' ? '⚡ Tugas Utama' : '☕ Tugas Sambilan'} berhasil disimpan ke server & semua komputer ${newTaskShiftTarget === 'ALL' ? '(SEMUA SHIFT)' : `(Shift ${newTaskShiftTarget})`}!`);
   };
 
   // Start editing a task
@@ -211,7 +213,6 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
     e.preventDefault();
     if (!editingTaskId || !editTitle.trim()) return;
 
-    let updatedEditedTask: JobdeskTask | null = null;
     const updated = tasks.map(t => {
       if (t.id === editingTaskId) {
         const modified: JobdeskTask = {
@@ -222,27 +223,22 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
           shift: editShift,
           taskType: editTaskType
         };
-        updatedEditedTask = modified;
         return modified;
       }
       return t;
     });
 
-    if (updatedEditedTask) {
-      saveLocalCustomTask(updatedEditedTask);
-    }
-
     onUpdateTasks(updated);
     setEditingTaskId(null);
-    showToast('✅ Perubahan tugas berhasil diperbarui dan disimpan!');
+    showToast('✅ Perubahan tugas berhasil diperbarui ke server & semua komputer!');
   };
 
   // Delete task
   const handleDeleteTask = async (task: JobdeskTask) => {
-    if (window.confirm(`Hapus tugas ini secara permanen?\n\n"${task.title}"\n[${task.taskType === 'SAMBILAN' ? '☕ Tugas Sambilan' : '⚡ Tugas Utama'} - Shift ${task.shift}]`)) {
+    if (window.confirm(`Hapus tugas ini secara permanen dari SEMUA komputer & staff?\n\n"${task.title}"\n[${task.taskType === 'SAMBILAN' ? '☕ Tugas Sambilan' : '⚡ Tugas Utama'} - Shift ${task.shift}]`)) {
       const updated = await deleteJobdeskTask(task.id, tasks);
       onUpdateTasks(updated);
-      showToast('🗑️ Tugas berhasil dihapus secara permanen dari sistem.');
+      showToast('🗑️ Tugas berhasil dihapus dari server & semua komputer.');
     }
   };
 
@@ -337,15 +333,41 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
               OPERASIONAL {category}
             </span>
             <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 text-[11px] font-mono">
-              <Database className="w-3 h-3 text-emerald-400" />
-              <span>Tersimpan Permanen</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Multi-PC Live Sync</span>
             </div>
+            {lastSyncedAt && (
+              <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
+                Terakhir Sinkron: {(() => {
+                  try {
+                    return new Date(lastSyncedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+                  } catch {
+                    return 'Baru Saja';
+                  }
+                })()}
+              </span>
+            )}
+            {onManualRefresh && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await onManualRefresh();
+                  showToast('🔄 Data Jobdesk berhasil diperbarui langsung dari server pusat!');
+                }}
+                disabled={isSyncing}
+                title="Sinkronkan data dari server sekarang"
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 text-[11px] font-mono cursor-pointer transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-cyan-400' : ''}`} />
+                <span>{isSyncing ? 'Menyinkronkan...' : 'Segarkan Data'}</span>
+              </button>
+            )}
           </div>
           <h2 className="text-2xl font-black text-white font-['Rajdhani'] uppercase tracking-wider">
             Jobdesk {category === 'CS' ? 'Customer Service' : 'Kasir / Keuangan'}
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Dikelompokkan menjadi <strong className="text-amber-300">Tugas Utama (Wajib)</strong> dan <strong className="text-indigo-300">Tugas Sambilan (Saat Senggang)</strong>.
+            Tersinkronisasi otomatis antar semua komputer, lokasi, & IP staff. Dikelompokkan menjadi <strong className="text-amber-300">Tugas Utama (Wajib)</strong> dan <strong className="text-indigo-300">Tugas Sambilan</strong>.
           </p>
         </div>
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, ActiveView } from './components/Sidebar';
 import { LoginModal } from './components/LoginModal';
@@ -13,7 +13,7 @@ import { ShiftType, UserProfile, JobdeskTask } from './types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from './data/initialData';
 import { 
   getInitialJobdeskTasks, 
-  mergeJobdeskTasks, 
+  fetchJobdeskFromServer, 
   persistJobdeskTasks 
 } from './utils/jobdeskStorage';
 import { ChevronRight, Home, Lock } from 'lucide-react';
@@ -106,51 +106,86 @@ export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('home');
   const [soundEnabled, setSoundEnabled] = useState(true);
   
-  // Jobdesk tasks state with multi-tier persistence (LocalStorage + Custom Backup + Server API Storage)
+  // Jobdesk tasks state with multi-PC server-authoritative persistence
   const [tasks, setTasks] = useState<JobdeskTask[]>(() => {
     return getInitialJobdeskTasks();
   });
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('don_isko_jobdesk_synced_at');
+    }
+    return null;
+  });
 
-  // Fetch canonical jobdesk from server on mount with smart 2-way merge
-  useEffect(() => {
-    let isMounted = true;
-    const loadServerJobdesk = async () => {
-      try {
-        const res = await fetch('/api/jobdesk');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data.tasks)) {
-            const currentLocal = getInitialJobdeskTasks();
-            const { merged, hasNewLocalTasks } = mergeJobdeskTasks(
-              currentLocal, 
-              data.tasks, 
-              data.deletedIds || []
-            );
-
-            if (isMounted) {
-              setTasks(merged);
-            }
-
-            // If local had new tasks that server lacked, sync back immediately
-            if (hasNewLocalTasks) {
-              persistJobdeskTasks(merged).catch(() => {});
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Gagal sinkronisasi jobdesk dari server API:', err);
+  // Centralized sync function that pulls canonical tasks from server API
+  const syncJobdesk = useCallback(async (silent = false) => {
+    if (!silent) setIsSyncing(true);
+    try {
+      const data = await fetchJobdeskFromServer();
+      if (data && Array.isArray(data.tasks)) {
+        setTasks(data.tasks);
+        setLastSyncedAt(data.updatedAt);
       }
-    };
-    loadServerJobdesk();
-    return () => { isMounted = false; };
+    } catch (err) {
+      console.warn('Gagal sinkronisasi jobdesk dari server API:', err);
+    } finally {
+      if (!silent) setIsSyncing(false);
+    }
   }, []);
 
-  // Handler to update tasks, syncing reliably to LocalStorage, custom backup, and server API
-  const handleUpdateTasks = (updatedTasks: JobdeskTask[]) => {
+  // 1. Initial fetch on mount from server API
+  useEffect(() => {
+    syncJobdesk(false);
+  }, [syncJobdesk]);
+
+  // 2. Real-time background auto-polling every 4 seconds across all staff PCs & IPs
+  useEffect(() => {
+    const timer = setInterval(() => {
+      syncJobdesk(true);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [syncJobdesk]);
+
+  // 3. Immediately sync whenever staff returns/focuses the browser tab
+  useEffect(() => {
+    const onFocus = () => {
+      syncJobdesk(true);
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [syncJobdesk]);
+
+  // 4. Instant multi-tab synchronization on the same device
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    const channel = new BroadcastChannel('don_isko_jobdesk_channel');
+    channel.onmessage = (e) => {
+      if (e.data?.type === 'JOBDESK_UPDATED') {
+        syncJobdesk(true);
+      }
+    };
+    return () => {
+      channel.close();
+    };
+  }, [syncJobdesk]);
+
+  // Handler to update tasks, syncing immediately to server API and notifying peers
+  const handleUpdateTasks = async (updatedTasks: JobdeskTask[]) => {
     setTasks(updatedTasks);
-    persistJobdeskTasks(updatedTasks).catch(err => {
-      console.warn('Gagal menyimpan jobdesk ke server:', err);
-    });
+    setLastSyncedAt(new Date().toISOString());
+    const success = await persistJobdeskTasks(updatedTasks);
+    if (!success) {
+      console.warn('Gagal menyimpan jobdesk ke server API');
+    }
+    // Broadcast immediately to other tabs
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel('don_isko_jobdesk_channel');
+        channel.postMessage({ type: 'JOBDESK_UPDATED' });
+        channel.close();
+      } catch {}
+    }
   };
 
   // Modals & Dynamic Image Customization with LocalStorage persistence
@@ -243,6 +278,9 @@ export default function App() {
       }
     }
     setActiveView(viewId);
+    if (viewId === 'jobdesk-cs' || viewId === 'jobdesk-kasir') {
+      syncJobdesk(true);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -250,6 +288,8 @@ export default function App() {
     setCurrentUser(user);
     setActiveShift(user.shift);
     setIsLoginModalOpen(false);
+    // Instant sync from server so this login session immediately has latest tasks from other computers
+    syncJobdesk(false);
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem('don_isko_auth_user', JSON.stringify(user));
@@ -472,6 +512,9 @@ export default function App() {
                   category="CS"
                   activeShift={activeShift}
                   onShiftChange={handleShiftChange}
+                  onManualRefresh={() => syncJobdesk(false)}
+                  isSyncing={isSyncing}
+                  lastSyncedAt={lastSyncedAt}
                 />
               )}
 
@@ -482,6 +525,9 @@ export default function App() {
                   category="KASIR"
                   activeShift={activeShift}
                   onShiftChange={handleShiftChange}
+                  onManualRefresh={() => syncJobdesk(false)}
+                  isSyncing={isSyncing}
+                  lastSyncedAt={lastSyncedAt}
                 />
               )}
 

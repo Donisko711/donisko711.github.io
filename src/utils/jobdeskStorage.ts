@@ -1,274 +1,213 @@
 import { JobdeskTask } from '../types';
 import { INITIAL_JOBDESK_CS, INITIAL_JOBDESK_KASIR } from '../data/initialData';
 
-const LOCAL_STORAGE_KEY = 'don_isko_jobdesk_tasks_v2';
-const LEGACY_STORAGE_KEY = 'don_isko_jobdesk_tasks_v1';
-const CUSTOM_BACKUP_KEY = 'don_isko_custom_jobdesk_backup_v2';
-const DELETED_IDS_KEY = 'don_isko_deleted_task_ids_v2';
+const LOCAL_STORAGE_KEY = 'don_isko_jobdesk_tasks_v3';
+const LEGACY_STORAGE_V2 = 'don_isko_jobdesk_tasks_v2';
+const LEGACY_STORAGE_V1 = 'don_isko_jobdesk_tasks_v1';
+const SYNCED_AT_KEY = 'don_isko_jobdesk_synced_at';
+const VERSION_KEY = 'don_isko_jobdesk_version';
 
 /**
- * Get the list of IDs that were explicitly deleted by users
- */
-export function getLocalDeletedIds(): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(DELETED_IDS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (err) {
-    console.warn('Error reading deleted task IDs:', err);
-  }
-  return [];
-}
-
-/**
- * Record a deleted task ID locally so it is never re-added or resurrected
- */
-export function recordLocalDeletedId(id: string): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const current = getLocalDeletedIds();
-    if (!current.includes(id)) {
-      current.push(id);
-      localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(current));
-    }
-    // Also remove from custom backup if present
-    const custom = getLocalCustomTasks();
-    const updatedCustom = custom.filter(t => t.id !== id);
-    localStorage.setItem(CUSTOM_BACKUP_KEY, JSON.stringify(updatedCustom));
-  } catch (err) {
-    console.warn('Error recording deleted ID locally:', err);
-  }
-}
-
-/**
- * Get user-created custom tasks from local backup storage
- */
-export function getLocalCustomTasks(): JobdeskTask[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(CUSTOM_BACKUP_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (err) {
-    console.warn('Error reading custom jobdesk backup:', err);
-  }
-  return [];
-}
-
-/**
- * Save user-created custom tasks to local backup storage
- */
-export function saveLocalCustomTask(task: JobdeskTask): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const current = getLocalCustomTasks();
-    const idx = current.findIndex(t => t.id === task.id);
-    if (idx >= 0) {
-      current[idx] = task;
-    } else {
-      current.push(task);
-    }
-    localStorage.setItem(CUSTOM_BACKUP_KEY, JSON.stringify(current));
-  } catch (err) {
-    console.warn('Error saving custom jobdesk backup:', err);
-  }
-}
-
-/**
- * Read the initial tasks from local storage or defaults on boot
+ * Read the initial tasks from local storage or defaults on initial frame render
  */
 export function getInitialJobdeskTasks(): JobdeskTask[] {
   const defaultTasks: JobdeskTask[] = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
   if (typeof window === 'undefined') return defaultTasks;
 
-  const deletedIds = new Set(getLocalDeletedIds());
-  const customTasks = getLocalCustomTasks();
-
-  let loadedTasks: JobdeskTask[] = [];
-
   try {
-    // Check v2 key first, then legacy v1 key
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY) || 
+                localStorage.getItem(LEGACY_STORAGE_V2) || 
+                localStorage.getItem(LEGACY_STORAGE_V1);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        loadedTasks = parsed;
+        return parsed.map(t => ({
+          ...t,
+          taskType: t.taskType || 'UTAMA'
+        }));
       }
     }
   } catch (err) {
-    console.warn('Error reading initial tasks from localStorage:', err);
+    console.warn('Gagal membaca initial jobdesk dari local storage:', err);
   }
 
-  // If no saved tasks found, use default tasks
-  if (loadedTasks.length === 0) {
-    loadedTasks = defaultTasks;
-  }
-
-  // Merge with custom tasks backup to ensure no custom tasks were lost
-  const taskMap = new Map<string, JobdeskTask>();
-  loadedTasks.forEach(t => {
-    if (!deletedIds.has(t.id)) {
-      taskMap.set(t.id, {
-        ...t,
-        taskType: t.taskType || 'UTAMA'
-      });
-    }
-  });
-
-  customTasks.forEach(t => {
-    if (!deletedIds.has(t.id) && !taskMap.has(t.id)) {
-      taskMap.set(t.id, {
-        ...t,
-        taskType: t.taskType || 'UTAMA'
-      });
-    }
-  });
-
-  // Ensure non-deleted defaults are present
-  defaultTasks.forEach(def => {
-    if (!deletedIds.has(def.id) && !taskMap.has(def.id)) {
-      taskMap.set(def.id, def);
-    }
-  });
-
-  return Array.from(taskMap.values());
+  return defaultTasks;
 }
 
 /**
- * Two-way merge server tasks with local tasks, respecting deleted IDs and custom tasks
+ * Fetch canonical jobdesk tasks from server API (authoritative source for all computers & IPs)
  */
-export function mergeJobdeskTasks(
-  localTasks: JobdeskTask[],
-  serverTasks: JobdeskTask[],
-  serverDeletedIds: string[] = []
-): { merged: JobdeskTask[]; hasNewLocalTasks: boolean } {
-  // Sync deleted IDs
-  const localDeleted = getLocalDeletedIds();
-  const allDeletedIds = new Set([...localDeleted, ...serverDeletedIds]);
+export async function fetchJobdeskFromServer(): Promise<{ tasks: JobdeskTask[]; version: number; updatedAt: string } | null> {
+  try {
+    const res = await fetch('/api/jobdesk', {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
 
-  // Update local deleted IDs
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(allDeletedIds)));
-    } catch {}
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.tasks)) {
+        const normalizedTasks: JobdeskTask[] = data.tasks.map((t: JobdeskTask) => ({
+          ...t,
+          taskType: t.taskType || 'UTAMA'
+        }));
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalizedTasks));
+            if (data.version) {
+              localStorage.setItem(VERSION_KEY, String(data.version));
+            }
+            if (data.updatedAt) {
+              localStorage.setItem(SYNCED_AT_KEY, data.updatedAt);
+            }
+          } catch {
+            // ignore localStorage quota errors
+          }
+        }
+
+        return {
+          tasks: normalizedTasks,
+          version: typeof data.version === 'number' ? data.version : 1,
+          updatedAt: data.updatedAt || new Date().toISOString()
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal memuat jobdesk dari server API:', err);
   }
-
-  const customTasks = getLocalCustomTasks();
-  const mergedMap = new Map<string, JobdeskTask>();
-
-  // 1. Add server tasks that are not deleted
-  serverTasks.forEach(t => {
-    if (!allDeletedIds.has(t.id)) {
-      mergedMap.set(t.id, {
-        ...t,
-        taskType: t.taskType || 'UTAMA'
-      });
-    }
-  });
-
-  let hasNewLocalTasks = false;
-
-  // 2. Merge local tasks (preserve local checked status or local custom additions)
-  localTasks.forEach(localT => {
-    if (allDeletedIds.has(localT.id)) return;
-
-    if (!mergedMap.has(localT.id)) {
-      // Local has a task that server does not have -> preserve it and flag for sync!
-      mergedMap.set(localT.id, {
-        ...localT,
-        taskType: localT.taskType || 'UTAMA'
-      });
-      hasNewLocalTasks = true;
-    } else {
-      // If task already on server, retain completed toggle from local if available
-      const existing = mergedMap.get(localT.id)!;
-      mergedMap.set(localT.id, {
-        ...existing,
-        completed: localT.completed !== undefined ? localT.completed : existing.completed,
-        order: localT.order !== undefined ? localT.order : existing.order
-      });
-    }
-  });
-
-  // 3. Merge custom backup tasks
-  customTasks.forEach(customT => {
-    if (!allDeletedIds.has(customT.id) && !mergedMap.has(customT.id)) {
-      mergedMap.set(customT.id, {
-        ...customT,
-        taskType: customT.taskType || 'UTAMA'
-      });
-      hasNewLocalTasks = true;
-    }
-  });
-
-  const merged = Array.from(mergedMap.values());
-
-  // Save to localStorage
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
-    } catch {}
-  }
-
-  return { merged, hasNewLocalTasks };
+  return null;
 }
 
 /**
- * Persist tasks locally and sync to server API
+ * Persist full jobdesk tasks list to server and update local cache
  */
 export async function persistJobdeskTasks(tasks: JobdeskTask[]): Promise<boolean> {
+  // Update local cache immediately for zero-lag UI
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks));
-      // Save any custom task to custom backup key
-      const defaultIds = new Set([...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR].map(d => d.id));
-      const customTasks = tasks.filter(t => !defaultIds.has(t.id));
-      if (customTasks.length > 0) {
-        localStorage.setItem(CUSTOM_BACKUP_KEY, JSON.stringify(customTasks));
-      }
+      localStorage.setItem(SYNCED_AT_KEY, new Date().toISOString());
     } catch (err) {
-      console.warn('Gagal menyimpan jobdesk ke localStorage:', err);
+      console.warn('Gagal menyimpan jobdesk ke local cache:', err);
     }
   }
 
+  // Push to server API for all staff computers
   try {
     const res = await fetch('/api/jobdesk', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store'
+      },
       body: JSON.stringify({ tasks })
     });
-    return res.ok;
+
+    if (res.ok) {
+      const data = await res.json();
+      if (typeof window !== 'undefined' && data) {
+        if (data.version) localStorage.setItem(VERSION_KEY, String(data.version));
+        if (data.updatedAt) localStorage.setItem(SYNCED_AT_KEY, data.updatedAt);
+      }
+      return true;
+    }
+    return false;
   } catch (err) {
-    console.warn('Gagal sync jobdesk ke server API:', err);
+    console.warn('Gagal sinkronisasi jobdesk ke server API:', err);
     return false;
   }
 }
 
 /**
- * Delete a task locally and on server
+ * Delete a jobdesk task permanently on server and local cache
  */
 export async function deleteJobdeskTask(taskId: string, currentTasks: JobdeskTask[]): Promise<JobdeskTask[]> {
-  recordLocalDeletedId(taskId);
   const updated = currentTasks.filter(t => t.id !== taskId);
 
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
-      const custom = getLocalCustomTasks().filter(t => t.id !== taskId);
-      localStorage.setItem(CUSTOM_BACKUP_KEY, JSON.stringify(custom));
     } catch {}
   }
 
   try {
-    fetch(`/api/jobdesk/task/${encodeURIComponent(taskId)}`, {
-      method: 'DELETE'
-    }).catch(() => {});
-  } catch {}
+    const res = await fetch(`/api/jobdesk/task/${encodeURIComponent(taskId)}`, {
+      method: 'DELETE',
+      headers: { 'Cache-Control': 'no-cache, no-store' }
+    });
+
+    if (!res.ok) {
+      // Fallback: push full updated array to server
+      await persistJobdeskTasks(updated);
+    }
+  } catch (err) {
+    console.warn('Gagal request delete task ke server API, fallback ke persist:', err);
+    await persistJobdeskTasks(updated);
+  }
 
   return updated;
+}
+
+/**
+ * Reset jobdesk to factory defaults on server and local cache
+ */
+export async function resetJobdeskToFactory(): Promise<JobdeskTask[]> {
+  const defaultTasks: JobdeskTask[] = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+  
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(defaultTasks));
+      localStorage.setItem(SYNCED_AT_KEY, new Date().toISOString());
+    } catch {}
+  }
+
+  try {
+    const res = await fetch('/api/jobdesk/reset', {
+      method: 'POST',
+      headers: { 'Cache-Control': 'no-cache, no-store' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.tasks)) {
+        return data.tasks;
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal reset jobdesk ke factory via server API:', err);
+  }
+
+  return defaultTasks;
+}
+
+/**
+ * Compatibility helper for saving custom tasks
+ */
+export function saveLocalCustomTask(_task: JobdeskTask): void {
+  // No-op for cross-device consistency; tasks are saved directly through persistJobdeskTasks
+}
+
+/**
+ * Compatibility helper for deleted ID tracking
+ */
+export function recordLocalDeletedId(_id: string): void {
+  // No-op; server is now the canonical source of truth for active tasks
+}
+
+export function getLocalDeletedIds(): string[] {
+  return [];
+}
+
+export function getLocalCustomTasks(): JobdeskTask[] {
+  return [];
+}
+
+export function mergeJobdeskTasks(
+  _localTasks: JobdeskTask[],
+  serverTasks: JobdeskTask[],
+  _serverDeletedIds: string[] = []
+): { merged: JobdeskTask[]; hasNewLocalTasks: boolean } {
+  return { merged: serverTasks, hasNewLocalTasks: false };
 }

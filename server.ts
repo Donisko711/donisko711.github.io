@@ -167,154 +167,179 @@ async function startServer() {
   });
 
   // ==========================================
-  // JOBDESK CS & KASIR PERSISTENT STORAGE
+  // ==========================================
+  // JOBDESK CS & KASIR PERSISTENT STORAGE (CENTRALIZED MULTI-CLIENT)
   // ==========================================
   const DATA_DIR = path.join(process.cwd(), "data");
   const JOBDESK_FILE = path.join(DATA_DIR, "jobdesk_storage.json");
-  const DELETED_TASKS_FILE = path.join(DATA_DIR, "deleted_tasks.json");
 
-  function getDeletedTaskIds(): string[] {
-    try {
-      if (fs.existsSync(DELETED_TASKS_FILE)) {
-        const raw = fs.readFileSync(DELETED_TASKS_FILE, "utf-8");
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (err) {
-      console.error("Error reading deleted tasks file:", err);
-    }
-    return [];
+  interface JobdeskStorePayload {
+    version: number;
+    updatedAt: string;
+    tasks: JobdeskTask[];
   }
 
-  function recordDeletedTaskId(id: string) {
+  function getJobdeskStore(): JobdeskStorePayload {
     try {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
-      const deleted = getDeletedTaskIds();
-      if (!deleted.includes(id)) {
-        deleted.push(id);
-        fs.writeFileSync(DELETED_TASKS_FILE, JSON.stringify(deleted, null, 2), "utf-8");
-      }
-    } catch (err) {
-      console.error("Error recording deleted task:", err);
-    }
-  }
-
-  function ensureJobdeskStorage(): JobdeskTask[] {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      const deletedIds = new Set(getDeletedTaskIds());
-      const defaultTasks: JobdeskTask[] = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
-      const defaultMap = new Map(defaultTasks.map(d => [d.id, d]));
 
       if (fs.existsSync(JOBDESK_FILE)) {
         const raw = fs.readFileSync(JOBDESK_FILE, "utf-8");
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Filter out explicitly deleted tasks
-          const activeTasks = parsed.filter((t: JobdeskTask) => !deletedIds.has(t.id));
 
-          // Ensure all active tasks have valid taskType ('UTAMA' or 'SAMBILAN')
-          const normalized = activeTasks.map((t: JobdeskTask) => {
+        // Migrate if stored as legacy raw array
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const defaultTasks = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+          const defaultMap = new Map(defaultTasks.map(d => [d.id, d]));
+          const normalized = parsed.map((t: JobdeskTask) => {
             const defTask = defaultMap.get(t.id);
             return {
               ...t,
               taskType: t.taskType || (defTask ? defTask.taskType : 'UTAMA')
             };
           });
+          const migrated: JobdeskStorePayload = {
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            tasks: normalized
+          };
+          fs.writeFileSync(JOBDESK_FILE, JSON.stringify(migrated, null, 2), "utf-8");
+          return migrated;
+        }
 
-          // Ensure any default tasks that were not deleted are present
-          const existingIds = new Set(normalized.map(t => t.id));
-          defaultTasks.forEach(def => {
-            if (!existingIds.has(def.id) && !deletedIds.has(def.id)) {
-              normalized.push({
-                ...def,
-                taskType: def.taskType || 'UTAMA'
-              });
-            }
-          });
-
-          fs.writeFileSync(JOBDESK_FILE, JSON.stringify(normalized, null, 2), "utf-8");
-          return normalized;
+        // Standard object format with version & updatedAt
+        if (parsed && Array.isArray(parsed.tasks)) {
+          return {
+            version: typeof parsed.version === 'number' ? parsed.version : 1,
+            updatedAt: parsed.updatedAt || new Date().toISOString(),
+            tasks: parsed.tasks
+          };
         }
       }
-
-      // Initial seed excluding any recorded deleted tasks
-      const initialTasks: JobdeskTask[] = defaultTasks.filter(t => !deletedIds.has(t.id));
-      fs.writeFileSync(JOBDESK_FILE, JSON.stringify(initialTasks, null, 2), "utf-8");
-      return initialTasks;
     } catch (err) {
-      console.error("Error ensuring jobdesk storage:", err);
-      return [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+      console.error("Error reading jobdesk storage:", err);
     }
+
+    // Initial seed from defaults ONLY if file does not exist
+    const defaultTasks: JobdeskTask[] = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+    const initialStore: JobdeskStorePayload = {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      tasks: defaultTasks
+    };
+    try {
+      fs.writeFileSync(JOBDESK_FILE, JSON.stringify(initialStore, null, 2), "utf-8");
+    } catch (err) {
+      console.error("Error seeding initial jobdesk storage:", err);
+    }
+    return initialStore;
   }
 
-  function saveJobdeskStorage(tasks: JobdeskTask[]): boolean {
+  function saveJobdeskStore(tasks: JobdeskTask[]): JobdeskStorePayload {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const current = getJobdeskStore();
+    const nextStore: JobdeskStorePayload = {
+      version: (current.version || 0) + 1,
+      updatedAt: new Date().toISOString(),
+      tasks
+    };
     try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      const deletedIds = new Set(getDeletedTaskIds());
-      const activeTasks = tasks.filter(t => !deletedIds.has(t.id));
-      fs.writeFileSync(JOBDESK_FILE, JSON.stringify(activeTasks, null, 2), "utf-8");
-      return true;
+      fs.writeFileSync(JOBDESK_FILE, JSON.stringify(nextStore, null, 2), "utf-8");
     } catch (err) {
       console.error("Error saving jobdesk storage:", err);
-      return false;
     }
+    return nextStore;
   }
 
-  // GET all jobdesk tasks and deleted IDs
+  // GET all jobdesk tasks with active version & cache headers
   app.get("/api/jobdesk", (_req, res) => {
-    const tasks = ensureJobdeskStorage();
-    const deletedIds = getDeletedTaskIds();
-    res.json({ success: true, tasks, deletedIds });
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    const store = getJobdeskStore();
+    res.json({ 
+      success: true, 
+      tasks: store.tasks, 
+      version: store.version, 
+      updatedAt: store.updatedAt 
+    });
   });
 
-  // POST replace/save full jobdesk tasks list
+  // POST replace/save full jobdesk tasks list (Centralized single source of truth)
   app.post("/api/jobdesk", (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache");
     const { tasks } = req.body;
     if (!Array.isArray(tasks)) {
       res.status(400).json({ error: "Invalid tasks payload" });
       return;
     }
-    const saved = saveJobdeskStorage(tasks);
-    if (saved) {
-      res.json({ success: true, count: tasks.length });
-    } else {
-      res.status(500).json({ error: "Failed to write jobdesk storage" });
-    }
+    const nextStore = saveJobdeskStore(tasks);
+    res.json({ 
+      success: true, 
+      count: nextStore.tasks.length, 
+      version: nextStore.version, 
+      updatedAt: nextStore.updatedAt,
+      tasks: nextStore.tasks 
+    });
   });
 
   // POST add or update a single task
   app.post("/api/jobdesk/task", (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache");
     const { task } = req.body;
     if (!task || !task.id || !task.title) {
       res.status(400).json({ error: "Task with id and title required" });
       return;
     }
-    const tasks = ensureJobdeskStorage();
+    const store = getJobdeskStore();
+    const tasks = [...store.tasks];
     const existingIndex = tasks.findIndex(t => t.id === task.id);
     if (existingIndex >= 0) {
       tasks[existingIndex] = { ...tasks[existingIndex], ...task };
     } else {
       tasks.push(task);
     }
-    saveJobdeskStorage(tasks);
-    res.json({ success: true, task });
+    const nextStore = saveJobdeskStore(tasks);
+    res.json({ 
+      success: true, 
+      task, 
+      version: nextStore.version, 
+      updatedAt: nextStore.updatedAt 
+    });
   });
 
   // DELETE a task permanently
   app.delete("/api/jobdesk/task/:id", (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache");
     const { id } = req.params;
-    recordDeletedTaskId(id);
-    const tasks = ensureJobdeskStorage();
-    const filtered = tasks.filter(t => t.id !== id);
-    saveJobdeskStorage(filtered);
-    res.json({ success: true, deletedId: id });
+    const store = getJobdeskStore();
+    const filtered = store.tasks.filter(t => t.id !== id);
+    const nextStore = saveJobdeskStore(filtered);
+    res.json({ 
+      success: true, 
+      deletedId: id, 
+      version: nextStore.version, 
+      updatedAt: nextStore.updatedAt, 
+      count: filtered.length 
+    });
+  });
+
+  // POST reset jobdesk to factory defaults if requested
+  app.post("/api/jobdesk/reset", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache");
+    const defaultTasks: JobdeskTask[] = [...INITIAL_JOBDESK_CS, ...INITIAL_JOBDESK_KASIR];
+    const nextStore = saveJobdeskStore(defaultTasks);
+    res.json({ 
+      success: true, 
+      message: "Jobdesk berhasil direset ke standar default pabrik", 
+      tasks: nextStore.tasks, 
+      version: nextStore.version,
+      updatedAt: nextStore.updatedAt
+    });
   });
 
   // Shared Comprehensive TrustPositif Komdigi & Nawala Blocklist Engine
