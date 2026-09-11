@@ -72,21 +72,112 @@ DANA, 08952879684, Didik hariyanto`;
 export const WdAutoFlop: React.FC = () => {
   const [rawText, setRawText] = useState<string>('');
   const [parsedRows, setParsedRows] = useState<ParsedWdRow[]>([]);
-  const [copyFormat, setCopyFormat] = useState<'tab' | 'pipe' | 'comma'>('tab');
-  const [timeDisplayFormat, setTimeDisplayFormat] = useState<'standard' | 'compact'>('standard');
+  const [copyFormat, setCopyFormat] = useState<'tab' | 'pipe' | 'comma'>(() => {
+    try {
+      const saved = localStorage.getItem('hs_wd_autoflop_copy_format');
+      return (saved as 'tab' | 'pipe' | 'comma') || 'tab';
+    } catch {
+      return 'tab';
+    }
+  });
+  const [timeDisplayFormat, setTimeDisplayFormat] = useState<'standard' | 'compact'>(() => {
+    try {
+      const saved = localStorage.getItem('hs_wd_autoflop_time_format');
+      return (saved as 'standard' | 'compact') || 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
-  const [sortByTime, setSortByTime] = useState<boolean>(true);
-  const [autoCopyOnPaste, setAutoCopyOnPaste] = useState<boolean>(false);
+  const [sortByTime, setSortByTime] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('hs_wd_autoflop_sort_time');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+  const [autoCopyOnPaste, setAutoCopyOnPaste] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('hs_wd_autoflop_autocopy_enabled');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
   const [showExampleMenu, setShowExampleMenu] = useState(false);
 
-  // Auto-delete / Auto-Clear Cache timer states
-  const [autoClearEnabled, setAutoClearEnabled] = useState<boolean>(false);
-  const [autoClearSeconds, setAutoClearSeconds] = useState<number>(10);
+  // Auto-delete / Auto-Clear Cache timer states (Persisten via localStorage - selalu hidup jika dihidupkan sampai dimatikan)
+  const [autoClearEnabled, setAutoClearEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('hs_wd_autoflop_autoclear_enabled');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+  const [autoClearSeconds, setAutoClearSeconds] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('hs_wd_autoflop_autoclear_seconds');
+      return saved !== null ? JSON.parse(saved) : 10;
+    } catch {
+      return 10;
+    }
+  });
   const [countdown, setCountdown] = useState<number>(0);
   const [justCleared, setJustCleared] = useState<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Simpan preferensi ke localStorage setiap kali ada perubahan
+  useEffect(() => {
+    try {
+      localStorage.setItem('hs_wd_autoflop_autoclear_enabled', JSON.stringify(autoClearEnabled));
+    } catch (e) {
+      console.warn('Gagal menyimpan autoClearEnabled:', e);
+    }
+  }, [autoClearEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hs_wd_autoflop_autoclear_seconds', JSON.stringify(autoClearSeconds));
+    } catch (e) {
+      console.warn('Gagal menyimpan autoClearSeconds:', e);
+    }
+  }, [autoClearSeconds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hs_wd_autoflop_autocopy_enabled', JSON.stringify(autoCopyOnPaste));
+    } catch (e) {
+      console.warn('Gagal menyimpan autoCopyOnPaste:', e);
+    }
+  }, [autoCopyOnPaste]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hs_wd_autoflop_copy_format', copyFormat);
+    } catch (e) {
+      console.warn('Gagal menyimpan copyFormat:', e);
+    }
+  }, [copyFormat]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hs_wd_autoflop_time_format', timeDisplayFormat);
+    } catch (e) {
+      console.warn('Gagal menyimpan timeDisplayFormat:', e);
+    }
+  }, [timeDisplayFormat]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hs_wd_autoflop_sort_time', JSON.stringify(sortByTime));
+    } catch (e) {
+      console.warn('Gagal menyimpan sortByTime:', e);
+    }
+  }, [sortByTime]);
 
   // Bank name helpers for formatting reversal
   const KNOWN_BANKS = [
@@ -501,23 +592,29 @@ export const WdAutoFlop: React.FC = () => {
           {/* Action Buttons: Auto Clear Control, Quick Toggles, Contoh Data & Clear Cache */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Auto Delete / Clear Cache Toggle */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/60 border border-white/10 text-xs font-mono">
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-all ${
+              autoClearEnabled 
+                ? 'bg-emerald-950/40 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
+                : 'bg-black/60 border-white/10'
+            }`}>
               <button
                 type="button"
                 onClick={() => setAutoClearEnabled(!autoClearEnabled)}
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                   autoClearEnabled 
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]' 
-                    : 'text-gray-400 hover:text-gray-300'
+                    ? 'bg-emerald-500 text-black font-extrabold shadow-[0_0_10px_rgba(16,185,129,0.4)] hover:bg-emerald-400' 
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                 }`}
-                title="Aktifkan/Nonaktifkan Hapus Otomatis Input Textarea"
+                title={autoClearEnabled 
+                  ? 'Status: SELALU AKTIF (Tersimpan). Klik untuk MEMATIKAN (OFF).' 
+                  : 'Status: NONAKTIF. Klik untuk MENGHIDUPKAN (ON) - akan selalu aktif sampai dimatikan.'}
               >
-                <Timer className={`w-3.5 h-3.5 ${autoClearEnabled ? 'text-emerald-400 animate-spin' : 'text-gray-500'}`} style={{ animationDuration: '6s' }} />
-                <span>AUTO CLEAR: {autoClearEnabled ? `${autoClearSeconds}S` : 'OFF'}</span>
+                <Timer className={`w-3.5 h-3.5 ${autoClearEnabled ? 'text-black animate-spin' : 'text-gray-500'}`} style={{ animationDuration: '6s' }} />
+                <span>AUTO CLEAR: {autoClearEnabled ? `ON (${autoClearSeconds}S)` : 'OFF'}</span>
               </button>
 
               {autoClearEnabled && (
-                <div className="flex items-center gap-1 pl-1 border-l border-white/10">
+                <div className="flex items-center gap-1 pl-1.5 border-l border-emerald-500/30">
                   {[3, 5, 10, 30].map((sec) => (
                     <button
                       key={sec}
@@ -525,13 +622,22 @@ export const WdAutoFlop: React.FC = () => {
                       onClick={() => setAutoClearSeconds(sec)}
                       className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
                         autoClearSeconds === sec
-                          ? 'bg-emerald-400 text-black font-extrabold'
-                          : 'text-gray-400 hover:text-white hover:bg-white/10'
+                          ? 'bg-emerald-400 text-black font-extrabold shadow-sm'
+                          : 'text-emerald-300/70 hover:text-emerald-200 hover:bg-emerald-500/20'
                       }`}
+                      title={`Pilih jeda waktu auto clear ${sec} detik`}
                     >
                       {sec}s
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => setAutoClearEnabled(false)}
+                    className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-rose-300 hover:text-rose-100 hover:bg-rose-500/30 cursor-pointer border border-rose-500/30 transition-all"
+                    title="Klik untuk mematikan Auto Clear (OFF)"
+                  >
+                    OFF
+                  </button>
                 </div>
               )}
             </div>

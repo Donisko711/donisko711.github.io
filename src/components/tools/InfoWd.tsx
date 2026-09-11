@@ -74,8 +74,24 @@ export const InfoWd: React.FC<InfoWdProps> = () => {
   const [copiedReport, setCopiedReport] = useState(false);
   const [copiedDetail, setCopiedDetail] = useState(false);
 
-  // Optional Auto-Clear idle timer (disabled by default so user's text isn't lost before copying)
-  const [autoClearEnabled, setAutoClearEnabled] = useState(false);
+  // Optional Auto-Clear idle timer (Persisten via localStorage agar selalu hidup saat dihidupkan)
+  const [autoClearEnabled, setAutoClearEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('hs_info_wd_autoclear_enabled');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hs_info_wd_autoclear_enabled', JSON.stringify(autoClearEnabled));
+    } catch (e) {
+      console.warn('Gagal menyimpan hs_info_wd_autoclear_enabled:', e);
+    }
+  }, [autoClearEnabled]);
+
   const [countdown, setCountdown] = useState<number | null>(null);
   const idleTimerRef = useRef<any>(null);
   const countdownIntervalRef = useRef<any>(null);
