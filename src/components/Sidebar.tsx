@@ -33,7 +33,6 @@ export const OFFICIAL_DON_ISKO_IMG = 'https://ik.imagekit.io/donisko711/donisko7
 
 export type ActiveView = 
   | 'home'
-  | 'ai-intelegency'
   | 'nawala-checker'
   | 'generate-artikel'
   | 'phising-checker'
@@ -184,21 +183,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         
         {/* ========================================================= */}
         {/* MENU HIGHLIGHT (Berada di Atas Kategori / Bawah Dashboard) */}
-        {/* 1. AI INTELEGENCY                                         */}
-        {/* 2. LIVESCORE                                              */}
-        {/* 3. PHISING CHECKER                                        */}
-        {/* 4. CEK STATUS NAWALA                                      */}
-        {/* Disembunyikan khusus untuk akun staf LEO                   */}
+        {/* 1. LIVESCORE                                              */}
+        {/* 2. PHISING CHECKER                                        */}
+        {/* 3. CEK STATUS NAWALA                                      */}
         {/* ========================================================= */}
-        {currentUser?.username?.toLowerCase() !== 'leo' && (
-          <div className="rounded-2xl bg-gradient-to-b from-[#131622] to-[#0A0C14] border-2 border-[#00F3FF]/40 shadow-[0_0_20px_rgba(0,243,255,0.18)] p-1.5 space-y-1.5 overflow-hidden transition-all">
+        <div className="rounded-2xl bg-gradient-to-b from-[#131622] to-[#0A0C14] border-2 border-[#00F3FF]/40 shadow-[0_0_20px_rgba(0,243,255,0.18)] p-1.5 space-y-1.5 overflow-hidden transition-all">
             {isOpen ? (
               <div className="px-2 pt-1 pb-0.5 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#00F3FF] animate-pulse"></span>
                   <span className="text-[10px] font-black uppercase tracking-wider text-white font-sans flex items-center gap-1">
                     <span>MENU HIGHLIGHT</span>
-                    <span className="text-yellow-400 font-mono text-[9px]">(TOP 4)</span>
+                    <span className="text-yellow-400 font-mono text-[9px]">(TOP 3)</span>
                   </span>
                 </div>
                 <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded-full bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.5)]">
@@ -211,37 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
 
-            {/* 1. AI INTELEGENCY */}
-            <button
-              onClick={() => handleSelectView('ai-intelegency')}
-              id="menu-ai-intelegency"
-              title="AI Intelegency - Asisten CS & Kasir 711"
-              className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
-                activeView === 'ai-intelegency'
-                  ? 'bg-gradient-to-r from-[#00F3FF]/30 via-yellow-400/20 to-[#00F3FF]/20 border-2 border-[#00F3FF] text-white shadow-[0_0_18px_rgba(0,243,255,0.4)] font-bold'
-                  : 'bg-[#141724]/90 hover:bg-[#1E2235] text-gray-200 hover:text-white border border-[#00F3FF]/30 hover:border-[#00F3FF] shadow-[0_0_8px_rgba(0,243,255,0.1)]'
-              }`}
-            >
-              <div className={`flex items-center ${isOpen ? 'gap-2.5' : 'justify-center'}`}>
-                <div className="p-1.5 rounded-xl bg-gradient-to-br from-[#00F3FF]/25 to-yellow-400/25 text-[#00F3FF] border border-[#00F3FF]/50 group-hover:scale-105 transition-transform shadow-[0_0_8px_rgba(0,243,255,0.3)] flex-shrink-0">
-                  <Bot className="w-4 h-4 text-[#00F3FF]" />
-                </div>
-                {isOpen && (
-                  <div className="text-left min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-black tracking-wide text-white">AI INTELEGENCY</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-yellow-400 text-black font-black font-mono animate-pulse">
-                        NEW
-                      </span>
-                    </div>
-                    <span className="text-[9px] text-[#00F3FF] font-mono block truncate">Asisten CS & Kasir 711</span>
-                  </div>
-                )}
-              </div>
-              {isOpen && <Sparkles className="w-3.5 h-3.5 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)] flex-shrink-0" />}
-            </button>
-
-            {/* 2. LIVESCORE */}
+            {/* 1. LIVESCORE */}
             <button
               onClick={() => handleSelectView('livescore')}
               id="menu-livescore"
@@ -340,14 +306,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </button>
           </div>
-        )}
 
         {/* ========================================================= */}
         {/* CATEGORY: ALAT GENERATE (Collapsible Accordion)            */}
-        {/* Disembunyikan khusus untuk akun staf LEO                   */}
         {/* ========================================================= */}
-        {currentUser?.username?.toLowerCase() !== 'leo' && (
-          <div className="rounded-2xl bg-gradient-to-b from-[#211905]/85 to-[#120D02]/90 border border-amber-400/50 p-1.5 overflow-hidden transition-all shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+        <div className="rounded-2xl bg-gradient-to-b from-[#211905]/85 to-[#120D02]/90 border border-amber-400/50 p-1.5 overflow-hidden transition-all shadow-[0_0_15px_rgba(245,158,11,0.15)]">
             {isOpen ? (
               <button
                 onClick={() => toggleCategory('alat-generate')}
@@ -466,14 +429,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
           </div>
-        )}
 
         {/* ========================================================= */}
         {/* CATEGORY 1: TOOLS KERJA CS (Collapsible Single Accordion) */}
-        {/* Disembunyikan khusus untuk akun staf LEO                   */}
         {/* ========================================================= */}
-        {currentUser?.username?.toLowerCase() !== 'leo' && (
-          <div className="rounded-2xl bg-gradient-to-b from-[#081C26]/85 to-[#040E14]/90 border border-[#00F3FF]/50 p-1.5 overflow-hidden transition-all shadow-[0_0_15px_rgba(0,243,255,0.15)]">
+        <div className="rounded-2xl bg-gradient-to-b from-[#081C26]/85 to-[#040E14]/90 border border-[#00F3FF]/50 p-1.5 overflow-hidden transition-all shadow-[0_0_15px_rgba(0,243,255,0.15)]">
             {isOpen ? (
               <button
                 onClick={() => toggleCategory('tools-cs')}
@@ -711,7 +671,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
           </div>
-        )}
 
         {/* ========================================================= */}
         {/* WD AUTO FLOP (BERADA DI ANTARA TOOLS CS & TOOLS KASIR)     */}

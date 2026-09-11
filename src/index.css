@@ -95,7 +95,7 @@
 .animate-marquee-slow {
   display: inline-flex;
   white-space: nowrap;
-  animation: marquee-scroll 75s linear infinite;
+  animation: marquee-scroll 180s linear infinite;
 }
 
 .animate-marquee-slow:hover {
@@ -105,7 +105,7 @@
 .animate-marquee-superslow {
   display: inline-flex;
   white-space: nowrap;
-  animation: marquee-scroll 110s linear infinite;
+  animation: marquee-scroll 260s linear infinite;
 }
 
 .animate-marquee-superslow:hover {

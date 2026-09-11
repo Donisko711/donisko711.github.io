@@ -1,136 +1,55 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Search, 
-  Sparkles, 
   ArrowRight, 
-  CheckCircle, 
-  LayoutGrid, 
-  Layers, 
-  ArrowDownToLine, 
-  ArrowUpFromLine, 
-  Bot, 
-  FileSpreadsheet, 
-  WalletCards, 
-  Repeat, 
-  LineChart, 
-  Award, 
-  CheckSquare, 
-  ShieldAlert, 
-  FileText, 
-  Calculator, 
-  Gift, 
-  Dices, 
-  CreditCard, 
-  UserCheck, 
-  Lock, 
-  MessageSquareText, 
-  Headphones, 
-  Trophy, 
-  Gamepad2, 
-  Flame, 
-  SearchCheck, 
-  FileBadge,
-  Code2,
-  Radio
+  Radio,
+  Clock,
+  Sparkles,
+  X
 } from 'lucide-react';
 import { DASHBOARD_MODULE_CARDS } from '../data/initialData';
 import { ActiveView } from './Sidebar';
+import { LiveScore } from './tools/LiveScore';
+import { UserProfile } from '../types';
 
 interface HomeDashboardProps {
   onNavigate: (view: ActiveView) => void;
   shiftName: string;
+  currentUser?: UserProfile | null;
 }
 
-export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftName }) => {
+export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftName, currentUser }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-
-  const categories = [
-    { id: 'ALL', label: 'SEMUA MENU', count: DASHBOARD_MODULE_CARDS.length },
-    { id: 'KASIR', label: 'KASIR & REKAPAN', count: DASHBOARD_MODULE_CARDS.filter(c => c.category === 'KASIR').length },
-    { id: 'CS', label: 'CUSTOMER SERVICE', count: DASHBOARD_MODULE_CARDS.filter(c => c.category === 'CS').length },
-    { id: 'PRODUK', label: 'INFO PRODUK & GAMES', count: DASHBOARD_MODULE_CARDS.filter(c => c.category === 'PRODUK').length },
-    { id: 'SISTEM', label: 'UTILITAS & CEK SISTEM', count: DASHBOARD_MODULE_CARDS.filter(c => c.category === 'SISTEM').length },
-  ];
 
   const quickPills = [
-    { label: 'AI INTELEGENCY', view: 'ai-intelegency' as ActiveView },
-    { label: 'LIVESCORE (WIB)', view: 'livescore' as ActiveView },
     { label: 'PHISING CHECKER', view: 'phising-checker' as ActiveView },
     { label: 'CEK STATUS NAWALA', view: 'nawala-checker' as ActiveView },
-    { label: 'GENERATE ARTIKEL', view: 'generate-artikel' as ActiveView },
-    { label: 'BBFS & ANGKA TARUNG', view: 'bbfs-angka-tarung' as ActiveView },
-    { label: 'KALKULATOR PARLAY', view: 'kalkulator-parlay' as ActiveView },
-    { label: 'HITUNG TOP-UP', view: 'wd-auto-flop' as ActiveView },
-    { label: 'HITUNG WD', view: 'wd-auto-flop' as ActiveView },
     { label: 'AUTO WD FLOP', view: 'wd-auto-flop' as ActiveView },
     { label: 'DEPOSIT MANUAL', view: 'edit-pembayaran' as ActiveView },
     { label: 'SALDO WD', view: 'info-wd' as ActiveView },
-    { label: 'LIVESCORE & PASARAN', view: 'livescore' as ActiveView }
+    { label: 'KALKULATOR PARLAY', view: 'kalkulator-parlay' as ActiveView },
+    { label: 'BONUS PARLAY', view: 'bonus-parlay' as ActiveView },
+    { label: 'BBFS & ANGKA TARUNG', view: 'bbfs-angka-tarung' as ActiveView },
+    { label: 'GENERATE ARTIKEL', view: 'generate-artikel' as ActiveView },
+    { label: 'FORM DEPO / WD', view: 'form-depo-wd' as ActiveView },
+    { label: 'LAPORAN CS', view: 'laporan-cs' as ActiveView },
+    { label: 'JOBDESK CS', view: 'jobdesk-cs' as ActiveView }
   ];
 
-  const filteredCards = useMemo(() => {
-    return DASHBOARD_MODULE_CARDS.filter(card => {
-      const matchCat = selectedCategory === 'ALL' || card.category === selectedCategory;
-      const matchSearch = 
-        card.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.categoryLabel.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCat && matchSearch;
-    });
-  }, [searchQuery, selectedCategory]);
-
-  const renderIcon = (iconName: string) => {
-    const props = { className: "w-5 h-5 text-amber-400" };
-    switch (iconName) {
-      case 'ArrowDownToLine': return <ArrowDownToLine {...props} className="w-5 h-5 text-emerald-400" />;
-      case 'ArrowUpFromLine': return <ArrowUpFromLine {...props} className="w-5 h-5 text-amber-400" />;
-      case 'Bot': return <Bot {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'FileSpreadsheet': return <FileSpreadsheet {...props} className="w-5 h-5 text-emerald-400" />;
-      case 'WalletCards': return <WalletCards {...props} className="w-5 h-5 text-amber-400" />;
-      case 'Repeat': return <Repeat {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'LineChart': return <LineChart {...props} className="w-5 h-5 text-amber-400" />;
-      case 'Award': return <Award {...props} className="w-5 h-5 text-yellow-400" />;
-      case 'CheckSquare': return <CheckSquare {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'ShieldAlert': return <ShieldAlert {...props} className="w-5 h-5 text-rose-400" />;
-      case 'FileText': return <FileText {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'Calculator': return <Calculator {...props} className="w-5 h-5 text-amber-400" />;
-      case 'Dices': return <Dices {...props} className="w-5 h-5 text-yellow-400" />;
-      case 'Gift': return <Gift {...props} className="w-5 h-5 text-purple-400" />;
-      case 'CreditCard': return <CreditCard {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'UserCheck': return <UserCheck {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'Lock': return <Lock {...props} className="w-5 h-5 text-amber-400" />;
-      case 'MessageSquareText': return <MessageSquareText {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'Headphones': return <Headphones {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'Trophy': return <Trophy {...props} className="w-5 h-5 text-amber-400" />;
-      case 'Sparkles': return <Sparkles {...props} className="w-5 h-5 text-yellow-400" />;
-      case 'Gamepad2': return <Gamepad2 {...props} className="w-5 h-5 text-purple-400" />;
-      case 'Flame': return <Flame {...props} className="w-5 h-5 text-rose-400" />;
-      case 'SearchCheck': return <SearchCheck {...props} className="w-5 h-5 text-amber-400" />;
-      case 'FileBadge': return <FileBadge {...props} className="w-5 h-5 text-cyan-400" />;
-      case 'Code2': return <Code2 {...props} className="w-5 h-5 text-emerald-400" />;
-      case 'Radio': return <Radio {...props} className="w-5 h-5 text-rose-400 animate-pulse" />;
-      default: return <Sparkles {...props} />;
-    }
-  };
-
-  const getBadgeStyle = (badge?: string) => {
-    switch (badge) {
-      case 'BARU':
-        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
-      case 'UTAMA':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40';
-      case 'POPULER':
-        return 'bg-[#00F3FF22] text-[#00F3FF] border-[#00F3FF44]';
-      default:
-        return 'bg-[#1A1A1A] text-gray-400 border-[#1F1F1F]';
-    }
-  };
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return DASHBOARD_MODULE_CARDS.filter(card => 
+      card.title.toLowerCase().includes(query) ||
+      card.description.toLowerCase().includes(query) ||
+      card.categoryLabel.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
 
   return (
     <div className="space-y-6 w-full pb-12">
-      {/* Top Main Banner Card (Sleek Interface with Translucent Glass - Full Width Responsive) */}
-      <div className="relative w-full rounded-3xl bg-[#121212]/75 backdrop-blur-xl border border-white/10 p-5 sm:p-7 shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden">
+      {/* Top Main Banner Card (Workstation CS & Kasir Terpadu) */}
+      <div className="relative w-full rounded-3xl bg-[#121212]/75 backdrop-blur-xl border border-white/10 p-5 sm:p-7 shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-visible">
         {/* Subtle ambient background glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-[#00F3FF]/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -140,7 +59,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1A1A1A]/80 border border-yellow-500/50 text-yellow-400 text-[10px] font-bold font-mono shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_#facc15]"></span>
-                👑 DON ISKO • HS GROUP 711
+                👑 {currentUser?.username?.toUpperCase() === 'LEO' ? 'LEO (INTEL SENIOR)' : (currentUser?.username?.toUpperCase() || 'DON ISKO')} • HS GROUP 711
               </div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00F3FF]/15 border border-[#00F3FF]/30 text-[#00F3FF] text-[10px] font-bold font-mono">
                 ⚡ SHIFT {shiftName || 'PAGI'}
@@ -149,32 +68,84 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 SISTEM ONLINE
               </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[10px] font-mono font-bold">
+                <Radio className="w-3 h-3 text-rose-400 animate-pulse" />
+                LIVESCORE WIB AKTIF
+              </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
               Workstation CS & Kasir Terpadu
             </h1>
             <p className="text-xs sm:text-sm text-gray-300 max-w-3xl leading-relaxed">
-              Semua modul alur kerja Customer Service, Kasir, dan Modul SOP telah dikelompokkan secara terstruktur. Pilih modul di bawah atau gunakan filter pencarian cepat.
+              Monitoring jadwal pertandingan resmi, skor realtime (LIVE WIB), dan modul alur kerja CS & Kasir. Pilih modul pintasan di bawah atau gunakan menu navigasi sebelah kiri.
             </p>
           </div>
 
-          {/* Search bar in Hero */}
-          <div className="w-full lg:w-96 space-y-2 flex-shrink-0">
+          {/* Quick Search bar in Hero */}
+          <div className="w-full lg:w-96 space-y-2 flex-shrink-0 relative">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00F3FF]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Cari nama modul / fungsi..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-full bg-[#1A1A1A]/80 border border-white/10 focus:border-[#00F3FF] text-xs text-white placeholder-gray-400 outline-none transition-all backdrop-blur-sm shadow-inner"
+                placeholder="Cari modul / alat CS..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-full bg-[#1A1A1A]/90 border border-white/10 focus:border-[#00F3FF] text-xs text-white placeholder-gray-400 outline-none transition-all backdrop-blur-sm shadow-inner"
               />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
+
+            {/* Dropdown Quick Search Results */}
+            {searchQuery.trim() && (
+              <div className="absolute top-full mt-2 left-0 right-0 z-50 bg-[#121420]/95 backdrop-blur-2xl border-2 border-[#00F3FF]/40 rounded-2xl p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.8)] max-h-72 overflow-y-auto space-y-1.5 custom-scrollbar">
+                <div className="text-[10px] font-mono text-gray-400 px-2 py-1 flex items-center justify-between border-b border-white/10">
+                  <span>Hasil Pencarian Modul:</span>
+                  <span className="text-[#00F3FF] font-bold">{searchResults.length} ditemukan</span>
+                </div>
+                {searchResults.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-gray-400">
+                    Tidak ditemukan modul dengan kata kunci tersebut.
+                  </div>
+                ) : (
+                  searchResults.map(card => (
+                    <button
+                      key={card.id}
+                      onClick={() => {
+                        onNavigate(card.actionMenuId as ActiveView);
+                        setSearchQuery('');
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl bg-white/5 hover:bg-[#00F3FF]/15 hover:border-[#00F3FF]/50 border border-white/5 transition-all flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <div className="text-xs font-bold text-white group-hover:text-[#00F3FF] transition-colors truncate">
+                          {card.title}
+                        </div>
+                        <div className="text-[10px] text-gray-400 truncate">
+                          {card.categoryLabel}
+                        </div>
+                      </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-[#00F3FF] group-hover:translate-x-1 transition-all flex-shrink-0" />
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-[11px] text-gray-400 px-2 font-mono">
-              <span>Total Modul Tersedia:</span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-[#00F3FF]" />
+                Sinkronisasi: Realtime WIB
+              </span>
               <span className="px-2 py-0.5 rounded-full bg-[#1A1A1A]/80 text-[#00F3FF] font-bold border border-white/10">
-                {filteredCards.length} Fitur
+                {DASHBOARD_MODULE_CARDS.length} Modul
               </span>
             </div>
           </div>
@@ -184,7 +155,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
         <div className="mt-6 pt-5 border-t border-white/10">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1 mr-1 font-mono">
-              ⚡ AKSES CEPAT:
+              ⚡ PINTASAN CEPAT:
             </span>
             {quickPills.map(pill => (
               <button
@@ -199,85 +170,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
         </div>
       </div>
 
-      {/* Category Tabs */}
-      <div className="flex flex-wrap items-center gap-2">
-        {categories.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer backdrop-blur-sm ${
-              selectedCategory === cat.id
-                ? 'bg-[#1F1F1F]/90 text-[#00F3FF] border border-[#00F3FF] shadow-[0_0_15px_rgba(0,243,255,0.2)] font-bold'
-                : 'bg-[#1A1A1A]/70 text-gray-300 hover:text-white border border-white/10 hover:border-gray-500'
-            }`}
-          >
-            <span>{cat.label}</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-              selectedCategory === cat.id ? 'bg-[#00F3FF]/20 text-[#00F3FF]' : 'bg-black/40 text-gray-400'
-            }`}>
-              {cat.count}
-            </span>
-          </button>
-        ))}
+      {/* Tampilan LiveScore Utama di Bagian Depan (Dibawah Kolom Workstation CS & Kasir Terpadu) */}
+      <div className="w-full">
+        <LiveScore />
       </div>
-
-      {/* Grid of Modular Cards (Translucent Glass Styling - Responsive Full Width Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4.5 sm:gap-5 w-full">
-        {filteredCards.map(card => (
-          <div
-            key={card.id}
-            onClick={() => onNavigate(card.actionMenuId as ActiveView)}
-            className="group relative flex flex-col justify-between p-6 rounded-3xl bg-[#121212]/75 hover:bg-[#181818]/90 backdrop-blur-xl border border-white/10 hover:border-[#00F3FF] shadow-[0_4px_24px_rgba(0,0,0,0.5)] hover:shadow-[0_0_25px_rgba(0,243,255,0.2)] transition-all duration-200 cursor-pointer overflow-hidden"
-          >
-            <div>
-              {/* Header: Icon & Badge */}
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="p-3 rounded-2xl bg-[#1A1A1A]/80 border border-white/10 group-hover:border-[#00F3FF]/40 text-[#00F3FF] transition-all shadow-inner">
-                  {renderIcon(card.icon)}
-                </div>
-                {card.badge && (
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border backdrop-blur-sm ${getBadgeStyle(card.badge)}`}>
-                    {card.badge}
-                  </span>
-                )}
-              </div>
-
-              {/* Category Label */}
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-mono mb-1">
-                {card.categoryLabel}
-              </div>
-
-              {/* Card Title */}
-              <h3 className="text-base font-bold text-white group-hover:text-[#00F3FF] tracking-tight transition-colors mb-2">
-                {card.title}
-              </h3>
-
-              {/* Description */}
-              <p className="text-xs text-gray-300 line-clamp-3 leading-relaxed mb-4">
-                {card.description}
-              </p>
-            </div>
-
-            {/* Action Link Footer */}
-            <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs font-semibold text-[#00F3FF] group-hover:text-[#00F3FF]">
-              <span className="group-hover:translate-x-1 transition-transform">
-                Buka Modul
-              </span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredCards.length === 0 && (
-        <div className="p-12 text-center rounded-3xl bg-[#121212]/75 backdrop-blur-xl border border-white/10">
-          <Search className="w-10 h-10 text-gray-500 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-white mb-1">Modul Tidak Ditemukan</h3>
-          <p className="text-xs text-gray-300">
-            Coba kata kunci pencarian lain atau pilih kategori Semua Menu.
-          </p>
-        </div>
-      )}
     </div>
   );
 };

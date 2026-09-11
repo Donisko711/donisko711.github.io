@@ -40,7 +40,6 @@ import { NotificationDrawer } from './livescore/NotificationDrawer';
 import { SeasonMatchArchiveView } from './livescore/SeasonMatchArchiveView';
 import { LeagueStandingsView } from './livescore/LeagueStandingsView';
 import { playRefereeWhistle, playGoalCelebration } from '../../utils/audioAlert';
-import { SbobetSportsSidebar } from './livescore/SbobetSportsSidebar';
 import { SBOBET_SPORTS_LIST } from '../../data/sbobetSports';
 
 const INITIAL_ALERTS: LiveScoreAlertItem[] = [];
@@ -51,7 +50,6 @@ export const LiveScore: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [selectedSport, setSelectedSport] = useState<SportType>('all');
-  const [isMobileSportsSidebarOpen, setIsMobileSportsSidebarOpen] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<MatchStatusFilter>('ALL');
   const [regionFilter, setRegionFilter] = useState<MatchRegionFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -853,18 +851,8 @@ export const LiveScore: React.FC = () => {
       {/* View 3: Today Livescore & Schedules */}
       {activeMainTab === 'today' && (
         <>
-          {/* SBOBET Quick Bar & Mobile Trigger */}
+          {/* Sports Quick Filter Bar */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-            {/* Mobile / Quick Access Button to SBOBET "Jenis Olahraga" Panel */}
-            <button
-              type="button"
-              onClick={() => setIsMobileSportsSidebarOpen(true)}
-              className="lg:hidden px-3.5 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 flex-shrink-0 bg-[#2E3C6B] text-white border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.3)]"
-            >
-              <Trophy className="w-4 h-4 text-yellow-400" />
-              <span>Menu Olahraga SBOBET (26)</span>
-            </button>
-
             {/* Horizontal Sport Pills with SBOBET Counter Badges */}
             {sportsTabs.map((tab) => {
               const isActive = selectedSport === tab.id;
@@ -893,20 +881,9 @@ export const LiveScore: React.FC = () => {
             })}
           </div>
 
-          {/* SBOBET Two-Column Grid: Sticky SBOBET "Jenis Olahraga" Sidebar + Matches List */}
-          <div className="lg:grid lg:grid-cols-[255px_1fr] xl:grid-cols-[275px_1fr] gap-4 items-start">
-            {/* SBOBET Desktop Sidebar (Matching the user's reference image) */}
-            <div className="hidden lg:block sticky top-20">
-              <SbobetSportsSidebar
-                selectedSport={selectedSport}
-                onSelectSport={setSelectedSport}
-                actualSportCounts={actualSportCounts}
-              />
-            </div>
-
-            {/* Main Content Area */}
-            <div className="min-w-0 space-y-4">
-              {/* Active Sport Notification Banner */}
+          {/* Main Matches Content Area (Full Width) */}
+          <div className="w-full space-y-4">
+            {/* Active Sport Notification Banner */}
               {selectedSport !== 'all' && activeSbobetSport && (
                 <div className="bg-[#10172A] border-2 border-[#2E3C6B] p-3 rounded-2xl flex items-center justify-between flex-wrap gap-2 shadow-lg animate-in fade-in">
                   <div className="flex items-center gap-3">
@@ -2026,23 +2003,7 @@ export const LiveScore: React.FC = () => {
     })}
         </div>
       )}
-            </div>
           </div>
-
-          {/* SBOBET Mobile Modal / Drawer (when user taps "Menu Olahraga SBOBET") */}
-          {isMobileSportsSidebarOpen && (
-            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 lg:hidden animate-in fade-in">
-              <div className="w-full max-w-sm max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl">
-                <SbobetSportsSidebar
-                  selectedSport={selectedSport}
-                  onSelectSport={setSelectedSport}
-                  isMobileModal={true}
-                  onCloseMobile={() => setIsMobileSportsSidebarOpen(false)}
-                  actualSportCounts={actualSportCounts}
-                />
-              </div>
-            </div>
-          )}
         </>
       )}
 

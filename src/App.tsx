@@ -51,7 +51,6 @@ const WdAutoFlop = safeLazy(() => import('./components/tools/WdAutoFlop').then(m
 const InfoWd = safeLazy(() => import('./components/tools/InfoWd').then(m => ({ default: m.InfoWd })));
 const InfoDataPL = safeLazy(() => import('./components/tools/InfoDataPL').then(m => ({ default: m.InfoDataPL })));
 const ModulBelajar = safeLazy(() => import('./components/tools/ModulBelajar').then(m => ({ default: m.ModulBelajar })));
-const AiIntelligence = safeLazy(() => import('./components/tools/AiIntelligence').then(m => ({ default: m.AiIntelligence })));
 const HadiahTogelOnline = safeLazy(() => import('./components/tools/HadiahTogelOnline').then(m => ({ default: m.HadiahTogelOnline })));
 const JadwalPasaranTogel = safeLazy(() => import('./components/tools/JadwalPasaranTogel').then(m => ({ default: m.JadwalPasaranTogel })));
 
@@ -258,25 +257,6 @@ export default function App() {
   };
 
   const handleSelectView = (viewId: ActiveView) => {
-    // Role Leo (INTEL SENIOR / CEO) Access Restriction
-    if (currentUser?.username?.toLowerCase() === 'leo' || currentUser?.role === 'INTEL SENIOR' || currentUser?.role === 'CEO') {
-      const allowedViews: ActiveView[] = [
-        'home',
-        'wd-auto-flop', 
-        'jobdesk-kasir',
-        'info-wd', 
-        'info-data-pl',
-        'modul-sportbooks',
-        'modul-togel-cara',
-        'modul-togel-hadiah',
-        'modul-togel-jadwal',
-        'modul-slot'
-      ];
-      if (!allowedViews.includes(viewId)) {
-        setActiveView('wd-auto-flop');
-        return;
-      }
-    }
     setActiveView(viewId);
     if (viewId === 'jobdesk-cs' || viewId === 'jobdesk-kasir') {
       syncJobdesk(true);
@@ -298,7 +278,7 @@ export default function App() {
       }
     }
     if (user.username.toLowerCase() === 'leo' || user.role === 'INTEL SENIOR' || user.role === 'CEO') {
-      setActiveView('wd-auto-flop');
+      setActiveView('home');
     } else if (user.username.toLowerCase() === 'cs' || user.role === 'CS MANTAP') {
       setActiveView('jobdesk-cs');
     } else if (user.username.toLowerCase() === 'donisko') {
@@ -350,7 +330,6 @@ export default function App() {
   const getViewBreadcrumb = () => {
     switch (activeView) {
       case 'home': return { category: 'BERANDA', title: 'Dashboard Ringkasan' };
-      case 'ai-intelegency': return { category: 'MENU HIGHLIGHT', title: 'AI Intelegency Workstation' };
       case 'livescore': return { category: 'MENU HIGHLIGHT', title: 'Live Score & Jadwal Pertandingan (WIB)' };
       case 'phising-checker': return { category: 'MENU HIGHLIGHT', title: 'Phising & Script Page Checker' };
       case 'nawala-checker': return { category: 'MENU HIGHLIGHT', title: 'Nawala & Link Checker' };
@@ -500,10 +479,9 @@ export default function App() {
                   <HomeDashboard
                     onNavigate={handleSelectView}
                     shiftName={activeShift}
+                    currentUser={currentUser}
                   />
                 )}
-
-              {activeView === 'ai-intelegency' && <AiIntelligence />}
 
               {activeView === 'jobdesk-cs' && (
                 <JobdeskManager

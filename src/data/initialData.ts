@@ -642,17 +642,6 @@ export const INITIAL_TOGEL_PASARAN: TogelPasaran[] = [
 ];
 
 export const DASHBOARD_MODULE_CARDS: DashboardModuleCard[] = [
-  // AI Intelligence & Smart Tools
-  {
-    id: 'mod-ai',
-    title: 'AI INTELEGENCY',
-    category: 'SISTEM',
-    categoryLabel: 'AI ASSISTANT',
-    description: 'Asisten AI Don Isko untuk CS & Kasir: Tanya SOP, template respon LiveChat, analisa fraud & dispute, serta hitung TO otomatis.',
-    badge: 'BARU',
-    icon: 'Sparkles',
-    actionMenuId: 'ai-intelegency'
-  },
   {
     id: 'mod-phising',
     title: 'PHISING CHECKER',

@@ -20,7 +20,7 @@ export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = ({
   onSelectAlert
 }) => {
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  // Default speed: 'slow' (80s) so bigmatch alerts are relaxed, easy to read, and not rushing
+  // Default speed: 'slow' (180s) so bigmatch alerts move at a relaxed, readable pace identical to BROADCAST
   const [speed, setSpeed] = useState<'slow' | 'superslow' | 'normal'>('slow');
 
   // Default ticker items if no alerts yet
@@ -98,7 +98,7 @@ export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = ({
             isPaused ? '' : 'animate-marquee-slow'
           }`}
           style={{
-            animationDuration: speed === 'superslow' ? '125s' : speed === 'slow' ? '85s' : '50s',
+            animationDuration: speed === 'superslow' ? '260s' : speed === 'slow' ? '180s' : '120s',
             animationPlayState: isPaused ? 'paused' : 'running',
             display: 'inline-flex',
             willChange: 'transform'
@@ -203,7 +203,7 @@ export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = ({
             else setSpeed('slow');
           }}
           className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-amber-300 hover:text-white transition-all text-xs flex items-center gap-1 cursor-pointer border border-amber-400/20"
-          title={`Kecepatan Teks Berjalan: ${speed === 'slow' ? '🐢 Pelan (85 dtk - Santai & Terbaca Jelas)' : speed === 'superslow' ? '🦥 Sangat Pelan (125 dtk)' : '⚡ Sedang (50 dtk)'}. Klik untuk ganti.`}
+          title={`Kecepatan Teks Berjalan: ${speed === 'slow' ? '🐢 Pelan (180 dtk - Santai seperti Broadcast)' : speed === 'superslow' ? '🦥 Sangat Pelan (260 dtk)' : '⚡ Sedang (120 dtk)'}. Klik untuk ganti.`}
         >
           <Gauge className="w-3.5 h-3.5 text-amber-400" />
           <span className="text-[10px] font-mono font-bold hidden md:inline">

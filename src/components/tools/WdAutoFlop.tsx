@@ -143,9 +143,13 @@ export const WdAutoFlop: React.FC = () => {
       if (!hasDate) return false;
       if (!/withdraw/i.test(line)) return false;
       const upper = line.toUpperCase();
-      const hasBankOrComma = KNOWN_BANKS.some(b => upper.includes(b)) || line.includes(',');
-      const hasStatusOrMultiFields = /ACCEPT|REJECT|PENDING|CANCEL|jvsaaautowd|approved|success|-/i.test(line) || line.split(/\t+/).length >= 4 || line.split(/\s+/).length >= 6;
-      return hasBankOrComma && hasStatusOrMultiFields;
+      // Must actually contain a known bank name on this exact line
+      const hasKnownBank = KNOWN_BANKS.some(b => upper.includes(b));
+      if (!hasKnownBank) return false;
+      const hasStatusOrTabs = /ACCEPT|REJECT|PENDING|CANCEL|jvsaaautowd|approved|success|-/i.test(line) 
+        || line.split(/\t+/).length >= 5 
+        || (line.includes(',') && (line.split(',').length >= 3));
+      return hasStatusOrTabs;
     };
 
     let currentBlock: Partial<ParsedWdRow> = {};
