@@ -879,7 +879,7 @@ export const IdnSlotRoundEditor: React.FC = () => {
         <div 
           ref={tableRef}
           style={{
-            minWidth: '1080px',
+            minWidth: '1240px',
             backgroundColor: '#ffffff',
             color: '#3f4254',
             fontFamily: 'Poppins, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -1048,25 +1048,25 @@ export const IdnSlotRoundEditor: React.FC = () => {
               <thead>
                 <tr style={{ background: '#f3f6f9', borderBottom: '1px solid #ebedf3', height: '42px' }}>
                   <th style={{ width: '28px', padding: '8px 4px 8px 12px' }}></th>
-                  <th style={{ width: '180px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '240px', minWidth: '230px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Game
                   </th>
-                  <th style={{ width: '260px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '250px', minWidth: '240px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Round ID
                   </th>
-                  <th style={{ width: '180px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '160px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     User
                   </th>
-                  <th style={{ width: '175px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '165px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Timestamp
                   </th>
-                  <th style={{ width: '110px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>
+                  <th style={{ width: '100px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>
                     Type
                   </th>
-                  <th style={{ width: '235px', minWidth: '230px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '240px', minWidth: '235px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Amount
                   </th>
-                  <th style={{ width: '65px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>
+                  <th style={{ width: '55px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>
                     Status
                   </th>
                 </tr>
@@ -1097,7 +1097,7 @@ export const IdnSlotRoundEditor: React.FC = () => {
                       </td>
 
                       {/* Game & Provider */}
-                      <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
+                      <td style={{ width: '240px', minWidth: '230px', padding: '8px 12px', verticalAlign: 'middle' }}>
                         <input
                           type="text"
                           value={row.gameId}
@@ -1131,7 +1131,7 @@ export const IdnSlotRoundEditor: React.FC = () => {
                       </td>
 
                       {/* Round ID & Ext ID */}
-                      <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
+                      <td style={{ width: '250px', minWidth: '240px', padding: '8px 12px', verticalAlign: 'middle' }}>
                         <input
                           type="text"
                           value={row.roundId}
@@ -1169,7 +1169,7 @@ export const IdnSlotRoundEditor: React.FC = () => {
                       </td>
 
                       {/* User & Operator */}
-                      <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
+                      <td style={{ width: '160px', padding: '8px 12px', verticalAlign: 'middle' }}>
                         <input
                           type="text"
                           value={row.nickname}
@@ -1202,7 +1202,7 @@ export const IdnSlotRoundEditor: React.FC = () => {
                       </td>
 
                       {/* Timestamp */}
-                      <td style={{ padding: '8px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                      <td style={{ width: '165px', padding: '8px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         <input
                           type="text"
                           value={row.timestamp}
