@@ -1042,31 +1042,31 @@ export const IdnSlotRoundEditor: React.FC = () => {
           )}
 
           {/* THE DATATABLE TABLE */}
-          <div style={{ border: '1px solid #ebedf3', borderRadius: '4px', overflow: 'hidden' }}>
+          <div style={{ border: '1px solid #ebedf3', borderRadius: '4px', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
               {/* THEAD */}
               <thead>
                 <tr style={{ background: '#f3f6f9', borderBottom: '1px solid #ebedf3', height: '42px' }}>
                   <th style={{ width: '28px', padding: '8px 4px 8px 12px' }}></th>
-                  <th style={{ width: '190px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '180px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Game
                   </th>
-                  <th style={{ width: '270px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '260px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Round ID
                   </th>
-                  <th style={{ width: '190px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '180px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     User
                   </th>
-                  <th style={{ width: '180px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '175px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Timestamp
                   </th>
-                  <th style={{ width: '120px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>
+                  <th style={{ width: '110px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>
                     Type
                   </th>
-                  <th style={{ width: '190px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ width: '235px', minWidth: '230px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Amount
                   </th>
-                  <th style={{ width: '70px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>
+                  <th style={{ width: '65px', padding: '8px 12px', color: '#b5b5c3', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>
                     Status
                   </th>
                 </tr>
@@ -1238,26 +1238,26 @@ export const IdnSlotRoundEditor: React.FC = () => {
                               border: 'none',
                               background: 'transparent',
                               color: isCredit ? '#1bc5bd' : isDebit ? '#f64e60' : '#3699ff',
-                              fontWeight: 'bold',
+                              fontWeight: 500,
                               fontSize: '12px',
                               outline: 'none',
                               cursor: 'pointer',
                               padding: '0'
                             }}
                           >
-                            <option value="Credit" style={{ color: '#1bc5bd' }}>Credit</option>
-                            <option value="Debit" style={{ color: '#f64e60' }}>Debit</option>
-                            <option value="Refund" style={{ color: '#3699ff' }}>Refund</option>
-                            <option value="Rollback Win" style={{ color: '#8950fc' }}>Rollback Win</option>
-                            <option value="Promotion" style={{ color: '#ffa800' }}>Promotion</option>
+                            <option value="Credit" style={{ color: '#1bc5bd', fontWeight: 500 }}>Credit</option>
+                            <option value="Debit" style={{ color: '#f64e60', fontWeight: 500 }}>Debit</option>
+                            <option value="Refund" style={{ color: '#3699ff', fontWeight: 500 }}>Refund</option>
+                            <option value="Rollback Win" style={{ color: '#8950fc', fontWeight: 500 }}>Rollback Win</option>
+                            <option value="Promotion" style={{ color: '#ffa800', fontWeight: 500 }}>Promotion</option>
                           </select>
                         </div>
                       </td>
 
                       {/* Amount & Balance */}
-                      <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <span style={{ fontWeight: 600, color: '#3f4254', fontSize: '12px', marginRight: '4px' }}>IDR</span>
+                      <td style={{ padding: '8px 12px', verticalAlign: 'middle', minWidth: '230px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: 600, color: '#3f4254', fontSize: '12px', marginRight: '4px', flexShrink: 0 }}>IDR</span>
                           <input
                             type="text"
                             value={formatIDR(row.amount)}
@@ -1277,8 +1277,8 @@ export const IdnSlotRoundEditor: React.FC = () => {
                             }}
                           />
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', color: '#b5b5c3', fontSize: '11px', marginTop: '1px' }}>
-                          <span>Balance : IDR&nbsp;</span>
+                        <div style={{ display: 'flex', alignItems: 'center', color: '#b5b5c3', fontSize: '11px', marginTop: '1px', whiteSpace: 'nowrap' }}>
+                          <span style={{ flexShrink: 0 }}>Balance : IDR&nbsp;</span>
                           <input
                             type="text"
                             value={formatIDR(row.balance)}
@@ -1291,7 +1291,8 @@ export const IdnSlotRoundEditor: React.FC = () => {
                               background: 'transparent',
                               color: '#b5b5c3',
                               fontSize: '11px',
-                              width: 'calc(100% - 85px)',
+                              flex: 1,
+                              minWidth: '120px',
                               outline: 'none',
                               padding: '0'
                             }}
