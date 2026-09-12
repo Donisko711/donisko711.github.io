@@ -181,12 +181,15 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
     const r = rawReason.trim();
     if (!r) return 'Kendala Akun';
 
-    // Priority regex mapping
+    // Priority exact/normalized checks
     if (/^rek\s*tidak\s*valid$/i.test(r)) {
       return 'Rek Tidak Valid';
     }
-    if (/nomor\s*rekening\s*tidak\s*valid|no\s*rekening\s*tidak\s*valid|no\s*rek\s*tidak\s*valid/i.test(r)) {
-      return 'No Rekening Tidak Valid';
+    if (/^no\s*rek(?:ening)?\s*tidak\s*valid$/i.test(r)) {
+      return 'No Rek Tidak Valid';
+    }
+    if (/^nomor\s*rekening\s*tidak\s*valid$/i.test(r)) {
+      return 'Nomor Rekening Tidak Valid';
     }
     if (/nama\s*rekening\s*beda|nama\s*rek\s*beda|nama\s*beda/i.test(r)) {
       return 'Nama Rek Beda';
@@ -195,7 +198,7 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
       return 'Akun Belum Premium';
     }
     if (/ewallet\s*pl\s*limit|e-wallet\s*pl\s*limit/i.test(r)) {
-      return 'Ewallet Pl Limit';
+      return 'Ewallet PL Limit';
     }
     if (/akun\s*pl\s*limit/i.test(r)) {
       return 'Akun PL Limit';
@@ -203,19 +206,23 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
     if (/form\s*kosong|spam\s*form\s*kosong/i.test(r)) {
       return 'Spam Form Kosong';
     }
-    if (/invest\s*2d\s*depan/i.test(r)) {
-      return 'Invest 2D Depan';
-    }
 
-    // Default to clean title case with acronym preservation
-    let formatted = toTitleCase(r);
-    formatted = formatted
-      .replace(/\bPl\b/g, 'PL')
-      .replace(/\bId\b/g, 'ID')
-      .replace(/\bWd\b/g, 'WD')
-      .replace(/\bDp\b/g, 'DP')
-      .replace(/\bNomor\b/g, 'No');
-    return formatted;
+    // Word-by-word formatting for acronyms, digits, and usernames
+    const words = r.split(/\s+/);
+    const formattedWords = words.map(w => {
+      const low = w.toLowerCase();
+      if (low === 'pl') return 'PL';
+      if (low === 'id') return 'ID';
+      if (low === 'userid' || low === 'user_id') return 'User ID';
+      if (low === 'wd') return 'WD';
+      if (low === 'dp') return 'DP';
+      if (/^\d+d$/i.test(low)) return low.toUpperCase(); // e.g. 2d -> 2D, 3d -> 3D, 4d -> 4D
+      // If word contains alphanumeric mix with digits (e.g. rini2022), preserve as lowercase
+      if (/^[a-zA-Z]+[0-9]+$/i.test(w)) return w.toLowerCase();
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    });
+
+    return formattedWords.join(' ');
   };
 
   // ==========================================
@@ -232,12 +239,36 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
     let detectedRawDate = '';
 
     lines.forEach((line, index) => {
+      const tabCols = line.split('\t').map(c => c.trim());
+
+      // Staff code extraction (e.g. keoaacs9, jvsaacs2, etc.)
+      let staff = '';
+      if (tabCols.length >= 3 && /\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(tabCols[1])) {
+        if (tabCols[2] && tabCols[2].length <= 30 && !/^(change|bank|rek|acc)/i.test(tabCols[2])) {
+          staff = tabCols[2];
+        }
+      }
+      if (!staff) {
+        const dtStaffMatch = line.match(/\d{1,2}[-/]\d{1,2}[-/]\d{4}\s+(?:\d{2}:\d{2}(?::\d{2})?\s+)?([a-zA-Z0-9_\-\.]+)\s+(?:change|locked|unlocked)/i);
+        if (dtStaffMatch) {
+          staff = dtStaffMatch[1].trim();
+        }
+      }
+      if (!staff) {
+        const staffMatch = line.match(/\b([a-zA-Z0-9]*(?:acs|aks|cs)\d*)\b/i) || line.match(/\b(staff\w*)\b/i);
+        if (staffMatch && !/^(bank|acc|rek)$/i.test(staffMatch[1])) {
+          staff = staffMatch[1].trim();
+        }
+      }
+
       // Find user ID (mendukung user ID full angka maupun alfanumerik)
       let userId = '';
       const explicitUser = line.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i)
         || line.match(/change\s+user\s+info\s+([a-zA-Z0-9_\-\.]+)/i);
       if (explicitUser) {
         userId = explicitUser[1].trim();
+      } else if (tabCols.length >= 6 && /^[a-zA-Z0-9_\-\.]+$/.test(tabCols[tabCols.length - 1])) {
+        userId = tabCols[tabCols.length - 1];
       } else {
         const tokens = line.split(/\s+|\t/).map(t => t.trim()).filter(Boolean);
         // Cari token kandidat user ID (bisa angka semua misal 88726155 atau huruf, bukan tanggal/jam/keyword)
@@ -248,6 +279,7 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
           !/^(bca|bni|bri|mandiri|cimb|danamon|dana|ovo|gopay|linkaja|shopeepay|qris|change|user|info|done|rek|bank|acc)$/i.test(t) &&
           !t.includes('=>') &&
           !t.includes(':') &&
+          t !== staff &&
           t.length >= 3
         );
         userId = candidate || tokens[tokens.length - 1] || `user_${index + 1}`;
@@ -267,54 +299,74 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
         if (tmMatch) time = tmMatch[1];
       }
 
-      // Staff code
-      let staff = staffAlias ? staffAlias.trim() : '';
-      const staffMatch = line.match(/jvsaacs\d+|jvsaaks\d+|staff\w+/i);
-      if (staffMatch) {
-        staff = staffMatch[0];
-      }
-
       // Old vs New Bank
-      let oldBank = 'BRI';
-      let newBank = 'OVO';
-      const bankMatch = line.match(/bank\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/i);
-      if (bankMatch) {
-        oldBank = bankMatch[1].trim().toUpperCase();
-        newBank = bankMatch[2].trim().toUpperCase();
+      let oldBank = 'GOPAY';
+      let newBank = 'GOPAY';
+      const bankMatches = Array.from(line.matchAll(/(?:bank|jenis\s*bank)\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/gi));
+      if (bankMatches.length > 0) {
+        const changed = bankMatches.find(m => m[1].trim().toUpperCase() !== m[2].trim().toUpperCase());
+        const selected = changed || bankMatches[0];
+        oldBank = selected[1].trim().toUpperCase();
+        newBank = selected[2].trim().toUpperCase();
+      } else {
+        const singleBank = line.match(/(?:bank|jenis\s*bank)\s*:\s*([^=>,\n\t]+)/i);
+        if (singleBank) {
+          oldBank = singleBank[1].trim().toUpperCase();
+          newBank = oldBank;
+        }
       }
 
       // Old vs New Rek
       let oldRek = '-';
       let newRek = '-';
-      const rekMatch = line.match(/rek\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/i);
-      if (rekMatch) {
-        oldRek = rekMatch[1].trim();
-        newRek = rekMatch[2].trim();
+      const rekMatches = Array.from(line.matchAll(/(?:rek|rekening|no\s*rek|no_rek)\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/gi));
+      if (rekMatches.length > 0) {
+        const changed = rekMatches.find(m => m[1].trim() !== m[2].trim());
+        const selected = changed || rekMatches[rekMatches.length - 1];
+        oldRek = selected[1].trim();
+        newRek = selected[2].trim();
+      } else {
+        const singleRek = line.match(/(?:rek|rekening|no\s*rek|no_rek)\s*:\s*([^=>,\n\t]+)/i);
+        if (singleRek) {
+          oldRek = singleRek[1].trim();
+          newRek = oldRek;
+        }
       }
 
-      // Old vs New Acc Name
+      // Old vs New Acc Name (Account Holder Name)
       let oldAcc = '-';
       let newAcc = '-';
-      const accMatch = line.match(/acc\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/i);
-      if (accMatch) {
-        oldAcc = toTitleCase(accMatch[1].trim());
-        newAcc = toTitleCase(accMatch[2].trim());
+      const accMatches = Array.from(line.matchAll(/(?:acc|nama|nama_rek|nama\s*rekening|account)\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/gi));
+      if (accMatches.length > 0) {
+        const changed = accMatches.find(m => m[1].trim().toUpperCase() !== m[2].trim().toUpperCase());
+        const selected = changed || accMatches[0];
+        oldAcc = selected[1].trim().toUpperCase();
+        newAcc = selected[2].trim().toUpperCase();
+      } else {
+        const singleAcc = line.match(/(?:acc|nama|nama_rek|nama\s*rekening|account)\s*:\s*([^=>,\n\t]+)/i);
+        if (singleAcc) {
+          oldAcc = singleAcc[1].trim().toUpperCase();
+          newAcc = oldAcc;
+        }
       }
+
+      if (oldAcc === '-' && newAcc !== '-') oldAcc = newAcc;
+      if (newAcc === '-' && oldAcc !== '-') newAcc = oldAcc;
 
       const item: ParsedGantiDataItem = {
         id: `gd-${index}-${Date.now()}`,
         no: index + 1,
         date: date || detectedRawDate || new Date().toISOString().slice(0, 10),
         time,
-        staff: staffAlias ? staffAlias.trim() : staff,
+        staff: staff || (staffAlias ? staffAlias.trim() : ''),
         userId,
         oldBank,
         newBank,
         oldRek,
         newRek,
-        oldAcc: oldAcc === '-' ? newAcc : oldAcc,
+        oldAcc,
         newAcc,
-        changeType: `${oldBank} To ${newBank}`
+        changeType: oldBank === newBank ? 'Ganti No Rekening' : `${oldBank} To ${newBank}`
       };
 
       parsedItems.push(item);
@@ -343,16 +395,17 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
 
     const blocks = gdParsedList.map((item) => {
       const formattedDate = formatIndonesianDate(item.date, false);
-      return `Staff : ${staffAlias ? staffAlias.trim() : ''}
+      const staffDisplay = item.staff
+        ? `${item.staff} / ${staffAlias ? staffAlias.trim() : ''}`
+        : (staffAlias ? `${staffAlias.trim()} / ` : '/ ');
+
+      return `Staff : ${staffDisplay}
 Tanggal : ${formattedDate}
-Info Ko / Ci
-Ket : Update Rekening PL, Terlampir Dibawah :
 
 User ID : ${item.userId}
-Data Sebelumnya : ${item.oldBank}, ${item.oldRek}, ${item.oldAcc}
-Data Terbaru : ${item.newBank}, ${item.newRek}, ${item.newAcc}
-
-NB : Pergantian Dilakukan Pada Jenis Bank ${item.oldBank} To ${item.newBank}`;
+Ket : Pergantian Data Rekening
+Data Sebelumnya : ${item.oldBank.toUpperCase()}, ${item.oldAcc.toUpperCase()}, ${item.oldRek}
+Data Terbarunya : ${item.newBank.toUpperCase()}, ${item.newAcc.toUpperCase()}, ${item.newRek}`;
     });
 
     setGdExtractedText(blocks.join('\n\n'));
@@ -429,10 +482,27 @@ NB : Pergantian Dilakukan Pada Jenis Bank ${item.oldBank} To ${item.newBank}`;
       }
 
       // Staff match
-      let staff = staffAlias ? staffAlias.trim() : '';
-      const staffMatch = line.match(/\b(jvsaacs\d+|jvsaaks\d+|staff\w+)\b/i);
-      if (staffMatch) {
-        staff = staffMatch[0];
+      let staff = '';
+      const tabCols = line.split('\t').map(c => c.trim());
+      if (tabCols.length >= 3 && /\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(tabCols[1])) {
+        if (tabCols[2] && tabCols[2].length <= 30 && !/^(locked|unlocked)/i.test(tabCols[2])) {
+          staff = tabCols[2];
+        }
+      }
+      if (!staff) {
+        const dtStaffMatch = line.match(/\d{1,2}[-/]\d{1,2}[-/]\d{4}\s+(?:\d{2}:\d{2}(?::\d{2})?\s+)?([a-zA-Z0-9_\-\.]+)\s+(?:locked|unlocked)/i);
+        if (dtStaffMatch) {
+          staff = dtStaffMatch[1].trim();
+        }
+      }
+      if (!staff) {
+        const staffMatch = line.match(/\b([a-zA-Z0-9]*(?:acs|aks|cs)\d*)\b/i) || line.match(/\b(staff\w*)\b/i);
+        if (staffMatch && !/^(locked|unlocked)$/i.test(staffMatch[1])) {
+          staff = staffMatch[1].trim();
+        }
+      }
+      if (!staff && staffAlias) {
+        staff = staffAlias.trim();
       }
 
       const item: ParsedLockedItem = {
@@ -463,39 +533,92 @@ NB : Pergantian Dilakukan Pada Jenis Bank ${item.oldBank} To ${item.newBank}`;
     const firstDate = lockParsedList.find(l => l.date)?.date;
     const reportDate = formatIndonesianDate(firstDate, false); // e.g. "03 Agustus 2026"
 
-    // Deduplicate locked items by userId (case-insensitive) in chronological order
-    const uniqueLocked = new Map<string, ParsedLockedItem>();
+    // Deduplicate locked items by userId (case-insensitive)
     const lockedOnly = lockParsedList.filter(l => l.action === 'Locked');
 
-    // Sort chronologically (earliest to latest in shift)
-    const sortedLocked = [...lockedOnly].sort((a, b) => {
+    // Separate into Invest vs Non-Invest (Regular)
+    const regularItems: ParsedLockedItem[] = [];
+    const investItems: ParsedLockedItem[] = [];
+    const seenRegular = new Set<string>();
+    const seenInvest = new Set<string>();
+
+    lockedOnly.forEach(item => {
+      const key = item.userId.toLowerCase();
+      const isInvest = /invest/i.test(item.kendala);
+      if (isInvest) {
+        if (!seenInvest.has(key)) {
+          seenInvest.add(key);
+          investItems.push(item);
+        }
+      } else {
+        if (!seenRegular.has(key)) {
+          seenRegular.add(key);
+          regularItems.push(item);
+        }
+      }
+    });
+
+    // For invest items: sort chronologically (earliest timestamp first)
+    const sortedInvest = [...investItems].sort((a, b) => {
       if (a.date && b.date && a.date !== b.date) {
         return a.date.localeCompare(b.date);
       }
-      return (a.time || '').localeCompare(b.time || '');
-    });
-
-    sortedLocked.forEach(item => {
-      const key = item.userId.toLowerCase();
-      if (!uniqueLocked.has(key)) {
-        uniqueLocked.set(key, item);
+      if (a.time && b.time && a.time !== b.time) {
+        return a.time.localeCompare(b.time);
       }
+      return b.no - a.no;
     });
 
-    const lockedListLines = Array.from(uniqueLocked.values())
-      .map(item => `* ${item.userId} - ${item.kendala}`);
+    // For regular items: maintain order of appearance in the log
+    const sortedRegular = [...regularItems];
 
-    const reportOutput = 
+    const reports: string[] = [];
+
+    // 1. Regular Locked Report
+    if (sortedRegular.length > 0) {
+      const listLines = sortedRegular.map(item => `* ${item.userId} - ${item.kendala}`);
+      const regBlock = 
 `Staff : ${staffAlias ? staffAlias.trim() : ''}
 Tanggal : ${reportDate}
-Info Ko / Ci
-Ket : Locked ID PL, Terlampir Dibawah :
+Ket : Locked Member
 
-${lockedListLines.length > 0 ? lockedListLines.join('\n') : '* Tidak ada user locked'}
+User ID :
+${listLines.join('\n')}`;
+      reports.push(regBlock);
+    }
 
-NB : Untuk PL Diatas Sudah Di Locked Yaa Ko/Ci ..`;
+    // 2. Invest Locked Report
+    if (sortedInvest.length > 0) {
+      const investLines = sortedInvest.map(item => `* ${item.userId} - ${item.kendala}`);
+      const investBlock = 
+`Staff : ${staffAlias ? staffAlias.trim() : ''}
+Tanggal : ${reportDate}
+Ket : Locked Member
 
-    setLockExtractedText(reportOutput);
+User ID :
+${investLines.join('\n')}
+
+NB : Untuk Member Invest Diatas Sudah Di Manualkan 2.000`;
+      reports.push(investBlock);
+    }
+
+    if (reports.length === 0) {
+      if (lockParsedList.length > 0) {
+        setLockExtractedText(
+`Staff : ${staffAlias ? staffAlias.trim() : ''}
+Tanggal : ${reportDate}
+Ket : Locked Member
+
+User ID :
+* Tidak ada user locked`
+        );
+      } else {
+        setLockExtractedText('');
+      }
+      return;
+    }
+
+    setLockExtractedText(reports.join('\n\n\n'));
   }, [lockParsedList, staffAlias]);
 
   // Update kendala for an individual locked user
@@ -551,7 +674,7 @@ NB : Untuk PL Diatas Sudah Di Locked Yaa Ko/Ci ..`;
   const handleCopyDetail = () => {
     if (activeTab === 'GANTI_DATA') {
       const rows = gdParsedList.map(item => 
-        `${item.no}\t${formatIndonesianDate(item.date, false)} ${item.time}\t${item.userId}\t${item.staff}\t${item.oldBank} - ${item.oldRek} (${item.oldAcc})\t${item.newBank} - ${item.newRek} (${item.newAcc})\t${item.changeType}`
+        `${item.no}\t${formatIndonesianDate(item.date, false)} ${item.time}\t${item.userId}\t${item.staff}\t${item.oldBank} - ${item.oldAcc} (${item.oldRek})\t${item.newBank} - ${item.newAcc} (${item.newRek})\t${item.changeType}`
       ).join('\n');
       const header = 'NO\tTANGGAL & JAM\tUSER ID\tSTAFF\tDATA SEBELUMNYA\tDATA TERBARU\tJENIS PERGANTIAN\n';
       navigator.clipboard.writeText(header + rows);
@@ -751,8 +874,8 @@ NB : Untuk PL Diatas Sudah Di Locked Yaa Ko/Ci ..`;
                 }
               }}
               placeholder={activeTab === 'GANTI_DATA'
-                ? `Tempelkan format log ganti data di sini...\n\nContoh:\n1 28-08-2026 12:58:53 jvsaaks3 change user info julamri12 bank : bri => OVO,rek : 085184408544 => 085184408544,acc : JULAMRI => JUL AMRI julamri12`
-                : `Tempelkan format log locked / unlocked di sini...\n\nContoh:\n1 28-08-2026 12:45:10 jvsaacs2 Locked (Spam Form Kosong) budi88\n2 28-08-2026 12:40:02 jvsaacs2 Locked (No Rekening Tidak Valid) andi99`
+                ? `Tempelkan format log ganti data di sini...\n\nContoh:\n8 12-09-2026 12:14:27 keoaacs9 change user info lesi678 bank : gopay => GOPAY,rek : 08569404728 => 085694047282,bank : gopay => GOPAY,acc : Iwan Setiawan => Iwan Setiawan,rek : 08569404728 => 085694047282,color : #FFFFFF => white lesi678`
+                : `Tempelkan format log locked / unlocked di sini...\n\nContoh:\n1 12-09-2026 18:37:49 keoaacs7 Change Lock/Unlock Locked (invest 2D) ves992\n2 12-09-2026 15:36:17 keoaacs2 Change Lock/Unlock Locked (pl memilih userid rini2022) rini999`
               }
               className="w-full h-64 p-4 rounded-xl bg-[#050811] border border-blue-900/40 text-xs text-gray-200 placeholder-gray-500 font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 transition-all resize-none shadow-inner leading-relaxed"
             />
@@ -920,12 +1043,12 @@ NB : Untuk PL Diatas Sudah Di Locked Yaa Ko/Ci ..`;
                       <td className="py-3 px-3.5 text-gray-400">{item.staff}</td>
                       <td className="py-3 px-3.5">
                         <span className="text-rose-300 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
-                          {item.oldBank}, {item.oldRek}, {item.oldAcc}
+                          {item.oldBank}, {item.oldAcc}, {item.oldRek}
                         </span>
                       </td>
                       <td className="py-3 px-3.5">
                         <span className="text-emerald-300 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                          {item.newBank}, {item.newRek}, {item.newAcc}
+                          {item.newBank}, {item.newAcc}, {item.newRek}
                         </span>
                       </td>
                       <td className="py-3 px-3.5">
