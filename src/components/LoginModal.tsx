@@ -89,6 +89,25 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       }
     }
 
+    // 4. Staff YOKA: yoka / yoka
+    if (u === 'yoka') {
+      if (p.toLowerCase() === 'yoka') {
+        onLogin({
+          id: 'user-yoka',
+          username: 'yoka',
+          name: 'YOKA',
+          role: 'DJ Junior',
+          shift: shift,
+          currentShift: shift,
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+        });
+        return;
+      } else {
+        setErrorMsg('User ID atau Password salah! Akses ditolak.');
+        return;
+      }
+    }
+
     // Akses Ditolak untuk username selain 3 di atas
     setErrorMsg('User ID atau Password salah! Akses ditolak.');
   };

@@ -283,6 +283,8 @@ export default function App() {
       setActiveView('jobdesk-cs');
     } else if (user.username.toLowerCase() === 'donisko') {
       setActiveView('home');
+    } else {
+      setActiveView('home');
     }
   };
 

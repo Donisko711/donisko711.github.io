@@ -36,6 +36,7 @@ interface ParsedGantiDataItem {
   oldAcc: string;
   newAcc: string;
   changeType: string;
+  ket: string;
 }
 
 interface ParsedLockedItem {
@@ -117,6 +118,28 @@ export const formatIndonesianDate = (rawDate?: string | Date, uppercaseMonth = f
   return `${d} ${m} ${now.getFullYear()}`;
 };
 
+// Helper title case
+export const toTitleCase = (str: string) => {
+  return str.toLowerCase().replace(/(?:^|\s|\/|-)\S/g, (char) => char.toUpperCase());
+};
+
+export const KNOWN_BANKS_SET = new Set([
+  'BCA', 'BNI', 'BRI', 'MANDIRI', 'CIMB', 'DANAMON', 'PERMATA', 'PANIN', 'OCBC',
+  'BTN', 'BSI', 'BJB', 'DKI', 'SINARMAS', 'BTPN', 'JENIUS', 'MEGA', 'BUKOPIN',
+  'DANA', 'OVO', 'GOPAY', 'LINKAJA', 'SHOPEEPAY', 'SAKUKU', 'QRIS', 'SEABANK',
+  'JAGO', 'ALADIN', 'NEOBANK', 'ALLO', 'MAYBANK', 'COMMONWEALTH', 'BCA DIGITAL', 'BLU'
+]);
+
+export const formatBankDisplayName = (bank: string): string => {
+  if (!bank) return '';
+  const b = bank.trim().toUpperCase();
+  if (['BCA', 'BNI', 'BRI', 'CIMB', 'BSI', 'BJB', 'DKI', 'BTN', 'BTPN', 'QRIS'].includes(b)) {
+    return b;
+  }
+  // Title case for words: Gopay, Dana, Ovo, Mandiri, Permata, Seabank, etc.
+  return toTitleCase(bank.trim());
+};
+
 export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA', currentUser }) => {
   const [activeTab, setActiveTab] = useState<'GANTI_DATA' | 'LOCKED'>(initialTab);
 
@@ -169,11 +192,6 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
       }
       setCountdown(null);
     }, 5000);
-  };
-
-  // Helper title case
-  const toTitleCase = (str: string) => {
-    return str.toLowerCase().replace(/(?:^|\s|\/|-)\S/g, (char) => char.toUpperCase());
   };
 
   // Helper clean format reason
@@ -299,15 +317,63 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
         if (tmMatch) time = tmMatch[1];
       }
 
+      // Old vs New Acc Name (Account Holder Name) - extract first so we can filter bank matches
+      let oldAcc = '-';
+      let newAcc = '-';
+      const accMatches = Array.from(line.matchAll(/(?:acc|nama|nama_rek|nama\s*rekening|account)\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/gi));
+      if (accMatches.length > 0) {
+        const changed = accMatches.find(m => m[1].trim().toUpperCase() !== m[2].trim().toUpperCase());
+        const selected = changed || accMatches[0];
+        oldAcc = selected[1].trim().toUpperCase();
+        newAcc = selected[2].trim().toUpperCase();
+      } else {
+        const singleAcc = line.match(/(?:acc|nama|nama_rek|nama\s*rekening|account)\s*:\s*([^=>,\n\t]+)/i);
+        if (singleAcc) {
+          oldAcc = singleAcc[1].trim().toUpperCase();
+          newAcc = oldAcc;
+        }
+      }
+
+      if (oldAcc === '-' && newAcc !== '-') oldAcc = newAcc;
+      if (newAcc === '-' && oldAcc !== '-') newAcc = oldAcc;
+
       // Old vs New Bank
       let oldBank = 'GOPAY';
       let newBank = 'GOPAY';
-      const bankMatches = Array.from(line.matchAll(/(?:bank|jenis\s*bank)\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/gi));
+      const rawBankMatches = Array.from(line.matchAll(/(?:bank|jenis\s*bank)\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/gi));
+      
+      // Filter out matches that are actually account names (e.g. "bank : Dahliasari => Dahlia Sari")
+      const bankMatches = rawBankMatches.filter(m => {
+        const val1 = m[1].trim().toUpperCase();
+        const val2 = m[2].trim().toUpperCase();
+        const norm1 = val1.replace(/\s+/g, '');
+        const norm2 = val2.replace(/\s+/g, '');
+        if (oldAcc !== '-' && (norm1 === oldAcc.replace(/\s+/g, '') || norm2 === oldAcc.replace(/\s+/g, ''))) {
+          return false;
+        }
+        if (newAcc !== '-' && (norm1 === newAcc.replace(/\s+/g, '') || norm2 === newAcc.replace(/\s+/g, ''))) {
+          return false;
+        }
+        return true;
+      });
+
       if (bankMatches.length > 0) {
+        const knownChanged = bankMatches.find(m => 
+          m[1].trim().toUpperCase() !== m[2].trim().toUpperCase() && 
+          KNOWN_BANKS_SET.has(m[1].trim().toUpperCase())
+        );
+        const knownMatch = bankMatches.find(m => 
+          KNOWN_BANKS_SET.has(m[1].trim().toUpperCase()) || 
+          KNOWN_BANKS_SET.has(m[2].trim().toUpperCase())
+        );
         const changed = bankMatches.find(m => m[1].trim().toUpperCase() !== m[2].trim().toUpperCase());
-        const selected = changed || bankMatches[0];
+        const selected = knownChanged || knownMatch || changed || bankMatches[0];
         oldBank = selected[1].trim().toUpperCase();
         newBank = selected[2].trim().toUpperCase();
+      } else if (rawBankMatches.length > 0) {
+        const first = rawBankMatches.find(m => KNOWN_BANKS_SET.has(m[1].trim().toUpperCase())) || rawBankMatches[0];
+        oldBank = first[1].trim().toUpperCase();
+        newBank = first[2].trim().toUpperCase();
       } else {
         const singleBank = line.match(/(?:bank|jenis\s*bank)\s*:\s*([^=>,\n\t]+)/i);
         if (singleBank) {
@@ -333,25 +399,25 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
         }
       }
 
-      // Old vs New Acc Name (Account Holder Name)
-      let oldAcc = '-';
-      let newAcc = '-';
-      const accMatches = Array.from(line.matchAll(/(?:acc|nama|nama_rek|nama\s*rekening|account)\s*:\s*([^=>,\n\t]+)\s*=>\s*([^=>,\n\t]+)/gi));
-      if (accMatches.length > 0) {
-        const changed = accMatches.find(m => m[1].trim().toUpperCase() !== m[2].trim().toUpperCase());
-        const selected = changed || accMatches[0];
-        oldAcc = selected[1].trim().toUpperCase();
-        newAcc = selected[2].trim().toUpperCase();
-      } else {
-        const singleAcc = line.match(/(?:acc|nama|nama_rek|nama\s*rekening|account)\s*:\s*([^=>,\n\t]+)/i);
-        if (singleAcc) {
-          oldAcc = singleAcc[1].trim().toUpperCase();
-          newAcc = oldAcc;
-        }
-      }
+      // Determine Keterangan (Ket) & Change Type
+      let ket = 'Pergantian Data Rekening';
+      let changeType = 'Ganti No Rekening';
+      const cleanOldAcc = oldAcc.replace(/\s+/g, '').toUpperCase();
+      const cleanNewAcc = newAcc.replace(/\s+/g, '').toUpperCase();
 
-      if (oldAcc === '-' && newAcc !== '-') oldAcc = newAcc;
-      if (newAcc === '-' && oldAcc !== '-') newAcc = oldAcc;
+      if (cleanOldAcc && cleanNewAcc && cleanOldAcc === cleanNewAcc && oldAcc.trim() !== newAcc.trim()) {
+        ket = 'Perbaiki Spasi Pada Nama Rekening';
+        changeType = 'Perbaiki Spasi Nama';
+      } else if (oldBank !== newBank) {
+        ket = 'Pergantian Data Rekening';
+        changeType = `${oldBank} To ${newBank}`;
+      } else if (oldRek !== newRek) {
+        ket = 'Pergantian Data Rekening';
+        changeType = 'Ganti No Rekening';
+      } else if (cleanOldAcc !== cleanNewAcc && cleanOldAcc !== '-' && cleanNewAcc !== '-') {
+        ket = 'Pergantian Data Rekening';
+        changeType = 'Ganti Nama';
+      }
 
       const item: ParsedGantiDataItem = {
         id: `gd-${index}-${Date.now()}`,
@@ -366,7 +432,8 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
         newRek,
         oldAcc,
         newAcc,
-        changeType: oldBank === newBank ? 'Ganti No Rekening' : `${oldBank} To ${newBank}`
+        changeType,
+        ket
       };
 
       parsedItems.push(item);
@@ -395,20 +462,26 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
 
     const blocks = gdParsedList.map((item) => {
       const formattedDate = formatIndonesianDate(item.date, false);
-      const staffDisplay = item.staff
-        ? `${item.staff} / ${staffAlias ? staffAlias.trim() : ''}`
+      const formattedStaff = item.staff
+        ? (item.staff.charAt(0).toUpperCase() + item.staff.slice(1))
+        : '';
+      const staffDisplay = formattedStaff
+        ? `${formattedStaff} / ${staffAlias ? staffAlias.trim() : ''}`
         : (staffAlias ? `${staffAlias.trim()} / ` : '/ ');
+
+      const oldBankDisplay = formatBankDisplayName(item.oldBank);
+      const newBankDisplay = formatBankDisplayName(item.newBank);
 
       return `Staff : ${staffDisplay}
 Tanggal : ${formattedDate}
 
 User ID : ${item.userId}
-Ket : Pergantian Data Rekening
-Data Sebelumnya : ${item.oldBank.toUpperCase()}, ${item.oldAcc.toUpperCase()}, ${item.oldRek}
-Data Terbarunya : ${item.newBank.toUpperCase()}, ${item.newAcc.toUpperCase()}, ${item.newRek}`;
+Ket : ${item.ket}
+Data Sebelumnya : ${oldBankDisplay}, ${item.oldAcc.toUpperCase()}, ${item.oldRek}
+Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek}`;
     });
 
-    setGdExtractedText(blocks.join('\n\n'));
+    setGdExtractedText(blocks.join('\n\n\n'));
   }, [gdParsedList, staffAlias]);
 
   // ==========================================
@@ -628,6 +701,13 @@ User ID :
     ));
   };
 
+  // Update ket for an individual ganti data item
+  const handleUpdateGdKet = (id: string, newKet: string) => {
+    setGdParsedList(prev => prev.map(item => 
+      item.id === id ? { ...item, ket: newKet } : item
+    ));
+  };
+
   // Helper bank badge style
   const getBankBadgeStyle = (bankName: string) => {
     const b = (bankName || '').toUpperCase();
@@ -674,9 +754,9 @@ User ID :
   const handleCopyDetail = () => {
     if (activeTab === 'GANTI_DATA') {
       const rows = gdParsedList.map(item => 
-        `${item.no}\t${formatIndonesianDate(item.date, false)} ${item.time}\t${item.userId}\t${item.staff}\t${item.oldBank} - ${item.oldAcc} (${item.oldRek})\t${item.newBank} - ${item.newAcc} (${item.newRek})\t${item.changeType}`
+        `${item.no}\t${formatIndonesianDate(item.date, false)} ${item.time}\t${item.userId}\t${item.staff}\t${formatBankDisplayName(item.oldBank)} - ${item.oldAcc} (${item.oldRek})\t${formatBankDisplayName(item.newBank)} - ${item.newAcc} (${item.newRek})\t${item.ket}`
       ).join('\n');
-      const header = 'NO\tTANGGAL & JAM\tUSER ID\tSTAFF\tDATA SEBELUMNYA\tDATA TERBARU\tJENIS PERGANTIAN\n';
+      const header = 'NO\tTANGGAL & JAM\tUSER ID\tSTAFF\tDATA SEBELUMNYA\tDATA TERBARU\tKETERANGAN\n';
       navigator.clipboard.writeText(header + rows);
     } else {
       const rows = lockParsedList.map(item => 
@@ -874,7 +954,7 @@ User ID :
                 }
               }}
               placeholder={activeTab === 'GANTI_DATA'
-                ? `Tempelkan format log ganti data di sini...\n\nContoh:\n8 12-09-2026 12:14:27 keoaacs9 change user info lesi678 bank : gopay => GOPAY,rek : 08569404728 => 085694047282,bank : gopay => GOPAY,acc : Iwan Setiawan => Iwan Setiawan,rek : 08569404728 => 085694047282,color : #FFFFFF => white lesi678`
+                ? `Tempelkan format log ganti data di sini...\n\nContoh 1 (Perbaiki Spasi Nama):\n1 12-09-2026 20:38:31 keoaacs9 change user info cawah09 bank : gopay => GOPAY,bank : Dahliasari => Dahlia Sari,bank : gopay => GOPAY,acc : Dahliasari => Dahlia Sari,rek : 089638137501 => 089638137501,color : #FFFFFF => white cawah09\n\nContoh 2 (Ganti No Rekening):\n8 12-09-2026 12:14:27 keoaacs9 change user info lesi678 bank : gopay => GOPAY,rek : 08569404728 => 085694047282,bank : gopay => GOPAY,acc : Iwan Setiawan => Iwan Setiawan,rek : 08569404728 => 085694047282,color : #FFFFFF => white lesi678`
                 : `Tempelkan format log locked / unlocked di sini...\n\nContoh:\n1 12-09-2026 18:37:49 keoaacs7 Change Lock/Unlock Locked (invest 2D) ves992\n2 12-09-2026 15:36:17 keoaacs2 Change Lock/Unlock Locked (pl memilih userid rini2022) rini999`
               }
               className="w-full h-64 p-4 rounded-xl bg-[#050811] border border-blue-900/40 text-xs text-gray-200 placeholder-gray-500 font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 transition-all resize-none shadow-inner leading-relaxed"
@@ -1020,7 +1100,7 @@ User ID :
                   <th className="py-3 px-3.5">STAFF</th>
                   <th className="py-3 px-3.5">DATA SEBELUMNYA</th>
                   <th className="py-3 px-3.5">DATA TERBARU</th>
-                  <th className="py-3 px-3.5">JENIS PERGANTIAN</th>
+                  <th className="py-3 px-3.5 min-w-[220px]">KETERANGAN LAPORAN</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 bg-[#070c18]/50">
@@ -1040,21 +1120,30 @@ User ID :
                           {item.userId}
                         </span>
                       </td>
-                      <td className="py-3 px-3.5 text-gray-400">{item.staff}</td>
+                      <td className="py-3 px-3.5 text-gray-400">{item.staff ? (item.staff.charAt(0).toUpperCase() + item.staff.slice(1)) : '-'}</td>
                       <td className="py-3 px-3.5">
                         <span className="text-rose-300 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
-                          {item.oldBank}, {item.oldAcc}, {item.oldRek}
+                          {formatBankDisplayName(item.oldBank)}, {item.oldAcc}, {item.oldRek}
                         </span>
                       </td>
                       <td className="py-3 px-3.5">
                         <span className="text-emerald-300 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                          {item.newBank}, {item.newAcc}, {item.newRek}
+                          {formatBankDisplayName(item.newBank)}, {item.newAcc}, {item.newRek}
                         </span>
                       </td>
                       <td className="py-3 px-3.5">
-                        <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-bold border border-cyan-500/30">
-                          {item.changeType}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="text"
+                            value={item.ket}
+                            onChange={(e) => handleUpdateGdKet(item.id, e.target.value)}
+                            className="w-full bg-[#03060f] border border-cyan-900/50 hover:border-cyan-500/50 focus:border-cyan-400 text-[11px] text-cyan-200 px-2 py-1 rounded outline-none transition-colors"
+                            title="Klik untuk mengubah keterangan laporan"
+                          />
+                          <span className="text-[10px] text-gray-500">
+                            Jenis: {item.changeType}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ))

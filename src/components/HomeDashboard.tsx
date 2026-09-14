@@ -59,7 +59,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1A1A1A]/80 border border-yellow-500/50 text-yellow-400 text-[10px] font-bold font-mono shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_#facc15]"></span>
-                👑 {currentUser?.username?.toUpperCase() === 'LEO' ? 'LEO (INTEL SENIOR)' : (currentUser?.username?.toUpperCase() || 'DON ISKO')} • HS GROUP 711
+                👑 {currentUser?.username?.toUpperCase() === 'LEO' ? 'LEO (INTEL SENIOR)' : currentUser?.username?.toUpperCase() === 'YOKA' ? 'YOKA (DJ JUNIOR)' : (currentUser ? `${currentUser.name} (${currentUser.role})` : 'DON ISKO')} • HS GROUP 711
               </div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00F3FF]/15 border border-[#00F3FF]/30 text-[#00F3FF] text-[10px] font-bold font-mono">
                 ⚡ SHIFT {shiftName || 'PAGI'}
