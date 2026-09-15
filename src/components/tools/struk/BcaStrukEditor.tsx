@@ -114,7 +114,9 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
         useCORS: true,
         scale: 3,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
       });
 
       // Potong 10px dari bawah jika perlu agar tepi bawah bersih sempurna
@@ -377,7 +379,7 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                 overflow: 'hidden',
                 display: 'block',
                 lineHeight: 0,
-                fontFamily: "'Inter', Arial, sans-serif"
+                fontFamily: "'Roboto', 'Plus Jakarta Sans', Arial, sans-serif"
               }}
             >
               {/* Background Image */}
@@ -402,7 +404,8 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                   width: '100%',
                   height: '100%',
                   pointerEvents: 'none',
-                  lineHeight: 'normal'
+                  lineHeight: 'normal',
+                  fontFamily: "'Roboto', 'Plus Jakarta Sans', Arial, sans-serif"
                 }}
               >
                 {/* 1. Dari Rekening (top: 122px, left: 25px) */}
@@ -414,22 +417,27 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                     fontSize: '13px',
                     color: '#333333',
                     fontWeight: 500,
+                    lineHeight: '16px',
                     whiteSpace: 'nowrap'
                   }}
                 >
                   {rekDari || '3780971991'}
                 </div>
 
-                {/* 2. Ke Rekening (top: 170px, left: 25px) */}
+                {/* 2. Ke Rekening (top: 165px, left: 25px, maxWidth: 295px) */}
                 <div 
                   style={{
                     position: 'absolute',
-                    top: '170px',
+                    top: '165px',
                     left: '25px',
-                    fontSize: '13px',
+                    maxWidth: '295px',
+                    fontSize: '12.5px',
                     color: '#333333',
                     fontWeight: 500,
-                    whiteSpace: 'nowrap'
+                    lineHeight: '16px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
                 >
                   {`${rekKe || '3801435031'} - ${namaPenerimaCut}`}
@@ -444,6 +452,7 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                     color: '#0154a2',
                     fontSize: '14px',
                     fontWeight: 500,
+                    lineHeight: '18px',
                     whiteSpace: 'nowrap'
                   }}
                 >
@@ -460,6 +469,7 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                     fontSize: '15px',
                     fontWeight: 500,
                     letterSpacing: '0.3px',
+                    lineHeight: '18px',
                     whiteSpace: 'nowrap'
                   }}
                 >
@@ -475,6 +485,7 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                     color: '#0154a2',
                     fontSize: '14px',
                     fontWeight: 500,
+                    lineHeight: '18px',
                     whiteSpace: 'nowrap'
                   }}
                 >
@@ -490,6 +501,7 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                     color: '#0154a2',
                     fontSize: '14px',
                     fontWeight: 500,
+                    lineHeight: '18px',
                     whiteSpace: 'nowrap'
                   }}
                 >
@@ -505,6 +517,7 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                     color: '#0154a2',
                     fontSize: '14px',
                     fontWeight: 500,
+                    lineHeight: '18px',
                     whiteSpace: 'nowrap'
                   }}
                 >
@@ -520,6 +533,7 @@ export const BcaStrukEditor: React.FC<BcaStrukEditorProps> = ({ onBackToGeneral 
                     color: '#0154a2',
                     fontSize: '14px',
                     fontWeight: 500,
+                    lineHeight: '18px',
                     whiteSpace: 'nowrap'
                   }}
                 >
