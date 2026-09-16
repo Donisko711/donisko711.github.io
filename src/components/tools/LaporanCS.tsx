@@ -16,9 +16,10 @@ import {
   Trash2
 } from 'lucide-react';
 import { UserProfile } from '../../types';
+import { CrosscheckLocked } from './CrosscheckLocked';
 
 interface LaporanCSProps {
-  initialTab?: 'GANTI_DATA' | 'LOCKED';
+  initialTab?: 'GANTI_DATA' | 'LOCKED' | 'CROSSCHECK';
   currentUser?: UserProfile | null;
 }
 
@@ -333,11 +334,11 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
     if (/form\s*kosong|spam\s*form\s*kosong/i.test(r)) {
       return 'Spam Form Kosong';
     }
-    if (/rekening\s*tidak\s*valid|no\s*rek(?:ening)?\s*tidak\s*valid|^rek\s*tidak\s*valid$/i.test(r)) {
-      return 'Rek Tidak Valid';
+    if (/(?:nomor\s*rekening|no\s*rek(?:ening)?|rekening|rek)\s*tidak\s*valid/i.test(r)) {
+      return 'No Rek Tidak Valid';
     }
-    if (/^nomor\s*rekening\s*tidak\s*valid$/i.test(r)) {
-      return 'Nomor Rekening Tidak Valid';
+    if (/e-?wallet\s*pl\s*(?:tidak|belum)\s*premium/i.test(r)) {
+      return 'Ewallet PL Tidak Premium';
     }
     if (/nama\s*rekening\s*beda|nama\s*rek\s*beda|nama\s*beda/i.test(r)) {
       return 'Nama Rek Beda';
@@ -766,13 +767,11 @@ NB : ${finalNb}`;
       return;
     }
 
-    const firstDate = lockParsedList.find(l => l.date)?.date;
+    const lockedOnly = lockParsedList.filter(l => l.action === 'Locked');
+    const firstDate = lockedOnly.find(l => l.date)?.date || lockParsedList.find(l => l.date)?.date;
     const reportDate = formatIndonesianDate(firstDate, false); // e.g. "17 September 2026"
 
     // Deduplicate locked items by userId (case-insensitive)
-    const lockedOnly = lockParsedList.filter(l => l.action === 'Locked');
-    const unlockedOnly = lockParsedList.filter(l => l.action === 'Unlocked');
-
     // Separate into Invest vs Non-Invest (Regular)
     const regularItems: ParsedLockedItem[] = [];
     const investItems: ParsedLockedItem[] = [];
@@ -795,6 +794,19 @@ NB : ${finalNb}`;
       }
     });
 
+    // Group regular items by kendala (preserving the order in which each kendala first appears)
+    const kendalaGroups = new Map<string, ParsedLockedItem[]>();
+    regularItems.forEach(item => {
+      const existing = kendalaGroups.get(item.kendala) || [];
+      existing.push(item);
+      kendalaGroups.set(item.kendala, existing);
+    });
+
+    const sortedRegular: ParsedLockedItem[] = [];
+    kendalaGroups.forEach(items => {
+      sortedRegular.push(...items);
+    });
+
     // For invest items: sort chronologically (earliest timestamp first)
     const sortedInvest = [...investItems].sort((a, b) => {
       if (a.date && b.date && a.date !== b.date) {
@@ -805,9 +817,6 @@ NB : ${finalNb}`;
       }
       return b.no - a.no;
     });
-
-    // For regular items: maintain order of appearance in the log
-    const sortedRegular = [...regularItems];
 
     const reports: string[] = [];
 
@@ -845,20 +854,6 @@ ${investLines.join('\n')}
 
 NB : Untuk Member Invest Diatas Sudah Di Manualkan 2.000`;
       reports.push(investBlock);
-    }
-
-    // 3. Unlocked Report
-    if (unlockedOnly.length > 0) {
-      const unlockLines = unlockedOnly.map(item => `* ${item.userId} - ${item.kendala}`);
-      const staffDisplay = getCollectionStaff(unlockedOnly);
-      const unlockBlock = 
-`Staff : ${staffDisplay}
-Tanggal : ${reportDate}
-Ket : Unlocked Member
-
-User ID :
-${unlockLines.join('\n')}`;
-      reports.push(unlockBlock);
     }
 
     if (reports.length === 0) {
