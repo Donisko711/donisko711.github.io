@@ -40,10 +40,12 @@ export type ActiveView =
   | 'kalkulator-parlay'
   | 'livescore'
   | 'jobdesk-cs'
+  | 'bagi-bonus'
   | 'bagi-bonus-slot'
   | 'bagi-bonus-parlay'
   | 'edit-pembayaran'
   | 'isi-rekapan'
+  | 'laporan-cs'
   | 'laporan-cs-ganti-data'
   | 'laporan-cs-locked'
   | 'jobdesk-kasir'
@@ -89,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (['generate-artikel', 'bbfs-angka-tarung', 'kalkulator-parlay'].includes(activeView)) {
       return 'alat-generate';
     }
-    if (['jobdesk-cs', 'bagi-bonus-slot', 'bagi-bonus-parlay', 'edit-pembayaran', 'laporan-cs-ganti-data', 'laporan-cs-locked'].includes(activeView)) {
+    if (['jobdesk-cs', 'bagi-bonus', 'bagi-bonus-slot', 'bagi-bonus-parlay', 'edit-pembayaran', 'isi-rekapan', 'laporan-cs', 'laporan-cs-ganti-data', 'laporan-cs-locked'].includes(activeView)) {
       return 'tools-cs';
     }
     if (['jobdesk-kasir', 'wd-auto-flop', 'info-wd', 'info-data-pl'].includes(activeView)) {
@@ -137,6 +139,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  // Support Ctrl + Click to open target menu in new browser window/tab
+  const handleItemClick = (
+    e: React.MouseEvent,
+    view: ActiveView,
+    accordionParent?: string,
+    categoryKey?: string
+  ) => {
+    // Check if Ctrl (Windows/Linux) or Meta/Cmd (Mac) or Middle mouse button was pressed
+    if (e.ctrlKey || e.metaKey || e.button === 1) {
+      // Allow browser native navigation to open href in new tab (Ctrl+Tab friendly)
+      return;
+    }
+    e.preventDefault();
+    handleSelectView(view, accordionParent, categoryKey);
+  };
+
   const isViewInGroup = (views: ActiveView[]) => views.includes(activeView);
 
   return (
@@ -149,8 +167,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Sidebar Header Navigation: DASHBOARD UTAMA (Langsung di bagian atas tanpa poster/badge merah) */}
       <div className="p-3 border-b border-white/10 bg-[#0c0c10]/90 flex items-center justify-between gap-2">
-        <button
-          onClick={() => handleSelectView('home')}
+        <a
+          href="?view=home"
+          onClick={(e) => handleItemClick(e, 'home')}
           id="btn-sidebar-home"
           className={`flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-[24px] transition-all cursor-pointer ${
             activeView === 'home'
@@ -164,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               DASHBOARD UTAMA
             </span>
           )}
-        </button>
+        </a>
 
         {/* Close Button on Mobile View */}
         {isOpen && onCloseMobile && (
@@ -208,8 +227,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
 
             {/* 1. LIVESCORE */}
-            <button
-              onClick={() => handleSelectView('livescore')}
+            <a
+              href="?view=livescore"
+              onClick={(e) => handleItemClick(e, 'livescore')}
               id="menu-livescore"
               title="LiveScore - Skor & Jadwal (WIB)"
               className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
@@ -239,11 +259,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   WIB
                 </span>
               )}
-            </button>
+            </a>
 
             {/* 3. PHISING CHECKER */}
-            <button
-              onClick={() => handleSelectView('phising-checker')}
+            <a
+              href="?view=phising-checker"
+              onClick={(e) => handleItemClick(e, 'phising-checker')}
               id="menu-phising-checker"
               title="Phising Checker - Baca Script Page Domain"
               className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
@@ -273,11 +294,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   HTML
                 </span>
               )}
-            </button>
+            </a>
 
             {/* 4. CEK STATUS NAWALA */}
-            <button
-              onClick={() => handleSelectView('nawala-checker')}
+            <a
+              href="?view=nawala-checker"
+              onClick={(e) => handleItemClick(e, 'nawala-checker')}
               id="menu-nawala-checker"
               title="Cek Status Nawala - Link & Domain Checker"
               className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
@@ -304,7 +326,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   DNS
                 </span>
               )}
-            </button>
+            </a>
           </div>
 
         {/* ========================================================= */}
@@ -356,8 +378,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {openCategory === 'alat-generate' && (
               <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
                 {/* 1. GENERATE ARTIKEL */}
-                <button
-                  onClick={() => handleSelectView('generate-artikel', undefined, 'alat-generate')}
+                <a
+                  href="?view=generate-artikel"
+                  onClick={(e) => handleItemClick(e, 'generate-artikel', undefined, 'alat-generate')}
                   id="menu-generate-artikel"
                   className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
                     activeView === 'generate-artikel'
@@ -376,11 +399,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     )}
                   </div>
-                </button>
+                </a>
 
                 {/* 2. BBFS & ANGKA TARUNG */}
-                <button
-                  onClick={() => handleSelectView('bbfs-angka-tarung', undefined, 'alat-generate')}
+                <a
+                  href="?view=bbfs-angka-tarung"
+                  onClick={(e) => handleItemClick(e, 'bbfs-angka-tarung', undefined, 'alat-generate')}
                   id="menu-bbfs-tarung"
                   className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
                     activeView === 'bbfs-angka-tarung'
@@ -399,11 +423,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     )}
                   </div>
-                </button>
+                </a>
 
                 {/* 3. KALKULATOR PARLAY */}
-                <button
-                  onClick={() => handleSelectView('kalkulator-parlay', undefined, 'alat-generate')}
+                <a
+                  href="?view=kalkulator-parlay"
+                  onClick={(e) => handleItemClick(e, 'kalkulator-parlay', undefined, 'alat-generate')}
                   id="menu-kalkulator-parlay"
                   className={`w-full px-3 py-2 rounded-[20px] transition-all duration-200 cursor-pointer flex items-center justify-between group ${
                     activeView === 'kalkulator-parlay'
@@ -425,7 +450,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {isOpen && (
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 font-mono">HOT</span>
                   )}
-                </button>
+                </a>
               </div>
             )}
           </div>
@@ -477,113 +502,58 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {openCategory === 'tools-cs' && (
               <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
                 {/* 1. JOBDESK CS */}
-                <div>
-                  <button
-                    onClick={() => {
-                      toggleAccordion('jobdesk-cs');
-                      handleSelectView('jobdesk-cs', 'jobdesk-cs', 'tools-cs');
-                    }}
-                    id="menu-jobdesk-cs"
-                    className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all duration-200 cursor-pointer flex items-center justify-between ${
-                      activeView === 'jobdesk-cs' || openAccordion === 'jobdesk-cs'
-                        ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                        : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <CheckSquare className="w-4 h-4" />
-                      {isOpen && (
-                        <div className="text-left">
-                          <span className="block text-xs font-semibold">JOBDESK CS</span>
-                        </div>
-                      )}
-                    </div>
+                <a
+                  href="?view=jobdesk-cs"
+                  onClick={(e) => handleItemClick(e, 'jobdesk-cs', undefined, 'tools-cs')}
+                  id="menu-jobdesk-cs"
+                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all duration-200 cursor-pointer flex items-center justify-between ${
+                    activeView === 'jobdesk-cs'
+                      ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
+                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <CheckSquare className="w-4 h-4 text-[#00F3FF]" />
                     {isOpen && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-gray-400 font-mono">
-                          {jobdeskCsCount.done}/{jobdeskCsCount.total}
-                        </span>
-                        {openAccordion === 'jobdesk-cs' ? (
-                          <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
-                        )}
+                      <div className="text-left">
+                        <span className="block text-xs font-semibold">JOBDESK CS</span>
+                        <span className="text-[9px] text-gray-400 font-mono">Pagi • Sore • Malam</span>
                       </div>
                     )}
-                  </button>
-
-                  {/* Sub Menu Jobdesk CS */}
-                  {isOpen && openAccordion === 'jobdesk-cs' && (
-                    <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
-                      {(['PAGI', 'SORE', 'MALAM'] as ShiftType[]).map(shift => (
-                        <button
-                          key={`cs-shift-${shift}`}
-                          onClick={() => {
-                            setSelectedShiftFilter(shift);
-                            handleSelectView('jobdesk-cs', 'jobdesk-cs', 'tools-cs');
-                          }}
-                          className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                            activeView === 'jobdesk-cs' && selectedShiftFilter === shift
-                              ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                              : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          SHIFT {shift === 'PAGI' ? 'PAGI' : shift === 'SORE' ? 'SORE' : 'MALAM'}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                  </div>
+                </a>
 
                 {/* 2. BAGI BONUS */}
-                <div>
-                  <button
-                    onClick={() => toggleAccordion('bagi-bonus')}
-                    id="menu-bagi-bonus"
-                    className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                      isViewInGroup(['bagi-bonus-slot', 'bagi-bonus-parlay']) || openAccordion === 'bagi-bonus'
-                        ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                        : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Gift className="w-4 h-4 text-gray-400" />
-                      {isOpen && <span className="font-semibold text-xs">BAGI BONUS</span>}
-                    </div>
+                <a
+                  href="?view=bagi-bonus"
+                  onClick={(e) => handleItemClick(e, 'bagi-bonus', undefined, 'tools-cs')}
+                  id="menu-bagi-bonus"
+                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                    isViewInGroup(['bagi-bonus', 'bagi-bonus-slot', 'bagi-bonus-parlay'])
+                      ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
+                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Gift className="w-4 h-4 text-gray-400" />
                     {isOpen && (
-                      openAccordion === 'bagi-bonus' ? <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                      <div className="text-left">
+                        <span className="font-semibold text-xs block">BAGI BONUS</span>
+                        <span className="text-[9px] text-gray-400 font-mono">Scatter & Parlay</span>
+                      </div>
                     )}
-                  </button>
-
-                  {isOpen && openAccordion === 'bagi-bonus' && (
-                    <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
-                      <button
-                        onClick={() => handleSelectView('bagi-bonus-slot', 'bagi-bonus', 'tools-cs')}
-                        className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                          activeView === 'bagi-bonus-slot'
-                            ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                            : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        SCATTER & HARIAN SLOT
-                      </button>
-                      <button
-                        onClick={() => handleSelectView('bagi-bonus-parlay', 'bagi-bonus', 'tools-cs')}
-                        className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                          activeView === 'bagi-bonus-parlay'
-                            ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                            : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        BONUS PARLAY
-                      </button>
-                    </div>
+                  </div>
+                  {isOpen && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-[#00F3FF] font-mono font-bold border border-cyan-500/30">
+                      SLOT & PARLAY
+                    </span>
                   )}
-                </div>
+                </a>
 
                 {/* 3. EDIT PEMBAYARAN */}
-                <button
-                  onClick={() => handleSelectView('edit-pembayaran', undefined, 'tools-cs')}
+                <a
+                  href="?view=edit-pembayaran"
+                  onClick={(e) => handleItemClick(e, 'edit-pembayaran', undefined, 'tools-cs')}
                   id="menu-edit-pembayaran"
                   className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
                     activeView === 'edit-pembayaran'
@@ -595,11 +565,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <CreditCard className="w-4 h-4 text-gray-400" />
                     {isOpen && <span className="font-semibold text-xs">EDIT PEMBAYARAN</span>}
                   </div>
-                </button>
+                </a>
 
                 {/* 4. ISI REKAPAN */}
-                <button
-                  onClick={() => handleSelectView('isi-rekapan', undefined, 'tools-cs')}
+                <a
+                  href="?view=isi-rekapan"
+                  onClick={(e) => handleItemClick(e, 'isi-rekapan', undefined, 'tools-cs')}
                   id="menu-isi-rekapan"
                   className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
                     activeView === 'isi-rekapan'
@@ -621,53 +592,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       NEW
                     </span>
                   )}
-                </button>
+                </a>
 
                 {/* 5. LAPORAN CS */}
-                <div>
-                  <button
-                    onClick={() => toggleAccordion('laporan-cs')}
-                    id="menu-laporan-cs"
-                    className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                      isViewInGroup(['laporan-cs-ganti-data', 'laporan-cs-locked']) || openAccordion === 'laporan-cs'
-                        ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
-                        : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <FileSpreadsheet className="w-4 h-4 text-gray-400" />
-                      {isOpen && <span className="font-semibold text-xs">LAPORAN CS</span>}
-                    </div>
+                <a
+                  href="?view=laporan-cs"
+                  onClick={(e) => handleItemClick(e, 'laporan-cs', undefined, 'tools-cs')}
+                  id="menu-laporan-cs"
+                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                    isViewInGroup(['laporan-cs', 'laporan-cs-ganti-data', 'laporan-cs-locked'])
+                      ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
+                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <FileSpreadsheet className="w-4 h-4 text-gray-400" />
                     {isOpen && (
-                      openAccordion === 'laporan-cs' ? <ChevronDown className="w-3.5 h-3.5 text-[#00F3FF]" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                      <div className="text-left">
+                        <span className="font-semibold text-xs block">LAPORAN CS</span>
+                        <span className="text-[9px] text-gray-400 font-mono">Ganti Data & Locked</span>
+                      </div>
                     )}
-                  </button>
-
-                  {isOpen && openAccordion === 'laporan-cs' && (
-                    <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
-                      <button
-                        onClick={() => handleSelectView('laporan-cs-ganti-data', 'laporan-cs', 'tools-cs')}
-                        className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                          activeView === 'laporan-cs-ganti-data'
-                            ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                            : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        LAPORAN GANTI DATA
-                      </button>
-                      <button
-                        onClick={() => handleSelectView('laporan-cs-locked', 'laporan-cs', 'tools-cs')}
-                        className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                          activeView === 'laporan-cs-locked'
-                            ? 'border-l-2 border-[#00F3FF] text-[#00F3FF] font-bold opacity-100'
-                            : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        LAPORAN LOCKED / UNLOCK
-                      </button>
-                    </div>
+                  </div>
+                  {isOpen && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-[#00F3FF] font-mono font-bold border border-cyan-500/30">
+                      GANTI &amp; LOCK
+                    </span>
                   )}
-                </div>
+                </a>
               </div>
             )}
           </div>
@@ -675,8 +627,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* ========================================================= */}
         {/* WD AUTO FLOP (BERADA DI ANTARA TOOLS CS & TOOLS KASIR)     */}
         {/* ========================================================= */}
-        <button
-          onClick={() => handleSelectView('wd-auto-flop')}
+        <a
+          href="?view=wd-auto-flop"
+          onClick={(e) => handleItemClick(e, 'wd-auto-flop')}
           id="menu-wd-auto-flop-standalone"
           className={`w-full px-3.5 py-2 rounded-[24px] transition-all duration-200 cursor-pointer flex items-center justify-between group shadow-sm ${
             activeView === 'wd-auto-flop'
@@ -702,7 +655,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               PARSING
             </span>
           )}
-        </button>
+        </a>
 
         {/* ========================================================= */}
         {/* CATEGORY 2: TOOLS KERJA KASIR (Collapsible Single Accordion) */}
@@ -750,68 +703,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {openCategory === 'kasir' && (
             <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
-              {/* 1. JOBDESK KASIR (Auto Minimalis) */}
-              <div>
-                <button
-                  onClick={() => {
-                    toggleAccordion('jobdesk-kasir');
-                    handleSelectView('jobdesk-kasir', 'jobdesk-kasir', 'kasir');
-                  }}
-                  id="menu-jobdesk-kasir"
-                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                    activeView === 'jobdesk-kasir' || openAccordion === 'jobdesk-kasir'
-                      ? 'bg-[#1F1F1F] border border-yellow-500 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.1)] font-semibold'
-                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <CheckSquare className="w-4 h-4 text-yellow-400" />
-                    {isOpen && (
-                      <div className="text-left">
-                        <span className="block text-xs font-semibold">JOBDESK KASIR</span>
-                      </div>
-                    )}
-                  </div>
+              {/* 1. JOBDESK KASIR */}
+              <a
+                href="?view=jobdesk-kasir"
+                onClick={(e) => handleItemClick(e, 'jobdesk-kasir', undefined, 'kasir')}
+                id="menu-jobdesk-kasir"
+                className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                  activeView === 'jobdesk-kasir'
+                    ? 'bg-[#1F1F1F] border border-yellow-500 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.1)] font-semibold'
+                    : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <CheckSquare className="w-4 h-4 text-yellow-400" />
                   {isOpen && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-yellow-400/80 font-mono">
-                        {jobdeskKasirCount.done}/{jobdeskKasirCount.total}
-                      </span>
-                      {openAccordion === 'jobdesk-kasir' ? (
-                        <ChevronDown className="w-3.5 h-3.5 text-yellow-400" />
-                      ) : (
-                        <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
-                      )}
+                    <div className="text-left">
+                      <span className="block text-xs font-semibold">JOBDESK KASIR</span>
+                      <span className="text-[9px] text-gray-400 font-mono">Pagi • Sore • Malam</span>
                     </div>
                   )}
-                </button>
-
-                {/* Sub Menu Jobdesk Kasir */}
-                {isOpen && openAccordion === 'jobdesk-kasir' && (
-                  <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
-                    {(['PAGI', 'SORE', 'MALAM'] as ShiftType[]).map(shift => (
-                      <button
-                        key={`ks-shift-${shift}`}
-                        onClick={() => {
-                          setSelectedShiftFilter(shift);
-                          handleSelectView('jobdesk-kasir', 'jobdesk-kasir', 'kasir');
-                        }}
-                        className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
-                          activeView === 'jobdesk-kasir' && selectedShiftFilter === shift
-                            ? 'border-l-2 border-yellow-400 text-yellow-300 font-bold opacity-100'
-                            : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
-                        }`}
-                      >
-                        SHIFT {shift === 'PAGI' ? 'PAGI' : shift === 'SORE' ? 'SORE' : 'MALAM'}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                </div>
+              </a>
 
               {/* 2. INFO DP / WD */}
-              <button
-                onClick={() => handleSelectView('info-wd', undefined, 'kasir')}
+              <a
+                href="?view=info-wd"
+                onClick={(e) => handleItemClick(e, 'info-wd', undefined, 'kasir')}
                 id="menu-info-wd"
                 className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
                   activeView === 'info-wd'
@@ -824,11 +741,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {isOpen && <span className="font-semibold text-xs">INFO DP / WD</span>}
                 </div>
                 {isOpen && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">LIVE</span>}
-              </button>
+              </a>
 
               {/* 3. INFO DATA MEMBER */}
-              <button
-                onClick={() => handleSelectView('info-data-pl', undefined, 'kasir')}
+              <a
+                href="?view=info-data-pl"
+                onClick={(e) => handleItemClick(e, 'info-data-pl', undefined, 'kasir')}
                 id="menu-info-data-pl"
                 className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
                   activeView === 'info-data-pl'
@@ -840,7 +758,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <TrendingUp className="w-4 h-4 text-yellow-400" />
                   {isOpen && <span className="font-semibold text-xs">INFO DATA MEMBER</span>}
                 </div>
-              </button>
+              </a>
             </div>
           )}
         </div>
@@ -892,8 +810,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {openCategory === 'modul-sop' && (
             <div className="space-y-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
               {/* MODUL SPORTBOOKS */}
-              <button
-                onClick={() => handleSelectView('modul-sportbooks', undefined, 'modul-sop')}
+              <a
+                href="?view=modul-sportbooks"
+                onClick={(e) => handleItemClick(e, 'modul-sportbooks', undefined, 'modul-sop')}
                 id="menu-modul-sportbooks"
                 className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
                   activeView === 'modul-sportbooks'
@@ -905,7 +824,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Trophy className="w-4 h-4 text-emerald-400" />
                   {isOpen && <span className="font-semibold text-xs">MODUL SPORTBOOKS</span>}
                 </div>
-              </button>
+              </a>
 
               {/* MODUL TOGEL (Sub-accordion) */}
               <div>
@@ -929,43 +848,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {isOpen && openAccordion === 'modul-togel' && (
                   <div className="mt-1 pb-2 px-3 space-y-1 animate-in fade-in slide-in-from-top-1">
-                    <button
-                      onClick={() => handleSelectView('modul-togel-cara', 'modul-togel', 'modul-sop')}
-                      className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
+                    <a
+                      href="?view=modul-togel-cara"
+                      onClick={(e) => handleItemClick(e, 'modul-togel-cara', 'modul-togel', 'modul-sop')}
+                      className={`block w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
                         activeView === 'modul-togel-cara'
                           ? 'border-l-2 border-emerald-400 text-emerald-300 font-bold opacity-100'
                           : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
                       }`}
                     >
                       CARA BERMAIN TOGEL
-                    </button>
-                    <button
-                      onClick={() => handleSelectView('modul-togel-hadiah', 'modul-togel', 'modul-sop')}
-                      className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
+                    </a>
+                    <a
+                      href="?view=modul-togel-hadiah"
+                      onClick={(e) => handleItemClick(e, 'modul-togel-hadiah', 'modul-togel', 'modul-sop')}
+                      className={`block w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
                         activeView === 'modul-togel-hadiah'
                           ? 'border-l-2 border-emerald-400 text-emerald-300 font-bold opacity-100'
                           : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
                       }`}
                     >
                       HADIAH TOGEL ONLINE
-                    </button>
-                    <button
-                      onClick={() => handleSelectView('modul-togel-jadwal', 'modul-togel', 'modul-sop')}
-                      className={`w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
+                    </a>
+                    <a
+                      href="?view=modul-togel-jadwal"
+                      onClick={(e) => handleItemClick(e, 'modul-togel-jadwal', 'modul-togel', 'modul-sop')}
+                      className={`block w-full text-left text-xs py-1.5 pl-4 transition-all cursor-pointer ${
                         activeView === 'modul-togel-jadwal'
                           ? 'border-l-2 border-emerald-400 text-emerald-300 font-bold opacity-100'
                           : 'border-l-2 border-gray-700 text-gray-400 hover:text-white opacity-60 hover:opacity-100'
                       }`}
                     >
                       JADWAL PASARAN TOGEL
-                    </button>
+                    </a>
                   </div>
                 )}
               </div>
 
               {/* MODUL SLOT */}
-              <button
-                onClick={() => handleSelectView('modul-slot', undefined, 'modul-sop')}
+              <a
+                href="?view=modul-slot"
+                onClick={(e) => handleItemClick(e, 'modul-slot', undefined, 'modul-sop')}
                 id="menu-modul-slot"
                 className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
                   activeView === 'modul-slot'
@@ -977,7 +900,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Flame className="w-4 h-4 text-emerald-400" />
                   {isOpen && <span className="font-semibold text-xs">MODUL SLOT</span>}
                 </div>
-              </button>
+              </a>
             </div>
           )}
         </div>

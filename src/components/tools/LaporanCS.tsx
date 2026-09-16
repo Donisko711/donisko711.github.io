@@ -37,6 +37,7 @@ interface ParsedGantiDataItem {
   newAcc: string;
   changeType: string;
   ket: string;
+  nb: string;
 }
 
 interface ParsedLockedItem {
@@ -140,11 +141,115 @@ export const formatBankDisplayName = (bank: string): string => {
   return toTitleCase(bank.trim());
 };
 
+export const formatStaffDisplay = (
+  rawAdminStaff?: string,
+  manualStaffAlias?: string,
+  currentUsername?: string
+): string => {
+  const admin = (rawAdminStaff || '').trim();
+  let formattedAdmin = '';
+  if (/^jvsaacs9$/i.test(admin)) {
+    formattedAdmin = 'Jvsaacs9';
+  } else if (/^keoaacs9$/i.test(admin)) {
+    formattedAdmin = 'Keoaacs9';
+  } else if (/^lelaacs9$/i.test(admin)) {
+    formattedAdmin = 'Lelaacs9';
+  } else if (admin) {
+    formattedAdmin = admin.charAt(0).toUpperCase() + admin.slice(1);
+  }
+
+  // Aliases known to belong to staff Ismail: Jvsaacs9, Keoaacs9, Lelaacs9
+  const isIsmailAdmin = /^(jvsaacs9|keoaacs9|lelaacs9)$/i.test(admin);
+
+  let secondary = (manualStaffAlias || '').trim();
+  if (!secondary) {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('laporan_cs_staff_alias') : null;
+    if (saved) secondary = saved;
+  }
+
+  if (isIsmailAdmin) {
+    // Admin Jvsaacs9, Keoaacs9, Lelaacs9 are specifically used by staff Ismail (user donisko)
+    if (!secondary || secondary.toLowerCase() === 'donisko' || secondary.toLowerCase() === 'ismail') {
+      secondary = 'Ismail';
+    }
+  } else {
+    // Admin selain Jvsaacs9, Keoaacs9, Lelaacs9 BUKAN admin yang digunakan oleh Ismail.
+    // Jika secondary alias bernilai 'Ismail' atau 'donisko', jangan tampilkan Ismail!
+    if (secondary.toLowerCase() === 'ismail' || secondary.toLowerCase() === 'donisko') {
+      secondary = '';
+    }
+  }
+
+  if (formattedAdmin) {
+    return secondary ? `${formattedAdmin} / ${secondary}` : `${formattedAdmin} /`;
+  }
+  if (secondary) {
+    return `${secondary} /`;
+  }
+  return '/';
+};
+
+/**
+ * Menghasilkan alasan catatan NB sesuai perbedaan Data Sebelumnya vs Data Terbarunya
+ */
+export const getGantiDataNB = (item: {
+  oldBank: string;
+  newBank: string;
+  oldAcc: string;
+  newAcc: string;
+  oldRek: string;
+  newRek: string;
+}): string => {
+  const cleanOldBank = item.oldBank.trim().toUpperCase();
+  const cleanNewBank = item.newBank.trim().toUpperCase();
+  const isBankChanged = cleanOldBank !== cleanNewBank;
+
+  const cleanOldRek = item.oldRek.trim();
+  const cleanNewRek = item.newRek.trim();
+  const isRekChanged = cleanOldRek !== cleanNewRek && cleanOldRek !== '-' && cleanNewRek !== '-';
+
+  const rawOldAcc = item.oldAcc.trim();
+  const rawNewAcc = item.newAcc.trim();
+  const cleanOldAccNoSpace = rawOldAcc.replace(/\s+/g, '').toUpperCase();
+  const cleanNewAccNoSpace = rawNewAcc.replace(/\s+/g, '').toUpperCase();
+  const isAccChanged = rawOldAcc.toUpperCase() !== rawNewAcc.toUpperCase() && rawOldAcc !== '-' && rawNewAcc !== '-';
+  const isSpacingOnly = isAccChanged && cleanOldAccNoSpace === cleanNewAccNoSpace;
+
+  // Jika jenis bank berbeda (misalnya dana => BRI), selalu set "Pergantian Pada Jenis Bank"
+  if (isBankChanged) {
+    return 'Pergantian Pada Jenis Bank';
+  }
+  if (isRekChanged && isAccChanged) {
+    return 'Pergantian Pada Nama Dan No Rekening';
+  }
+  if (isRekChanged) {
+    return 'Pergantian Pada No Rekening';
+  }
+  if (isSpacingOnly) {
+    return 'Perbaiki Spasi Pada Nama Rekening';
+  }
+  if (isAccChanged) {
+    return 'Pergantian Pada Nama Rekening';
+  }
+  return 'Pergantian Data Rekening';
+};
+
 export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA', currentUser }) => {
   const [activeTab, setActiveTab] = useState<'GANTI_DATA' | 'LOCKED'>(initialTab);
 
-  // Common Staff Alias manual field - default empty as requested (Staff : )
-  const [staffAlias, setStaffAlias] = useState('');
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  // Common Staff Alias manual field - default to saved localStorage or Ismail for donisko
+  const [staffAlias, setStaffAlias] = useState(() => {
+    const saved = localStorage.getItem('laporan_cs_staff_alias');
+    if (saved !== null && saved.trim()) return saved;
+    if (currentUser?.username?.toLowerCase() === 'donisko') return 'Ismail';
+    return '';
+  });
 
   // GANTI DATA STATES - Clean initial state (empty to prevent double data)
   const [gdRawText, setGdRawText] = useState('');
@@ -166,6 +271,31 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
   const [countdown, setCountdown] = useState<number | null>(null);
   const idleTimerRef = useRef<any>(null);
   const countdownIntervalRef = useRef<any>(null);
+
+  // Auto-fill and save Ismail if donisko user or Ismail aliases appear
+  useEffect(() => {
+    if (currentUser?.username?.toLowerCase() === 'donisko') {
+      if (!staffAlias.trim() || staffAlias.toLowerCase() === 'donisko') {
+        setStaffAlias('Ismail');
+        localStorage.setItem('laporan_cs_staff_alias', 'Ismail');
+      }
+    }
+  }, [currentUser, staffAlias]);
+
+  useEffect(() => {
+    const combined = `${gdRawText} ${lockRawText}`;
+    if (/jvsaacs9|keoaacs9|lelaacs9/i.test(combined)) {
+      if (!staffAlias.trim() || staffAlias.toLowerCase() === 'donisko') {
+        setStaffAlias('Ismail');
+        localStorage.setItem('laporan_cs_staff_alias', 'Ismail');
+      }
+    }
+  }, [gdRawText, lockRawText, staffAlias]);
+
+  const handleStaffAliasChange = (newVal: string) => {
+    setStaffAlias(newVal);
+    localStorage.setItem('laporan_cs_staff_alias', newVal);
+  };
 
   const startIdleTimer = (type: 'GD' | 'LOCK') => {
     if (!autoClearEnabled) return;
@@ -200,11 +330,11 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
     if (!r) return 'Kendala Akun';
 
     // Priority exact/normalized checks
-    if (/^rek\s*tidak\s*valid$/i.test(r)) {
-      return 'Rek Tidak Valid';
+    if (/form\s*kosong|spam\s*form\s*kosong/i.test(r)) {
+      return 'Spam Form Kosong';
     }
-    if (/^no\s*rek(?:ening)?\s*tidak\s*valid$/i.test(r)) {
-      return 'No Rek Tidak Valid';
+    if (/rekening\s*tidak\s*valid|no\s*rek(?:ening)?\s*tidak\s*valid|^rek\s*tidak\s*valid$/i.test(r)) {
+      return 'Rek Tidak Valid';
     }
     if (/^nomor\s*rekening\s*tidak\s*valid$/i.test(r)) {
       return 'Nomor Rekening Tidak Valid';
@@ -221,8 +351,8 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
     if (/akun\s*pl\s*limit/i.test(r)) {
       return 'Akun PL Limit';
     }
-    if (/form\s*kosong|spam\s*form\s*kosong/i.test(r)) {
-      return 'Spam Form Kosong';
+    if (/invest\s*2d/i.test(r)) {
+      return 'Invest 2D';
     }
 
     // Word-by-word formatting for acronyms, digits, and usernames
@@ -419,6 +549,15 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
         changeType = 'Ganti Nama';
       }
 
+      const calculatedNb = getGantiDataNB({
+        oldBank,
+        newBank,
+        oldRek,
+        newRek,
+        oldAcc,
+        newAcc
+      });
+
       const item: ParsedGantiDataItem = {
         id: `gd-${index}-${Date.now()}`,
         no: index + 1,
@@ -433,7 +572,8 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
         oldAcc,
         newAcc,
         changeType,
-        ket
+        ket,
+        nb: calculatedNb
       };
 
       parsedItems.push(item);
@@ -462,15 +602,11 @@ export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA',
 
     const blocks = gdParsedList.map((item) => {
       const formattedDate = formatIndonesianDate(item.date, false);
-      const formattedStaff = item.staff
-        ? (item.staff.charAt(0).toUpperCase() + item.staff.slice(1))
-        : '';
-      const staffDisplay = formattedStaff
-        ? `${formattedStaff} / ${staffAlias ? staffAlias.trim() : ''}`
-        : (staffAlias ? `${staffAlias.trim()} / ` : '/ ');
+      const staffDisplay = formatStaffDisplay(item.staff, staffAlias, currentUser?.username);
 
       const oldBankDisplay = formatBankDisplayName(item.oldBank);
       const newBankDisplay = formatBankDisplayName(item.newBank);
+      const finalNb = item.nb || getGantiDataNB(item);
 
       return `Staff : ${staffDisplay}
 Tanggal : ${formattedDate}
@@ -478,11 +614,13 @@ Tanggal : ${formattedDate}
 User ID : ${item.userId}
 Ket : ${item.ket}
 Data Sebelumnya : ${oldBankDisplay}, ${item.oldAcc.toUpperCase()}, ${item.oldRek}
-Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek}`;
+Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek}
+
+NB : ${finalNb}`;
     });
 
     setGdExtractedText(blocks.join('\n\n\n'));
-  }, [gdParsedList, staffAlias]);
+  }, [gdParsedList, staffAlias, currentUser]);
 
   // ==========================================
   // PARSER 2: LOCKED / UNLOCK
@@ -512,17 +650,27 @@ Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek
       }
 
       // Check action: Locked or Unlocked
-      const isLocked = /\blocked\b/i.test(line);
-      const isUnlocked = /\bunlocked\b/i.test(line);
-      const action: 'Locked' | 'Unlocked' = isLocked ? 'Locked' : 'Unlocked';
+      const isLocked = /\b(?:locked|lock)\b/i.test(line) || /status\s*->\s*locked/i.test(line);
+      const isUnlocked = /\b(?:unlocked|unlock)\b/i.test(line) || /status\s*->\s*unlocked/i.test(line);
+      const action: 'Locked' | 'Unlocked' = isUnlocked && !isLocked ? 'Unlocked' : 'Locked';
 
       let kendala = 'Kendala Akun';
       let userId = '';
 
-      // Ekstrak kendala/reason di dalam kurung (...)
+      // Ekstrak kendala/reason dari:
+      // 1. update info : -> SPAM FORM KOSONG, Status -> Locked
+      // 2. locked (invest 2d)
+      // 3. ket / alasan / kendala
+      const updateInfoMatch = line.match(/update\s+info\s*:\s*(?:->\s*)?([^,\t\r\n]+?)(?:,?\s*Status\s*->|$)/i);
       const reasonMatch = line.match(/(?:locked|unlocked)\s*\(([^)]*)\)/i);
-      if (reasonMatch && reasonMatch[1].trim()) {
+      const ketMatch = line.match(/(?:ket(?:erangan)?|alasan|kendala)\s*[:=]\s*(?:->\s*)?([^,\t\r\n]+)/i);
+
+      if (updateInfoMatch && updateInfoMatch[1].trim()) {
+        kendala = cleanReason(updateInfoMatch[1].trim());
+      } else if (reasonMatch && reasonMatch[1].trim()) {
         kendala = cleanReason(reasonMatch[1].trim());
+      } else if (ketMatch && ketMatch[1].trim() && !/^(locked|unlocked)$/i.test(ketMatch[1].trim())) {
+        kendala = cleanReason(ketMatch[1].trim());
       } else if (isUnlocked) {
         kendala = 'Buka Kunci Akun';
       } else {
@@ -531,11 +679,17 @@ Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek
 
       // Deteksi User ID (termasuk user id angka semua e.g. 12345678, 88726155)
       const explicitUser = line.match(/(?:user\s*id|username|id\s*user|id\s*member|user)\s*[:=]\s*([a-zA-Z0-9_\-\.]+)/i);
+      const changeUserMatch = line.match(/change\s+user\s+info\s+([a-zA-Z0-9_\-\.]+)/i);
       const afterActionMatch = line.match(/(?:locked|unlocked)\s*(?:\([^)]*\))?\s+([a-zA-Z0-9_\-\.]+)$/i);
       const beforeActionMatch = line.match(/^([a-zA-Z0-9_\-\.]+)\s+(?:locked|unlocked)/i);
+      const tabCols = line.split('\t').map(c => c.trim());
 
       if (explicitUser) {
         userId = explicitUser[1].trim();
+      } else if (changeUserMatch) {
+        userId = changeUserMatch[1].trim();
+      } else if (tabCols.length >= 5 && /^[a-zA-Z0-9_\-\.]+$/.test(tabCols[tabCols.length - 1])) {
+        userId = tabCols[tabCols.length - 1];
       } else if (afterActionMatch) {
         userId = afterActionMatch[1].trim();
       } else if (beforeActionMatch) {
@@ -546,9 +700,12 @@ Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek
           !/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(t) &&
           !/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(t) &&
           !/^\d{2}:\d{2}(:\d{2})?$/.test(t) &&
-          !/^(locked|unlocked|jvsaacs\d+|jvsaaks\d+|staff\w+)$/i.test(t) &&
+          !/^(locked|unlocked|jvsaacs\d+|jvsaaks\d+|keoaacs\d+|lelaacs\d+|staff\w+)$/i.test(t) &&
           !t.startsWith('(') &&
           !t.endsWith(')') &&
+          !t.includes('=>') &&
+          !t.includes(':') &&
+          !/^(update|info|status|change|user)$/i.test(t) &&
           t.length >= 3
         );
         userId = candidate || tokens[tokens.length - 1] || `member${index + 1}`;
@@ -556,21 +713,20 @@ Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek
 
       // Staff match
       let staff = '';
-      const tabCols = line.split('\t').map(c => c.trim());
       if (tabCols.length >= 3 && /\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(tabCols[1])) {
-        if (tabCols[2] && tabCols[2].length <= 30 && !/^(locked|unlocked)/i.test(tabCols[2])) {
+        if (tabCols[2] && tabCols[2].length <= 30 && !/^(locked|unlocked|change|update)/i.test(tabCols[2])) {
           staff = tabCols[2];
         }
       }
       if (!staff) {
-        const dtStaffMatch = line.match(/\d{1,2}[-/]\d{1,2}[-/]\d{4}\s+(?:\d{2}:\d{2}(?::\d{2})?\s+)?([a-zA-Z0-9_\-\.]+)\s+(?:locked|unlocked)/i);
+        const dtStaffMatch = line.match(/\d{1,2}[-/]\d{1,2}[-/]\d{4}\s+(?:\d{2}:\d{2}(?::\d{2})?\s+)?([a-zA-Z0-9_\-\.]+)\s+(?:change|locked|unlocked)/i);
         if (dtStaffMatch) {
           staff = dtStaffMatch[1].trim();
         }
       }
       if (!staff) {
         const staffMatch = line.match(/\b([a-zA-Z0-9]*(?:acs|aks|cs)\d*)\b/i) || line.match(/\b(staff\w*)\b/i);
-        if (staffMatch && !/^(locked|unlocked)$/i.test(staffMatch[1])) {
+        if (staffMatch && !/^(locked|unlocked|change|update)$/i.test(staffMatch[1])) {
           staff = staffMatch[1].trim();
         }
       }
@@ -578,13 +734,20 @@ Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek
         staff = staffAlias.trim();
       }
 
+      const isStaffIsmailAdmin = /^(jvsaacs9|keoaacs9|lelaacs9)$/i.test(staff);
+      const calculatedCsName = isStaffIsmailAdmin
+        ? 'Ismail'
+        : (staffAlias && staffAlias.toLowerCase() !== 'ismail' && staffAlias.toLowerCase() !== 'donisko'
+            ? staffAlias.trim()
+            : '-');
+
       const item: ParsedLockedItem = {
         id: `lock-${index}-${Date.now()}`,
         no: index + 1,
         date: date || detectedRawDate || new Date().toISOString().slice(0, 10),
         time,
         staff,
-        csName: currentUser?.name || 'CS On Duty',
+        csName: calculatedCsName,
         action,
         kendala,
         userId
@@ -604,10 +767,11 @@ Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek
     }
 
     const firstDate = lockParsedList.find(l => l.date)?.date;
-    const reportDate = formatIndonesianDate(firstDate, false); // e.g. "03 Agustus 2026"
+    const reportDate = formatIndonesianDate(firstDate, false); // e.g. "17 September 2026"
 
     // Deduplicate locked items by userId (case-insensitive)
     const lockedOnly = lockParsedList.filter(l => l.action === 'Locked');
+    const unlockedOnly = lockParsedList.filter(l => l.action === 'Unlocked');
 
     // Separate into Invest vs Non-Invest (Regular)
     const regularItems: ParsedLockedItem[] = [];
@@ -647,11 +811,18 @@ Data Terbarunya : ${newBankDisplay}, ${item.newAcc.toUpperCase()}, ${item.newRek
 
     const reports: string[] = [];
 
+    // Helper to get staff display for a set of items
+    const getCollectionStaff = (items: ParsedLockedItem[]) => {
+      const found = items.find(i => i.staff)?.staff || lockParsedList.find(i => i.staff)?.staff || '';
+      return formatStaffDisplay(found, staffAlias, currentUser?.username);
+    };
+
     // 1. Regular Locked Report
     if (sortedRegular.length > 0) {
       const listLines = sortedRegular.map(item => `* ${item.userId} - ${item.kendala}`);
+      const staffDisplay = getCollectionStaff(sortedRegular);
       const regBlock = 
-`Staff : ${staffAlias ? staffAlias.trim() : ''}
+`Staff : ${staffDisplay}
 Tanggal : ${reportDate}
 Ket : Locked Member
 
@@ -663,8 +834,9 @@ ${listLines.join('\n')}`;
     // 2. Invest Locked Report
     if (sortedInvest.length > 0) {
       const investLines = sortedInvest.map(item => `* ${item.userId} - ${item.kendala}`);
+      const staffDisplay = getCollectionStaff(sortedInvest);
       const investBlock = 
-`Staff : ${staffAlias ? staffAlias.trim() : ''}
+`Staff : ${staffDisplay}
 Tanggal : ${reportDate}
 Ket : Locked Member
 
@@ -675,10 +847,25 @@ NB : Untuk Member Invest Diatas Sudah Di Manualkan 2.000`;
       reports.push(investBlock);
     }
 
+    // 3. Unlocked Report
+    if (unlockedOnly.length > 0) {
+      const unlockLines = unlockedOnly.map(item => `* ${item.userId} - ${item.kendala}`);
+      const staffDisplay = getCollectionStaff(unlockedOnly);
+      const unlockBlock = 
+`Staff : ${staffDisplay}
+Tanggal : ${reportDate}
+Ket : Unlocked Member
+
+User ID :
+${unlockLines.join('\n')}`;
+      reports.push(unlockBlock);
+    }
+
     if (reports.length === 0) {
       if (lockParsedList.length > 0) {
+        const staffDisplay = getCollectionStaff(lockParsedList);
         setLockExtractedText(
-`Staff : ${staffAlias ? staffAlias.trim() : ''}
+`Staff : ${staffDisplay}
 Tanggal : ${reportDate}
 Ket : Locked Member
 
@@ -692,7 +879,7 @@ User ID :
     }
 
     setLockExtractedText(reports.join('\n\n\n'));
-  }, [lockParsedList, staffAlias]);
+  }, [lockParsedList, staffAlias, currentUser]);
 
   // Update kendala for an individual locked user
   const handleUpdateKendala = (id: string, newKendala: string) => {
@@ -705,6 +892,13 @@ User ID :
   const handleUpdateGdKet = (id: string, newKet: string) => {
     setGdParsedList(prev => prev.map(item => 
       item.id === id ? { ...item, ket: newKet } : item
+    ));
+  };
+
+  // Update nb for an individual ganti data item
+  const handleUpdateGdNb = (id: string, newNb: string) => {
+    setGdParsedList(prev => prev.map(item => 
+      item.id === id ? { ...item, nb: newNb } : item
     ));
   };
 
@@ -831,13 +1025,20 @@ User ID :
           <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#060a14] border border-cyan-500/40 shadow-inner">
             <User className="w-4 h-4 text-cyan-400 shrink-0" />
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Nama / Kode Alias:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Nama / Kode Alias:</span>
+                {(staffAlias.trim().toLowerCase() === 'ismail' || currentUser?.username?.toLowerCase() === 'donisko') && (
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">
+                    Staff Ismail
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 value={staffAlias}
-                onChange={(e) => setStaffAlias(e.target.value)}
-                placeholder="(Kosongkan saja)"
-                className="bg-transparent text-xs text-cyan-300 font-mono font-bold outline-none w-36 border-b border-cyan-500/50 pb-0.5 focus:border-cyan-300 transition-colors placeholder:text-gray-600"
+                onChange={(e) => handleStaffAliasChange(e.target.value)}
+                placeholder="Ismail (Otomatis)"
+                className="bg-transparent text-xs text-cyan-300 font-mono font-bold outline-none w-40 border-b border-cyan-500/50 pb-0.5 focus:border-cyan-300 transition-colors placeholder:text-gray-600"
               />
             </div>
           </div>
@@ -942,6 +1143,102 @@ User ID :
               </div>
             </div>
 
+            {/* Quick Test Sample Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+              <span className="text-[10px] font-mono text-gray-400 uppercase mr-1">Contoh Cepat:</span>
+              {activeTab === 'LOCKED' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = '3\t17-09-2026 01:35:46\tjvsaacs9\tchange user info rivaldi123xxxx\tupdate info : -> SPAM FORM KOSONG, Status -> Locked\trivaldi123xxxx';
+                      setLockRawText(sample);
+                      startIdleTimer('LOCK');
+                    }}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 transition-all cursor-pointer"
+                    title="Contoh User: Jvsaacs9 / Ismail - Spam Form Kosong"
+                  >
+                    ⚡ Jvsaacs9 (rivaldi123xxxx)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = '1\t17-09-2026 02:10:15\tkeoaacs9\tchange user info budi88xxxx\tupdate info : -> REK TIDAK VALID, Status -> Locked\tbudi88xxxx';
+                      setLockRawText(sample);
+                      startIdleTimer('LOCK');
+                    }}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 transition-all cursor-pointer"
+                    title="Contoh User: Keoaacs9 / Ismail - Rek Tidak Valid"
+                  >
+                    ⚡ Keoaacs9 (budi88xxxx)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = '2\t17-09-2026 03:15:30\tlelaacs9\tchange user info sandi01xxxx\tupdate info : -> INVEST 2D, Status -> Locked\tsandi01xxxx';
+                      setLockRawText(sample);
+                      startIdleTimer('LOCK');
+                    }}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 transition-all cursor-pointer"
+                    title="Contoh User: Lelaacs9 / Ismail - Invest 2D"
+                  >
+                    ⚡ Lelaacs9 (sandi01xxxx)
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = '2\t12-09-2026 12:14:27\tkeoaacs9\tchange user info lesi678xxxx\tbank : gopay => GOPAY,rek : 08569404728 => 085694047282,bank : gopay => GOPAY,acc : Iwan Setiawan => Iwan Setiawan,rek : 08569404728 => 085694047282,color : #FFFFFF => white\tlesi678xxxx';
+                      setGdRawText(sample);
+                      startIdleTimer('GD');
+                    }}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer"
+                    title="Contoh 1: Ganti No Rekening (lesi678xxxx)"
+                  >
+                    ⚡ Ganti No Rek (lesi678xxxx)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = '2\t12-09-2026 12:14:27\tkeoaacs9\tchange user info lesi678xxxx\tbank : gopay => GOPAY,rek : 085694047282 => 085694047282,bank : gopay => GOPAY,acc : Iwan S => Iwan Setiawan,rek : 085694047282 => 085694047282,color : #FFFFFF => white\tlesi678xxxx';
+                      setGdRawText(sample);
+                      startIdleTimer('GD');
+                    }}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 transition-all cursor-pointer"
+                    title="Contoh 2: Ganti Nama Rekening (lesi678xxxx)"
+                  >
+                    ⚡ Ganti Nama Rek (lesi678xxxx)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = '1\t17-09-2026 20:38:31\tjvsaacs9\tchange user info cawah09xxxx\tbank : gopay => GOPAY,bank : Dahliasari => Dahlia Sari,bank : gopay => GOPAY,acc : Dahliasari => Dahlia Sari,rek : 089638137501 => 089638137501,color : #FFFFFF => white\tcawah09xxxx';
+                      setGdRawText(sample);
+                      startIdleTimer('GD');
+                    }}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer"
+                    title="Contoh 3: Spasi Nama (cawah09xxxx)"
+                  >
+                    ⚡ Spasi Nama (cawah09xxxx)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = '4\t12-09-2026 14:10:05\tkeoaacs9\tchange user info budi01xxxx\tbank : dana => BRI,bank : dana => BRI,acc : BUDI SANTOSO => BUDI SANTOSO,rek : 081298765432 => 123401005678504,color : #FFFFFF => white\tbudi01xxxx';
+                      setGdRawText(sample);
+                      startIdleTimer('GD');
+                    }}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-all cursor-pointer"
+                    title="Contoh 4: Ganti Jenis Bank (Dana => BRI)"
+                  >
+                    ⚡ Ganti Bank (Dana =&gt; BRI)
+                  </button>
+                </>
+              )}
+            </div>
+
             <textarea
               value={activeTab === 'GANTI_DATA' ? gdRawText : lockRawText}
               onChange={(e) => {
@@ -954,8 +1251,8 @@ User ID :
                 }
               }}
               placeholder={activeTab === 'GANTI_DATA'
-                ? `Tempelkan format log ganti data di sini...\n\nContoh 1 (Perbaiki Spasi Nama):\n1 12-09-2026 20:38:31 keoaacs9 change user info cawah09 bank : gopay => GOPAY,bank : Dahliasari => Dahlia Sari,bank : gopay => GOPAY,acc : Dahliasari => Dahlia Sari,rek : 089638137501 => 089638137501,color : #FFFFFF => white cawah09\n\nContoh 2 (Ganti No Rekening):\n8 12-09-2026 12:14:27 keoaacs9 change user info lesi678 bank : gopay => GOPAY,rek : 08569404728 => 085694047282,bank : gopay => GOPAY,acc : Iwan Setiawan => Iwan Setiawan,rek : 08569404728 => 085694047282,color : #FFFFFF => white lesi678`
-                : `Tempelkan format log locked / unlocked di sini...\n\nContoh:\n1 12-09-2026 18:37:49 keoaacs7 Change Lock/Unlock Locked (invest 2D) ves992\n2 12-09-2026 15:36:17 keoaacs2 Change Lock/Unlock Locked (pl memilih userid rini2022) rini999`
+                ? `Tempelkan format log ganti data di sini...\n\nContoh 1 (Perbaiki Spasi Nama):\n1 12-09-2026 20:38:31 keoaacs9 change user info cawah09xxxx bank : gopay => GOPAY,bank : Dahliasari => Dahlia Sari,bank : gopay => GOPAY,acc : Dahliasari => Dahlia Sari,rek : 089638137501 => 089638137501,color : #FFFFFF => white cawah09xxxx\n\nContoh 2 (Ganti No Rekening):\n8 12-09-2026 12:14:27 keoaacs9 change user info lesi678xxxx bank : gopay => GOPAY,rek : 08569404728 => 085694047282,bank : gopay => GOPAY,acc : Iwan Setiawan => Iwan Setiawan,rek : 08569404728 => 085694047282,color : #FFFFFF => white lesi678xxxx`
+                : `Tempelkan format log locked / unlocked di sini...\n\nContoh:\n1 12-09-2026 18:37:49 keoaacs7 Change Lock/Unlock Locked (invest 2D) ves992xxxx\n2 12-09-2026 15:36:17 keoaacs2 Change Lock/Unlock Locked (pl memilih userid rini2022xxxx) rini999xxxx`
               }
               className="w-full h-64 p-4 rounded-xl bg-[#050811] border border-blue-900/40 text-xs text-gray-200 placeholder-gray-500 font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 transition-all resize-none shadow-inner leading-relaxed"
             />
@@ -998,9 +1295,33 @@ User ID :
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                READY TO COPY
-              </span>
+
+              {/* Copy button at top right header (as in Bonus Mahjong with color feedback) */}
+              <button
+                type="button"
+                onClick={handleCopyReport}
+                disabled={!(activeTab === 'GANTI_DATA' ? gdExtractedText : lockExtractedText)}
+                className={`px-4 py-1.5 rounded-xl font-mono font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                  copiedReport
+                    ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-black border-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.6)] animate-pulse'
+                    : (activeTab === 'GANTI_DATA' ? gdExtractedText : lockExtractedText)
+                      ? 'bg-cyan-500 hover:bg-cyan-400 text-black border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                      : 'bg-white/5 text-gray-500 border-white/10 opacity-30 cursor-not-allowed'
+                }`}
+                title="Salin hasil laporan ke clipboard"
+              >
+                {copiedReport ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 stroke-[3] text-black" />
+                    <span>TERCOPY!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>COPY &gt;&gt;</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <textarea
@@ -1014,10 +1335,15 @@ User ID :
           <div className="space-y-2.5 pt-2">
             <button
               onClick={handleCopyReport}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-bold text-xs font-mono transition-all cursor-pointer flex flex-col items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.35)]"
+              disabled={!(activeTab === 'GANTI_DATA' ? gdExtractedText : lockExtractedText)}
+              className={`w-full py-3 px-4 rounded-xl font-bold text-xs font-mono transition-all cursor-pointer flex flex-col items-center justify-center shadow-lg ${
+                copiedReport
+                  ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-black shadow-[0_0_20px_rgba(16,185,129,0.5)]'
+                  : 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-500 hover:to-fuchsia-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.35)]'
+              }`}
             >
               <div className="flex items-center gap-2 text-sm">
-                {copiedReport ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                {copiedReport ? <Check className="w-4 h-4 text-black stroke-[3]" /> : <Copy className="w-4 h-4" />}
                 <span>
                   {copiedReport 
                     ? 'Tersalin ke Clipboard!' 
@@ -1132,7 +1458,7 @@ User ID :
                         </span>
                       </td>
                       <td className="py-3 px-3.5">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1.5">
                           <input
                             type="text"
                             value={item.ket}
@@ -1140,9 +1466,16 @@ User ID :
                             className="w-full bg-[#03060f] border border-cyan-900/50 hover:border-cyan-500/50 focus:border-cyan-400 text-[11px] text-cyan-200 px-2 py-1 rounded outline-none transition-colors"
                             title="Klik untuk mengubah keterangan laporan"
                           />
-                          <span className="text-[10px] text-gray-500">
-                            Jenis: {item.changeType}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-purple-400 font-bold whitespace-nowrap">NB:</span>
+                            <input
+                              type="text"
+                              value={item.nb}
+                              onChange={(e) => handleUpdateGdNb(item.id, e.target.value)}
+                              className="w-full bg-[#03060f] border border-purple-900/50 hover:border-purple-500/50 focus:border-purple-400 text-[10px] text-purple-200 px-1.5 py-0.5 rounded outline-none transition-colors"
+                              title="Klik untuk mengubah catatan NB"
+                            />
+                          </div>
                         </div>
                       </td>
                     </tr>

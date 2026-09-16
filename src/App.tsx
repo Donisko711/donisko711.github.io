@@ -41,6 +41,7 @@ const ArticleGenerator = safeLazy(() => import('./components/tools/ArticleGenera
 const PhisingChecker = safeLazy(() => import('./components/tools/PhisingChecker').then(m => ({ default: m.PhisingChecker })));
 const ParlayCalculator = safeLazy(() => import('./components/tools/ParlayCalculator').then(m => ({ default: m.ParlayCalculator })));
 const LiveScore = safeLazy(() => import('./components/tools/LiveScore').then(m => ({ default: m.LiveScore })));
+const BagiBonus = safeLazy(() => import('./components/tools/BagiBonus').then(m => ({ default: m.BagiBonus })));
 const BonusCalculator = safeLazy(() => import('./components/tools/BonusCalculator').then(m => ({ default: m.BonusCalculator })));
 const BonusParlayCalculator = safeLazy(() => import('./components/tools/BonusParlayCalculator').then(m => ({ default: m.BonusParlayCalculator })));
 const BbfsGenerator = safeLazy(() => import('./components/tools/BbfsGenerator').then(m => ({ default: m.BbfsGenerator })));
@@ -102,8 +103,38 @@ export default function App() {
   });
 
   const [activeShift, setActiveShift] = useState<ShiftType>(() => currentUser?.shift || 'PAGI');
-  const [activeView, setActiveView] = useState<ActiveView>('home');
+  const [activeView, setActiveView] = useState<ActiveView>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view') || params.get('tab');
+      if (viewParam) {
+        return viewParam as ActiveView;
+      }
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        return hash as ActiveView;
+      }
+    }
+    return 'home';
+  });
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Synchronize browser URL popstate (Back/Forward buttons and multi-tab url changes)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const viewParam = params.get('view') || params.get('tab') || window.location.hash.replace('#', '');
+        if (viewParam) {
+          setActiveView(viewParam as ActiveView);
+        } else {
+          setActiveView('home');
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   // Jobdesk tasks state with multi-PC server-authoritative persistence
   const [tasks, setTasks] = useState<JobdeskTask[]>(() => {
@@ -258,6 +289,13 @@ export default function App() {
 
   const handleSelectView = (viewId: ActiveView) => {
     setActiveView(viewId);
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', viewId);
+        window.history.pushState({ view: viewId }, '', url.toString());
+      } catch {}
+    }
     if (viewId === 'jobdesk-cs' || viewId === 'jobdesk-kasir') {
       syncJobdesk(true);
     }
@@ -339,10 +377,12 @@ export default function App() {
       case 'bbfs-angka-tarung': return { category: 'ALAT GENERATE', title: 'BBFS & Angka Tarung' };
       case 'kalkulator-parlay': return { category: 'ALAT GENERATE', title: 'Kalkulator Hitung Parlay' };
       case 'jobdesk-cs': return { category: 'TOOLS KERJA CS', title: `Jobdesk CS (${activeShift})` };
+      case 'bagi-bonus': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus (Scatter & Parlay)' };
       case 'bagi-bonus-slot': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Slot & Harian' };
       case 'bagi-bonus-parlay': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Mix Parlay Win Full' };
       case 'edit-pembayaran': return { category: 'TOOLS KERJA CS', title: 'Edit & Generator Pembayaran' };
       case 'isi-rekapan': return { category: 'TOOLS KERJA CS', title: 'Isi Rekapan & Validasi PL CS' };
+      case 'laporan-cs': return { category: 'LAPORAN CS', title: 'Laporan CS (Ganti Data & Locked)' };
       case 'laporan-cs-ganti-data': return { category: 'LAPORAN CS', title: 'Laporan Ganti Data' };
       case 'laporan-cs-locked': return { category: 'LAPORAN CS', title: 'Laporan Locked / Unlock' };
       case 'jobdesk-kasir': return { category: 'KASIR & REKAPAN', title: `Jobdesk Kasir (${activeShift})` };
@@ -521,12 +561,16 @@ export default function App() {
 
               {activeView === 'livescore' && <LiveScore />}
 
+              {activeView === 'bagi-bonus' && (
+                <BagiBonus initialTab="SLOT" />
+              )}
+
               {activeView === 'bagi-bonus-slot' && (
-                <BonusCalculator />
+                <BagiBonus initialTab="SLOT" />
               )}
 
               {activeView === 'bagi-bonus-parlay' && (
-                <BonusParlayCalculator />
+                <BagiBonus initialTab="PARLAY" />
               )}
 
               {activeView === 'bbfs-angka-tarung' && <BbfsGenerator />}
@@ -534,6 +578,10 @@ export default function App() {
               {activeView === 'edit-pembayaran' && <EditPembayaran />}
 
               {activeView === 'isi-rekapan' && <IsiRekapan />}
+
+              {activeView === 'laporan-cs' && (
+                <LaporanCS initialTab="GANTI_DATA" currentUser={currentUser} />
+              )}
 
               {activeView === 'laporan-cs-ganti-data' && (
                 <LaporanCS initialTab="GANTI_DATA" currentUser={currentUser} />

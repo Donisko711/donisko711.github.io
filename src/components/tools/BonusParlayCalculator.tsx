@@ -122,7 +122,7 @@ const SAMPLE_WIN_FULL_5TEAM = `SBO SportsBook Game
 SBO SportBook
 512729330
 Ext. ID : 7CR-512729330
-panjol12
+panjolxxxx
 ITWLFA - jvsaa
 29 Aug 2026 - 22:55:12
 Credit
@@ -132,7 +132,7 @@ SBO SportsBook Game
 SBO SportBook
 512729330
 Ext. ID : 512729330
-panjol12
+panjolxxxx
 ITWLFA - jvsaa
 29 Aug 2026 - 21:34:03
 Debit
@@ -181,7 +181,7 @@ const SAMPLE_LOSE_1_5TEAM = `SBO SportsBook Game
 SBO SportBook
 512729330
 Ext. ID : 512729330
-panjol12
+panjolxxxx
 ITWLFA - jvsaa
 29 Aug 2026 - 21:34:03
 Debit
@@ -228,7 +228,7 @@ Status	Won`;
 
 const SAMPLE_WIN_FULL_25K_7TEAM = `SBO SportsBook
 Ticket: 881920381
-User ID: alexander77
+User ID: alexanderxxxx
 29 Aug 2026 - 21:30:00
 Debit: IDR 25,000
 1. Man City vs Arsenal - Over 2.5 @1.85 (Status: Won)
@@ -241,7 +241,7 @@ Debit: IDR 25,000
 
 const SAMPLE_WIN_FULL_100K_10TEAM = `SBO SportBook
 Ticket ID: 994019284
-User ID: sultan_parlay
+User ID: sultan_xxxx
 29 Aug 2026 - 22:00:00
 Debit: IDR 100,000
 Match 1: Over 2.5 @1.85 Status: Won
@@ -257,7 +257,7 @@ Match 10: Over 2.5 @1.92 Status: Won`;
 
 const SAMPLE_REJECTED_UNDER_BET = `SBO SportsBook
 512729330
-panjol12
+panjolxxxx
 Debit: IDR 5,000
 Selection 1 @1.90 Status: Won
 Selection 2 @1.90 Status: Won
@@ -684,15 +684,45 @@ export const BonusParlayCalculator: React.FC = () => {
     }, 5000);
   };
 
+  // Robust clipboard copying helper for iframe / webview compatibility
+  const copyToClipboard = (text: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(() => {
+        fallbackExecCopy(text);
+      });
+    } else {
+      fallbackExecCopy(text);
+    }
+  };
+
+  const fallbackExecCopy = (text: string) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '-9999px';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+    }
+  };
+
   // Handle Copy Tabel 1: BONUS PARLAY WIN FULL MINIMAL 5 TEAM
   // Permintaan: Kata "Team" HANYA muncul di tabel saja. Saat di copy formatnya adalah:
-  // panjol12\t\t\tSBO SportBook\t512729330\t5\t\t15,000 (hanya angkanya saja)
-  const handleCopyWinFull = () => {
-    if (!parsed.isWinFullEligible) return;
+  // panjolxxxx\t\t\tSBO SportBook\t512729330\t5\t\t15,000 (hanya angkanya saja)
+  const handleCopyWinFull = (force: boolean = false) => {
+    if (!parsed.isWinFullEligible && !force) return;
+    if (!parsed.userId && !parsed.rawText && !force) return;
 
     // HANYA ANGKA JUMLAH TEAM SAAT DI-COPY (Tanpa kata 'Team')
-    const copyLine = `${parsed.userId}\t\t\t${parsed.provider}\t${parsed.noTiket}\t${parsed.teamCount}\t\t${parsed.stakeFormatted}`;
-    navigator.clipboard.writeText(copyLine);
+    const copyLine = `${parsed.userId || 'USER_ID'}\t\t\t${parsed.provider || 'Sportsbook'}\t${parsed.noTiket || '-'}\t${parsed.teamCount || '5'}\t\t${parsed.stakeFormatted || '0'}`;
+    copyToClipboard(copyLine);
     setCopiedWinFull(true);
 
     // Otomatis hilangkan format yang ditempel apabila hasil ekstrak sudah berhasil di-copy
@@ -708,12 +738,13 @@ export const BonusParlayCalculator: React.FC = () => {
 
   // Handle Copy Tabel 2: BONUS PARLAY LOSE 1 MINIMAL 5 TEAM
   // Format copy: USER ID \t\t\t PROVIDER \t NO TIKET \t JUMLAH TEAM (angka) \t\t TOTAL ODDS
-  const handleCopyLose1 = () => {
-    if (!parsed.isLose1Eligible) return;
+  const handleCopyLose1 = (force: boolean = false) => {
+    if (!parsed.isLose1Eligible && !force) return;
+    if (!parsed.userId && !parsed.rawText && !force) return;
 
     // HANYA ANGKA JUMLAH TEAM SAAT DI-COPY (Tanpa kata 'Team' / 'Team Lose 1')
-    const copyLine = `${parsed.userId}\t\t\t${parsed.provider}\t${parsed.noTiket}\t${parsed.teamCount}\t\t${parsed.totalOddsWonFormatted}`;
-    navigator.clipboard.writeText(copyLine);
+    const copyLine = `${parsed.userId || 'USER_ID'}\t\t\t${parsed.provider || 'Sportsbook'}\t${parsed.noTiket || '-'}\t${parsed.teamCount || '5'}\t\t${parsed.totalOddsWonFormatted || '0.00'}`;
+    copyToClipboard(copyLine);
     setCopiedLose1(true);
 
     // Otomatis hilangkan format yang ditempel apabila hasil ekstrak sudah berhasil di-copy
@@ -800,6 +831,86 @@ export const BonusParlayCalculator: React.FC = () => {
         >
           {autoClearEnabled ? 'Auto-Clear: AKTIF' : 'Auto-Clear: NONAKTIF'}
         </button>
+      </div>
+
+      {/* Quick Action Toolbar: Tombol Copy Hasil (Win Full & Lose 1) Sesuai Bonus Scatter & Harian */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-[#0d1624] via-[#102236] to-[#0d1624] border border-cyan-500/40 shadow-lg">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-inner">
+            <Zap className="w-4 h-4 text-cyan-300 fill-cyan-400/20" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-white font-mono uppercase tracking-wider">
+                TOMBOL CEPAT COPY HASIL PARLAY
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">
+                AUTO-CLIPBOARD
+              </span>
+            </div>
+            <p className="text-[11px] text-cyan-200/70 font-mono">
+              Salin data klaim langsung ke clipboard (hanya angka team, tanpa kata &apos;Team&apos;)
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Button Copy Win Full */}
+          <button
+            type="button"
+            id="btn-copy-parlay-winfull-bar"
+            onClick={() => handleCopyWinFull(true)}
+            disabled={!parsed.userId || parsed.userId === '-'}
+            className={`px-3.5 py-2 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all cursor-pointer active:scale-95 shadow-md ${
+              copiedWinFull
+                ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.6)] border border-emerald-400 font-black'
+                : parsed.isWinFullEligible
+                ? 'bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-black font-black border border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                : parsed.userId && parsed.userId !== '-'
+                ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40'
+                : 'bg-white/5 text-gray-500 border border-white/10 opacity-40 cursor-not-allowed'
+            }`}
+            title={
+              !parsed.userId || parsed.userId === '-'
+                ? 'Tempel tiket parlay terlebih dahulu'
+                : parsed.isWinFullEligible
+                ? 'Salin format klaim Bonus Parlay Win Full (SAH & BISA CLAIM)'
+                : 'Salin format Win Full'
+            }
+          >
+            {copiedWinFull ? <Check className="w-4 h-4 stroke-[3]" /> : <Copy className="w-4 h-4 stroke-[2.5]" />}
+            <span>{copiedWinFull ? 'TERSALIN!' : 'COPY WIN FULL'}</span>
+          </button>
+
+          <span className="text-white/20 text-xs font-mono select-none hidden sm:inline">|</span>
+
+          {/* Button Copy Lose 1 */}
+          <button
+            type="button"
+            id="btn-copy-parlay-lose1-bar"
+            onClick={() => handleCopyLose1(true)}
+            disabled={!parsed.userId || parsed.userId === '-'}
+            className={`px-3.5 py-2 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all cursor-pointer active:scale-95 shadow-md ${
+              copiedLose1
+                ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.6)] border border-emerald-400 font-black'
+                : parsed.isLose1Eligible
+                ? 'bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-black font-black border border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]'
+                : parsed.userId && parsed.userId !== '-'
+                ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                : 'bg-white/5 text-gray-500 border border-white/10 opacity-40 cursor-not-allowed'
+            }`}
+            title={
+              !parsed.userId || parsed.userId === '-'
+                ? 'Tempel tiket parlay terlebih dahulu'
+                : parsed.isLose1Eligible
+                ? 'Salin format klaim Bonus Parlay Lose 1 (SAH & BISA CLAIM)'
+                : 'Salin format Lose 1'
+            }
+          >
+            {copiedLose1 ? <Check className="w-4 h-4 stroke-[3]" /> : <Copy className="w-4 h-4 stroke-[2.5]" />}
+            <span>{copiedLose1 ? 'TERSALIN!' : 'COPY LOSE 1'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Preset Buttons for Quick Testing */}
@@ -973,9 +1084,9 @@ export const BonusParlayCalculator: React.FC = () => {
       {/* Main Grid: Left (Input Textarea) + Right (HASIL PEMBACAAN & METRIK) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left Column: Textarea Paste Area (Ukuran dibuat dinamis & compact jika kosong) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="p-5 rounded-3xl bg-[#090e18] border border-blue-600/30 shadow-xl space-y-3 flex flex-col justify-between">
+        {/* Left Column: Textarea Paste Area (Ukuran dibuat lebih besar & leluasa) */}
+        <div className="lg:col-span-6 space-y-4 flex flex-col">
+          <div className="p-5 rounded-3xl bg-[#090e18] border border-blue-600/30 shadow-xl space-y-3 flex-1 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
                 <div className="flex items-center gap-2.5">
@@ -987,7 +1098,7 @@ export const BonusParlayCalculator: React.FC = () => {
                       Tempel Format Tiket Parlay
                     </h3>
                     <span className="text-[11px] text-gray-400 font-mono">
-                      {rawText ? `${rawText.split('\n').filter(Boolean).length} Baris Terdeteksi` : 'Kolom otomatis meluas saat ditempel'}
+                      {rawText ? `${rawText.split('\n').filter(Boolean).length} Baris Terdeteksi` : 'Area kotak input lebih besar & leluasa'}
                     </span>
                   </div>
                 </div>
@@ -996,9 +1107,10 @@ export const BonusParlayCalculator: React.FC = () => {
                   <button
                     type="button"
                     onClick={handlePasteFromClipboard}
-                    className="text-[10px] font-mono uppercase tracking-wider px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 border border-blue-500/30 transition-all cursor-pointer"
+                    className="text-[10px] font-mono uppercase tracking-wider px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 border border-blue-500/30 transition-all cursor-pointer flex items-center gap-1"
                     title="Tempel langsung dari Clipboard"
                   >
+                    <Copy className="w-3 h-3" />
                     Paste Clipboard
                   </button>
                   <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">
@@ -1013,42 +1125,136 @@ export const BonusParlayCalculator: React.FC = () => {
                   setRawText(e.target.value);
                   startIdleTimer();
                 }}
-                placeholder="Tempel format tiket mix parlay dari Sportsbook di sini (kolom membesar saat diisi)..."
-                rows={rawText ? Math.min(Math.max(rawText.split('\n').length + 2, 8), 16) : 5}
-                className="w-full min-h-[140px] max-h-[360px] p-3.5 rounded-2xl bg-[#050811] border border-blue-900/50 text-cyan-300 font-mono text-xs leading-relaxed focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/40 resize-y shadow-inner transition-all"
+                placeholder="Tempel format tiket mix parlay dari Sportsbook di sini (kolom input lebih besar & leluasa)..."
+                rows={14}
+                className="w-full min-h-[300px] md:min-h-[340px] max-h-[500px] p-4 rounded-2xl bg-[#050811] border border-blue-900/50 text-cyan-300 font-mono text-xs leading-relaxed focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/40 resize-y shadow-inner transition-all"
               />
             </div>
 
-            <div className="flex items-center justify-between pt-2.5 border-t border-white/10 text-[11px] font-mono text-gray-400">
+            <div className="flex items-center justify-between pt-3 border-t border-white/10 text-[11px] font-mono text-gray-400 flex-wrap gap-2">
               <span>{rawText ? `${rawText.split('\n').filter(Boolean).length} baris format terbaca` : 'Menunggu input tiket...'}</span>
-              <button
-                onClick={handleClear}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-mono transition-colors cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Reset Data</span>
-              </button>
+              
+              <div className="flex items-center gap-2">
+                {/* Tombol Cepat Copy Hasil di Bawah Textarea */}
+                {parsed.userId && parsed.userId !== '-' && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyWinFull(true)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold font-mono flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
+                        copiedWinFull
+                          ? 'bg-emerald-500 text-black border border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                          : parsed.isWinFullEligible
+                          ? 'bg-cyan-500 hover:bg-cyan-400 text-black font-black shadow-[0_0_10px_rgba(6,182,212,0.4)]'
+                          : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30'
+                      }`}
+                      title="Salin hasil Win Full"
+                    >
+                      {copiedWinFull ? <Check className="w-3 h-3 stroke-[3]" /> : <Copy className="w-3 h-3 stroke-[2.5]" />}
+                      <span>{copiedWinFull ? 'TERSALIN!' : 'COPY WIN FULL'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLose1(true)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold font-mono flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
+                        copiedLose1
+                          ? 'bg-emerald-500 text-black border border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                          : parsed.isLose1Eligible
+                          ? 'bg-amber-400 hover:bg-amber-300 text-black font-black shadow-[0_0_10px_rgba(250,204,21,0.4)]'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                      }`}
+                      title="Salin hasil Lose 1"
+                    >
+                      {copiedLose1 ? <Check className="w-3 h-3 stroke-[3]" /> : <Copy className="w-3 h-3 stroke-[2.5]" />}
+                      <span>{copiedLose1 ? 'TERSALIN!' : 'COPY LOSE 1'}</span>
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleClear}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-mono transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Reset Data</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Right Column: HASIL PEMBACAAN CARD */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="p-5 sm:p-6 rounded-3xl bg-[#090e18] border border-cyan-500/30 shadow-xl space-y-4">
-            
-            {/* Card Top Title Bar */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                <span className="text-sm font-black uppercase tracking-widest text-white font-mono">
-                  HASIL PEMBACAAN &amp; METRIK
-                </span>
-              </div>
+        <div className="lg:col-span-6 space-y-4 flex flex-col">
+          <div className="p-5 sm:p-6 rounded-3xl bg-[#090e18] border border-cyan-500/30 shadow-xl space-y-4 flex-1 flex flex-col justify-between">
+            {/* Card Top Title Bar with Quick Copy Buttons */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                  <span className="text-sm font-black uppercase tracking-widest text-white font-mono">
+                    HASIL PEMBACAAN &amp; METRIK
+                  </span>
+                </div>
 
-              <div className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-mono text-[10px] font-bold tracking-wider uppercase">
-                FORMULA MODE
+                {/* Copy Buttons directly in Result Card Header like Scatter & Harian */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    id="btn-copy-parlay-winfull-header"
+                    onClick={() => handleCopyWinFull(true)}
+                    disabled={!parsed.userId || parsed.userId === '-'}
+                    className={`px-2.5 py-1 rounded-xl font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                      copiedWinFull
+                        ? 'bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.5)] border border-emerald-400 font-black'
+                        : parsed.isWinFullEligible
+                        ? 'bg-gradient-to-r from-cyan-400 to-teal-400 text-black font-black border border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                        : parsed.userId && parsed.userId !== '-'
+                        ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40'
+                        : 'bg-white/5 text-gray-500 border border-white/10 opacity-40 cursor-not-allowed'
+                    }`}
+                    title={
+                      !parsed.userId || parsed.userId === '-'
+                        ? 'Tempel tiket parlay terlebih dahulu'
+                        : parsed.isWinFullEligible
+                        ? 'Salin format klaim Bonus Parlay Win Full (SAH & BISA CLAIM)'
+                        : 'Salin format Win Full'
+                    }
+                  >
+                    {copiedWinFull ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Copy className="w-3.5 h-3.5 stroke-[2.5]" />}
+                    <span>{copiedWinFull ? 'TERSALIN!' : 'COPY WIN FULL'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    id="btn-copy-parlay-lose1-header"
+                    onClick={() => handleCopyLose1(true)}
+                    disabled={!parsed.userId || parsed.userId === '-'}
+                    className={`px-2.5 py-1 rounded-xl font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                      copiedLose1
+                        ? 'bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.5)] border border-emerald-400 font-black'
+                        : parsed.isLose1Eligible
+                        ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-black font-black border border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)]'
+                        : parsed.userId && parsed.userId !== '-'
+                        ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                        : 'bg-white/5 text-gray-500 border border-white/10 opacity-40 cursor-not-allowed'
+                    }`}
+                    title={
+                      !parsed.userId || parsed.userId === '-'
+                        ? 'Tempel tiket parlay terlebih dahulu'
+                        : parsed.isLose1Eligible
+                        ? 'Salin format klaim Bonus Parlay Lose 1 (SAH & BISA CLAIM)'
+                        : 'Salin format Lose 1'
+                    }
+                  >
+                    {copiedLose1 ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Copy className="w-3.5 h-3.5 stroke-[2.5]" />}
+                    <span>{copiedLose1 ? 'TERSALIN!' : 'COPY LOSE 1'}</span>
+                  </button>
+
+                  <div className="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-mono text-[10px] font-bold tracking-wider uppercase">
+                    FORMULA
+                  </div>
+                </div>
               </div>
-            </div>
 
             {/* Metric Boxes Grid (Total Kemenangan & Total Taruhan) */}
             <div className="grid grid-cols-2 gap-3">
@@ -1179,7 +1385,7 @@ export const BonusParlayCalculator: React.FC = () => {
           </div>
 
           <button
-            onClick={handleCopyWinFull}
+            onClick={() => handleCopyWinFull(false)}
             disabled={!parsed.isWinFullEligible}
             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-black text-xs font-mono flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all cursor-pointer active:scale-95"
           >
@@ -1279,7 +1485,7 @@ export const BonusParlayCalculator: React.FC = () => {
           </div>
 
           <button
-            onClick={handleCopyLose1}
+            onClick={() => handleCopyLose1(false)}
             disabled={!parsed.isLose1Eligible}
             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-black text-xs font-mono flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all cursor-pointer active:scale-95"
           >
