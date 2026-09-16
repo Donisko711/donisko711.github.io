@@ -17,7 +17,9 @@ import {
   Pencil,
   RotateCcw,
   SlidersHorizontal,
-  Calculator
+  Calculator,
+  List,
+  X
 } from 'lucide-react';
 
 interface ParsedStatement {
@@ -51,11 +53,55 @@ interface ValidationResult {
   overallStatus: 'BOTH' | 'SCATTER_ONLY' | 'HARIAN_ONLY' | 'REJECTED' | 'EMPTY';
 }
 
+// PG Soft Feature Buy Rate Table (Beli Fitur 75x)
+// Konversi otomatis harga beli fitur ke nominal taruhan asli dalam game
+export interface PgFeatureBuyRate {
+  beliFitur: number;
+  betAsli: number;
+}
+
+export const PGSOFT_FEATURE_BUY_RATES: PgFeatureBuyRate[] = [
+  { beliFitur: 30000, betAsli: 400 },
+  { beliFitur: 60000, betAsli: 800 },
+  { beliFitur: 90000, betAsli: 1200 },
+  { beliFitur: 120000, betAsli: 1600 },
+  { beliFitur: 150000, betAsli: 2000 },
+  { beliFitur: 180000, betAsli: 2400 },
+  { beliFitur: 210000, betAsli: 2800 },
+  { beliFitur: 240000, betAsli: 3200 },
+  { beliFitur: 270000, betAsli: 3600 },
+  { beliFitur: 300000, betAsli: 4000 },
+  { beliFitur: 600000, betAsli: 8000 },
+  { beliFitur: 900000, betAsli: 12000 },
+  { beliFitur: 1200000, betAsli: 16000 },
+  { beliFitur: 1500000, betAsli: 20000 },
+  { beliFitur: 1800000, betAsli: 24000 },
+  { beliFitur: 2100000, betAsli: 28000 },
+  { beliFitur: 2400000, betAsli: 32000 },
+  { beliFitur: 2700000, betAsli: 36000 },
+  { beliFitur: 3000000, betAsli: 40000 },
+  { beliFitur: 4500000, betAsli: 60000 },
+  { beliFitur: 7500000, betAsli: 100000 },
+  { beliFitur: 12000000, betAsli: 160000 },
+  { beliFitur: 15000000, betAsli: 200000 },
+];
+
+export const PGSOFT_FEATURE_BUY_MAP: Record<number, number> = Object.fromEntries(
+  PGSOFT_FEATURE_BUY_RATES.map(item => [item.beliFitur, item.betAsli])
+);
+
+export const getPgSoftBetAsli = (debit: number): number | null => {
+  if (PGSOFT_FEATURE_BUY_MAP[debit]) return PGSOFT_FEATURE_BUY_MAP[debit];
+  // Fallback rasio 75x untuk kelipatan 75 dengan debit >= 30.000
+  if (debit >= 30000 && debit % 75 === 0) return Math.round(debit / 75);
+  return null;
+};
+
 const SAMPLE_SCATTER_ONLY = `Mahjong Ways 2
 PGSoft
 2093760412662324736-2093760049250985473-106-0
 Ext. ID : CR2093760412662324736-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:59:17
 Credit
@@ -65,7 +111,7 @@ Mahjong Ways 2
 PGSoft
 2093760344488063488-2093760049250985473-106-0
 Ext. ID : CR2093760344488063488-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:59:01
 Credit
@@ -75,7 +121,7 @@ Mahjong Ways 2
 PGSoft
 2093760331062081537-2093760049250985473-106-0
 Ext. ID : CR2093760331062081537-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:57
 Credit
@@ -85,7 +131,7 @@ Mahjong Ways 2
 PGSoft
 2093760319276125188-2093760049250985473-106-0
 Ext. ID : CR2093760319276125188-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:55
 Credit
@@ -95,7 +141,7 @@ Mahjong Ways 2
 PGSoft
 2093760294684947969-2093760049250985473-106-0
 Ext. ID : CR2093760294684947969-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:49
 Credit
@@ -105,7 +151,7 @@ Mahjong Ways 2
 PGSoft
 2093760271574283780-2093760049250985473-106-0
 Ext. ID : CR2093760271574283780-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:43
 Credit
@@ -115,7 +161,7 @@ Mahjong Ways 2
 PGSoft
 2093760256558682112-2093760049250985473-106-0
 Ext. ID : CR2093760256558682112-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:40
 Credit
@@ -125,7 +171,7 @@ Mahjong Ways 2
 PGSoft
 2093760203190403072-2093760049250985473-106-0
 Ext. ID : CR2093760203190403072-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:27
 Credit
@@ -135,7 +181,7 @@ Mahjong Ways 2
 PGSoft
 2093760190406091776-2093760049250985473-106-0
 Ext. ID : CR2093760190406091776-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:24
 Credit
@@ -145,7 +191,7 @@ Mahjong Ways 2
 PGSoft
 2093760165143805443-2093760049250985473-106-0
 Ext. ID : CR2093760165143805443-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:18
 Credit
@@ -155,7 +201,7 @@ Mahjong Ways 2
 PGSoft
 2093760143505395200-2093760049250985473-106-0
 Ext. ID : CR2093760143505395200-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:13
 Credit
@@ -165,7 +211,7 @@ Mahjong Ways 2
 PGSoft
 2093760118301822977-2093760049250985473-106-0
 Ext. ID : CR2093760118301822977-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:07
 Credit
@@ -175,7 +221,7 @@ Mahjong Ways 2
 PGSoft
 2093760064509865985-2093760049250985473-106-0
 Ext. ID : CR2093760064509865985-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:57:54
 Credit
@@ -185,7 +231,7 @@ Mahjong Ways 2
 PGSoft
 2093760049250985473-2093760049250985473-106-0
 Ext. ID : CR2093760049250985473-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:57:50
 Credit
@@ -195,7 +241,7 @@ Mahjong Ways 2
 PGSoft
 2093760049250985473-2093760049250985473-106-0
 Ext. ID : DB2093760049250985473-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:57:50
 Debit
@@ -206,7 +252,7 @@ const SAMPLE_BOTH_ELIGIBLE = `Mahjong Ways
 PGSoft
 2093756137555006465-2093755723547846146-106-0
 Ext. ID : CR2093756137555006465-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:42:18
 Credit
@@ -216,7 +262,7 @@ Mahjong Ways
 PGSoft
 2093756120249370628-2093755723547846146-106-0
 Ext. ID : CR2093756120249370628-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:42:13
 Credit
@@ -226,7 +272,7 @@ Mahjong Ways
 PGSoft
 2093756066356707841-2093755723547846146-106-0
 Ext. ID : CR2093756066356707841-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:42:01
 Credit
@@ -236,7 +282,7 @@ Mahjong Ways
 PGSoft
 2093756052079294469-2093755723547846146-106-0
 Ext. ID : CR2093756052079294469-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:57
 Credit
@@ -246,7 +292,7 @@ Mahjong Ways
 PGSoft
 2093756038800147968-2093755723547846146-106-0
 Ext. ID : CR2093756038800147968-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:54
 Credit
@@ -256,7 +302,7 @@ Mahjong Ways
 PGSoft
 2093756025017643009-2093755723547846146-106-0
 Ext. ID : CR2093756025017643009-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:51
 Credit
@@ -266,7 +312,7 @@ Mahjong Ways
 PGSoft
 2093756007795816960-2093755723547846146-106-0
 Ext. ID : CR2093756007795816960-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:47
 Credit
@@ -276,7 +322,7 @@ Mahjong Ways
 PGSoft
 2093755958240131585-2093755723547846146-106-0
 Ext. ID : CR2093755958240131585-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:35
 Credit
@@ -286,7 +332,7 @@ Mahjong Ways
 PGSoft
 2093755940972216320-2093755723547846146-106-0
 Ext. ID : CR2093755940972216320-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:31
 Credit
@@ -296,7 +342,7 @@ Mahjong Ways
 PGSoft
 2093755896097327616-2093755723547846146-106-0
 Ext. ID : CR2093755896097327616-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:21
 Credit
@@ -306,7 +352,7 @@ Mahjong Ways
 PGSoft
 2093755878103751173-2093755723547846146-106-0
 Ext. ID : CR2093755878103751173-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:16
 Credit
@@ -316,7 +362,7 @@ Mahjong Ways
 PGSoft
 2093755836039099395-2093755723547846146-106-0
 Ext. ID : CR2093755836039099395-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:41:06
 Credit
@@ -326,7 +372,7 @@ Mahjong Ways
 PGSoft
 2093755800731430915-2093755723547846146-106-0
 Ext. ID : CR2093755800731430915-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:40:57
 Credit
@@ -336,7 +382,7 @@ Mahjong Ways
 PGSoft
 2093755723547846146-2093755723547846146-106-0
 Ext. ID : CR2093755723547846146-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:40:39
 Credit
@@ -346,7 +392,7 @@ Mahjong Ways
 PGSoft
 2093755723547846146-2093755723547846146-106-0
 Ext. ID : DB2093755723547846146-2093755723547846146-106-0
-isna
+isnaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:40:39
 Debit
@@ -357,7 +403,7 @@ const SAMPLE_REJECTED = `Mahjong Ways 2
 PGSoft
 2093760412662324736-2093760049250985473-106-0
 Ext. ID : CR2093760412662324736-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:59:17
 Credit
@@ -367,7 +413,7 @@ Mahjong Ways 2
 PGSoft
 2093760344488063488-2093760049250985473-106-0
 Ext. ID : CR2093760344488063488-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:59:01
 Credit
@@ -377,7 +423,7 @@ Mahjong Ways 2
 PGSoft
 2093760331062081537-2093760049250985473-106-0
 Ext. ID : CR2093760331062081537-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:57
 Credit
@@ -387,7 +433,7 @@ Mahjong Ways 2
 PGSoft
 2093760319276125188-2093760049250985473-106-0
 Ext. ID : CR2093760319276125188-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:55
 Credit
@@ -397,7 +443,7 @@ Mahjong Ways 2
 PGSoft
 2093760294684947969-2093760049250985473-106-0
 Ext. ID : CR2093760294684947969-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:49
 Credit
@@ -407,7 +453,7 @@ Mahjong Ways 2
 PGSoft
 2093760271574283780-2093760049250985473-106-0
 Ext. ID : CR2093760271574283780-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:43
 Credit
@@ -417,7 +463,7 @@ Mahjong Ways 2
 PGSoft
 2093760256558682112-2093760049250985473-106-0
 Ext. ID : CR2093760256558682112-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:40
 Credit
@@ -427,7 +473,7 @@ Mahjong Ways 2
 PGSoft
 2093760203190403072-2093760049250985473-106-0
 Ext. ID : CR2093760203190403072-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:27
 Credit
@@ -437,7 +483,7 @@ Mahjong Ways 2
 PGSoft
 2093760190406091776-2093760049250985473-106-0
 Ext. ID : CR2093760190406091776-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:24
 Credit
@@ -447,7 +493,7 @@ Mahjong Ways 2
 PGSoft
 2093760165143805443-2093760049250985473-106-0
 Ext. ID : CR2093760165143805443-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:18
 Credit
@@ -457,7 +503,7 @@ Mahjong Ways 2
 PGSoft
 2093760143505395200-2093760049250985473-106-0
 Ext. ID : CR2093760143505395200-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:13
 Credit
@@ -467,7 +513,7 @@ Mahjong Ways 2
 PGSoft
 2093760118301822977-2093760049250985473-106-0
 Ext. ID : CR2093760118301822977-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:58:07
 Credit
@@ -477,7 +523,7 @@ Mahjong Ways 2
 PGSoft
 2093760064509865985-2093760049250985473-106-0
 Ext. ID : CR2093760064509865985-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:57:54
 Credit
@@ -487,7 +533,7 @@ Mahjong Ways 2
 PGSoft
 2093760049250985473-2093760049250985473-106-0
 Ext. ID : CR2093760049250985473-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:57:50
 Credit
@@ -497,7 +543,7 @@ Mahjong Ways 2
 PGSoft
 2093760049250985473-2093760049250985473-106-0
 Ext. ID : DB2093760049250985473-2093760049250985473-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:57:50
 Debit
@@ -507,7 +553,7 @@ Mahjong Ways 2
 PGSoft
 2093760039063074816-2093760039063074816-106-0
 Ext. ID : DB2093760039063074816-2093760039063074816-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:57:48
 Debit
@@ -517,7 +563,7 @@ Mahjong Ways 2
 PGSoft
 2093760017156179461-2093759988995637763-106-0
 Ext. ID : CR2093760017156179461-2093759988995637763-106-0
-ruben77
+rubenxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 00:57:42
 Credit
@@ -528,7 +574,7 @@ const SAMPLE_MULTI_TICKET_REJECTED = `Mahjong Ways
 PGSoft
 2094504793124044292-2094504175818937859-106-0
 Ext. ID : CR2094504793124044292-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:17:11
 Credit
@@ -538,7 +584,7 @@ Mahjong Ways
 PGSoft
 2094504689839293954-2094504175818937859-106-0
 Ext. ID : CR2094504689839293954-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:46
 Credit
@@ -548,7 +594,7 @@ Mahjong Ways
 PGSoft
 2094504677122138626-2094504175818937859-106-0
 Ext. ID : CR2094504677122138626-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:43
 Credit
@@ -558,7 +604,7 @@ Mahjong Ways
 PGSoft
 2094504660307250688-2094504175818937859-106-0
 Ext. ID : CR2094504660307250688-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:39
 Credit
@@ -568,7 +614,7 @@ Mahjong Ways
 PGSoft
 2094504624101945344-2094504175818937859-106-0
 Ext. ID : CR2094504624101945344-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:31
 Credit
@@ -578,7 +624,7 @@ Mahjong Ways
 PGSoft
 2094504611737138177-2094504175818937859-106-0
 Ext. ID : CR2094504611737138177-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:28
 Credit
@@ -588,7 +634,7 @@ Mahjong Ways
 PGSoft
 2094504599301047299-2094504175818937859-106-0
 Ext. ID : CR2094504599301047299-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:25
 Credit
@@ -598,7 +644,7 @@ Mahjong Ways
 PGSoft
 2094504581773048832-2094504175818937859-106-0
 Ext. ID : CR2094504581773048832-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:21
 Credit
@@ -608,7 +654,7 @@ Mahjong Ways
 PGSoft
 2094504558821848066-2094504175818937859-106-0
 Ext. ID : CR2094504558821848066-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:15
 Credit
@@ -618,7 +664,7 @@ Mahjong Ways
 PGSoft
 2094504542086538753-2094504175818937859-106-0
 Ext. ID : CR2094504542086538753-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:11
 Credit
@@ -628,7 +674,7 @@ Mahjong Ways
 PGSoft
 2094504515184320002-2094504175818937859-106-0
 Ext. ID : CR2094504515184320002-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:05
 Credit
@@ -638,7 +684,7 @@ Mahjong Ways
 PGSoft
 2094504502479721986-2094504175818937859-106-0
 Ext. ID : CR2094504502479721986-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:16:02
 Credit
@@ -648,7 +694,7 @@ Mahjong Ways
 PGSoft
 2094504490790226432-2094504175818937859-106-0
 Ext. ID : CR2094504490790226432-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:59
 Credit
@@ -658,7 +704,7 @@ Mahjong Ways
 PGSoft
 2094504473807518208-2094504175818937859-106-0
 Ext. ID : CR2094504473807518208-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:55
 Credit
@@ -668,7 +714,7 @@ Mahjong Ways
 PGSoft
 2094504445042946562-2094504175818937859-106-0
 Ext. ID : CR2094504445042946562-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:48
 Credit
@@ -678,7 +724,7 @@ Mahjong Ways
 PGSoft
 2094504378961702400-2094504175818937859-106-0
 Ext. ID : CR2094504378961702400-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:32
 Credit
@@ -688,7 +734,7 @@ Mahjong Ways
 PGSoft
 2094504366190002177-2094504175818937859-106-0
 Ext. ID : CR2094504366190002177-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:29
 Credit
@@ -698,7 +744,7 @@ Mahjong Ways
 PGSoft
 2094504353925872128-2094504175818937859-106-0
 Ext. ID : CR2094504353925872128-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:26
 Credit
@@ -708,7 +754,7 @@ Mahjong Ways
 PGSoft
 2094504340424396802-2094504175818937859-106-0
 Ext. ID : CR2094504340424396802-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:23
 Credit
@@ -718,7 +764,7 @@ Mahjong Ways
 PGSoft
 2094504328617427456-2094504175818937859-106-0
 Ext. ID : CR2094504328617427456-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:20
 Credit
@@ -728,7 +774,7 @@ Mahjong Ways
 PGSoft
 2094504311664062976-2094504175818937859-106-0
 Ext. ID : CR2094504311664062976-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:15:16
 Credit
@@ -738,7 +784,7 @@ Mahjong Ways
 PGSoft
 2094504207867628544-2094504175818937859-106-0
 Ext. ID : CR2094504207867628544-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:14:51
 Credit
@@ -748,7 +794,7 @@ Mahjong Ways
 PGSoft
 2094504193695072770-2094504175818937859-106-0
 Ext. ID : CR2094504193695072770-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:14:48
 Credit
@@ -758,7 +804,7 @@ Mahjong Ways
 PGSoft
 2094504175818937859-2094504175818937859-106-0
 Ext. ID : CR2094504175818937859-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:14:44
 Credit
@@ -768,7 +814,7 @@ Mahjong Ways
 PGSoft
 2094504175818937859-2094504175818937859-106-0
 Ext. ID : DB2094504175818937859-2094504175818937859-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:14:44
 Debit
@@ -778,7 +824,7 @@ Mahjong Ways
 PGSoft
 2094504145322198528-2094504145322198528-106-0
 Ext. ID : CR2094504145322198528-2094504145322198528-106-0
-2409heri
+2409xxxx
 ITWLAD - lelaa
 01 Sep 2026 - 02:14:37
 Credit
@@ -789,7 +835,7 @@ const SAMPLE_HARIAN_ONLY = `Fortune Of Olympus
 Pragmatic Play
 80633368385126
 Ext. ID : 1246a933d6ef384241c10186b1a
-nirwana04
+nirwanaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 03:13:34
 Credit
@@ -799,7 +845,7 @@ Fortune Of Olympus
 Pragmatic Play
 80633368385126
 Ext. ID : 1246a933d65f384241c101861c7
-nirwana04
+nirwanaxxxx
 ITWLFA - jvsaa
 30 Aug 2026 - 03:13:25
 Debit
@@ -810,7 +856,7 @@ const SAMPLE_BUY_SPIN_PG = `Mighty Mania
 PGSoft
 2094413992318556672-2094413652613483520-106-0
 Ext. ID : CR2094413992318556672-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:16:22
 Credit
@@ -820,7 +866,7 @@ Mighty Mania
 PGSoft
 2094413979542636032-2094413652613483520-106-0
 Ext. ID : CR2094413979542636032-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:16:19
 Credit
@@ -830,7 +876,7 @@ Mighty Mania
 PGSoft
 2094413963260404225-2094413652613483520-106-0
 Ext. ID : CR2094413963260404225-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:16:15
 Credit
@@ -840,7 +886,7 @@ Mighty Mania
 PGSoft
 2094413950434234880-2094413652613483520-106-0
 Ext. ID : CR2094413950434234880-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:16:12
 Credit
@@ -850,7 +896,7 @@ Mighty Mania
 PGSoft
 2094413934051260929-2094413652613483520-106-0
 Ext. ID : CR2094413934051260929-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:16:08
 Credit
@@ -860,7 +906,7 @@ Mighty Mania
 PGSoft
 2094413917987039744-2094413652613483520-106-0
 Ext. ID : CR2094413917987039744-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:16:05
 Credit
@@ -870,7 +916,7 @@ Mighty Mania
 PGSoft
 2094413905051805697-2094413652613483520-106-0
 Ext. ID : CR2094413905051805697-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:16:02
 Credit
@@ -880,7 +926,7 @@ Mighty Mania
 PGSoft
 2094413887205023744-2094413652613483520-106-0
 Ext. ID : CR2094413887205023744-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:58
 Credit
@@ -890,7 +936,7 @@ Mighty Mania
 PGSoft
 2094413872101380608-2094413652613483520-106-0
 Ext. ID : CR2094413872101380608-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:54
 Credit
@@ -900,7 +946,7 @@ Mighty Mania
 PGSoft
 2094413857035402753-2094413652613483520-106-0
 Ext. ID : CR2094413857035402753-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:50
 Credit
@@ -910,7 +956,7 @@ Mighty Mania
 PGSoft
 2094413844423122432-2094413652613483520-106-0
 Ext. ID : CR2094413844423122432-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:47
 Credit
@@ -920,7 +966,7 @@ Mighty Mania
 PGSoft
 2094413829130755584-2094413652613483520-106-0
 Ext. ID : CR2094413829130755584-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:43
 Credit
@@ -930,7 +976,7 @@ Mighty Mania
 PGSoft
 2094413808570267649-2094413652613483520-106-0
 Ext. ID : CR2094413808570267649-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:39
 Credit
@@ -940,7 +986,7 @@ Mighty Mania
 PGSoft
 2094413779910566400-2094413652613483520-106-0
 Ext. ID : CR2094413779910566400-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:32
 Credit
@@ -950,7 +996,7 @@ Mighty Mania
 PGSoft
 2094413749212467200-2094413652613483520-106-0
 Ext. ID : CR2094413749212467200-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:24
 Credit
@@ -960,7 +1006,7 @@ Mighty Mania
 PGSoft
 2094413728727461889-2094413652613483520-106-0
 Ext. ID : CR2094413728727461889-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:20
 Credit
@@ -970,7 +1016,7 @@ Mighty Mania
 PGSoft
 2094413652613483520-2094413652613483520-106-0
 Ext. ID : DB2094413652613483520-2094413652613483520-106-0
-jaya66
+jayaxxxx
 ITWL63 - Keoaa
 31 Aug 2026 - 20:15:01
 Debit
@@ -981,7 +1027,7 @@ const SAMPLE_MAHJONG_WAYS_CEYA = `Mahjong Ways
 PGSoft
 	2095036057094620160-2095035735567675393-106-0
 Ext. ID : CR2095036057094620160-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:28:14	Credit 	IDR 800
 Balance : IDR 413,397
@@ -990,7 +1036,7 @@ Balance : IDR 413,397
 PGSoft
 	2095035968070516226-2095035735567675393-106-0
 Ext. ID : CR2095035968070516226-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:27:53	Credit 	IDR 192,000
 Balance : IDR 412,597
@@ -999,7 +1045,7 @@ Balance : IDR 412,597
 PGSoft
 	2095035956385233920-2095035735567675393-106-0
 Ext. ID : CR2095035956385233920-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:27:50	Credit 	IDR 12,800
 Balance : IDR 220,597
@@ -1008,7 +1054,7 @@ Balance : IDR 220,597
 PGSoft
 	2095035939377312256-2095035735567675393-106-0
 Ext. ID : CR2095035939377312256-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:27:46	Credit 	IDR 400
 Balance : IDR 207,797
@@ -1017,7 +1063,7 @@ Balance : IDR 207,797
 PGSoft
 	2095035868724283394-2095035735567675393-106-0
 Ext. ID : CR2095035868724283394-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:27:29	Credit 	IDR 200
 Balance : IDR 207,397
@@ -1026,7 +1072,7 @@ Balance : IDR 207,397
 PGSoft
 	2095035839213160449-2095035735567675393-106-0
 Ext. ID : CR2095035839213160449-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:27:22	Credit 	IDR 200
 Balance : IDR 207,197
@@ -1035,7 +1081,7 @@ Balance : IDR 207,197
 PGSoft
 	2095035817084012544-2095035735567675393-106-0
 Ext. ID : CR2095035817084012544-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:27:17	Credit 	IDR 60,000
 Balance : IDR 206,997
@@ -1044,7 +1090,7 @@ Balance : IDR 206,997
 PGSoft
 	2095035794501879808-2095035735567675393-106-0
 Ext. ID : CR2095035794501879808-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:27:11	Credit 	IDR 2,000
 Balance : IDR 146,997
@@ -1053,7 +1099,7 @@ Balance : IDR 146,997
 PGSoft
 	2095035749719173121-2095035735567675393-106-0
 Ext. ID : CR2095035749719173121-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:27:00	Credit 	IDR 600
 Balance : IDR 144,997
@@ -1062,7 +1108,7 @@ Balance : IDR 144,997
 PGSoft
 	2095035735567675393-2095035735567675393-106-0
 Ext. ID : DB2095035735567675393-2095035735567675393-106-0
-	ceya77
+	ceyaxxxx
 ITWLFA - jvsaa
 	02 Sep 2026 - 13:26:57	Debit 	IDR 2,000
 Balance : IDR 144,397`;
@@ -1071,7 +1117,7 @@ const SAMPLE_MIGHTY_MANIA_LEPENK = `Mighty Mania
 PGSoft
 	2095022550924055554-2095022414764358656-106-0
 Ext. ID : CR2095022550924055554-2095022414764358656-106-0
-	lepenk
+	lepenxxxx
 ITWL63 - Keoaa
 	02 Sep 2026 - 12:34:34	Credit 	IDR 648,000
 Balance : IDR 666,133
@@ -1080,7 +1126,7 @@ Balance : IDR 666,133
 PGSoft
 	2095022502697947136-2095022414764358656-106-0
 Ext. ID : CR2095022502697947136-2095022414764358656-106-0
-	lepenk
+	lepenxxxx
 ITWL63 - Keoaa
 	02 Sep 2026 - 12:34:23	Credit 	IDR 18,000
 Balance : IDR 18,133
@@ -1089,10 +1135,162 @@ Balance : IDR 18,133
 PGSoft
 	2095022414764358656-2095022414764358656-106-0
 Ext. ID : DB2095022414764358656-2095022414764358656-106-0
-	lepenk
+	lepenxxxx
 ITWL63 - Keoaa
 	02 Sep 2026 - 12:33:57	Debit 	IDR 90,000
 Balance : IDR 18,133`;
+
+const SAMPLE_BUY_FITUR_PG_150K = `Wild Bounty Showdown
+PGSoft
+	2099930644485453825-2099930186966525444-106-0
+Ext. ID : CR2099930644485453825-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:37:35	Credit 	IDR 19,200
+Balance : IDR 2,232,507
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930618812072449-2099930186966525444-106-0
+Ext. ID : CR2099930618812072449-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:37:29	Credit 	IDR 35,200
+Balance : IDR 2,213,307
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930603876170243-2099930186966525444-106-0
+Ext. ID : CR2099930603876170243-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:37:25	Credit 	IDR 4,000
+Balance : IDR 2,178,107
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930547756402178-2099930186966525444-106-0
+Ext. ID : CR2099930547756402178-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:37:12	Credit 	IDR 76,800
+Balance : IDR 2,174,107
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930532816268800-2099930186966525444-106-0
+Ext. ID : CR2099930532816268800-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:37:08	Credit 	IDR 4,800
+Balance : IDR 2,097,307
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930477547922432-2099930186966525444-106-0
+Ext. ID : CR2099930477547922432-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:55	Credit 	IDR 153,600
+Balance : IDR 2,092,507
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930467150232065-2099930186966525444-106-0
+Ext. ID : CR2099930467150232065-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:52	Credit 	IDR 16,000
+Balance : IDR 1,938,907
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930452298199040-2099930186966525444-106-0
+Ext. ID : CR2099930452298199040-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:49	Credit 	IDR 4,000
+Balance : IDR 1,922,907
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930419700128256-2099930186966525444-106-0
+Ext. ID : CR2099930419700128256-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:41	Credit 	IDR 8,000
+Balance : IDR 1,918,907
+Wild Bounty Showdown
+PGSoft
+	2099930365090238976-2099930186966525444-106-0
+Ext. ID : CR2099930365090238976-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:28	Credit 	IDR 384,000
+Balance : IDR 1,910,907
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930354155714048-2099930186966525444-106-0
+Ext. ID : CR2099930354155714048-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:25	Credit 	IDR 115,200
+Balance : IDR 1,526,907
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930343154035201-2099930186966525444-106-0
+Ext. ID : CR2099930343154035201-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:23	Credit 	IDR 24,000
+Balance : IDR 1,411,707
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930328100730368-2099930186966525444-106-0
+Ext. ID : CR2099930328100730368-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:19	Credit 	IDR 8,000
+Balance : IDR 1,387,707
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930305887633410-2099930186966525444-106-0
+Ext. ID : CR2099930305887633410-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:36:14	Credit 	IDR 1,600
+Balance : IDR 1,379,707
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930238644550659-2099930186966525444-106-0
+Ext. ID : CR2099930238644550659-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:35:58	Credit 	IDR 30,400
+Balance : IDR 1,378,107
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930223792520704-2099930186966525444-106-0
+Ext. ID : CR2099930223792520704-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:35:54	Credit 	IDR 19,200
+Balance : IDR 1,347,707
+	
+	Wild Bounty Showdown
+PGSoft
+	2099930186966525444-2099930186966525444-106-0
+Ext. ID : DB2099930186966525444-2099930186966525444-106-0
+	medanxxxx
+ITWLFA - jvsaa
+	16 Sep 2026 - 01:35:46	Debit 	IDR 150,000
+Balance : IDR 1,328,507`;
 
 interface BonusCalculatorProps {
   initialTab?: 'SLOT' | 'PARLAY';
@@ -1116,6 +1314,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
   const [customNoRek, setCustomNoRek] = useState<string>('-');
   const [customBetInput, setCustomBetInput] = useState<string>('');
   const [isEditingBet, setIsEditingBet] = useState<boolean>(false);
+
+  // PG Soft Feature Buy (Beli Fitur 75x) conversion state & modal
+  const [usePgFeatureConversion, setUsePgFeatureConversion] = useState<boolean>(true);
+  const [showPgRatesModal, setShowPgRatesModal] = useState<boolean>(false);
 
   // Parsing Engine
   const parsed: ParsedStatement = useMemo(() => {
@@ -1403,7 +1605,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
 
     return {
       rawText,
-      userId: detectedUser || (allUsersSet.size > 0 ? Array.from(allUsersSet)[0] : 'ruben77'),
+      userId: detectedUser || (allUsersSet.size > 0 ? Array.from(allUsersSet)[0] : 'rubenxxxx'),
       namaRekening: customNamaRek || '-',
       nomorRekening: customNoRek || '-',
       periodePatokan: detectedTime || '02 Sep 2026 - 13:28:14',
@@ -1425,20 +1627,38 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     };
   }, [rawText, customNamaRek, customNoRek]);
 
-  // Effective Bet (Nilai Taruhan Asli dalam game / Diedit untuk Buy Spin / Scatter)
+  // Auto-detection of PG Soft Beli Fitur (Rasio 75x)
+  const detectedPgBet = useMemo(() => {
+    if (parsed.totalDebit <= 0) return null;
+    const isPg = parsed.provider === 'PG SOFT' || parsed.provider.toLowerCase().includes('pg');
+    // Jika provider teridentifikasi PG Soft atau nama game khas PG Soft, atau debit cocok persis dengan tabel 23 nominal
+    if (isPg || PGSOFT_FEATURE_BUY_MAP[parsed.totalDebit]) {
+      return getPgSoftBetAsli(parsed.totalDebit);
+    }
+    return null;
+  }, [parsed.totalDebit, parsed.provider]);
+
+  // Effective Bet (Nilai Taruhan Asli dalam game / Beli Fitur PG Soft / Custom Bet)
   const parsedCustomBet = useMemo(() => {
     if (!customBetInput.trim()) return null;
     const num = parseInt(customBetInput.replace(/[^0-9]/g, ''), 10);
     return isNaN(num) || num <= 0 ? null : num;
   }, [customBetInput]);
 
-  const effectiveDebit = parsedCustomBet !== null ? parsedCustomBet : parsed.totalDebit;
+  const effectiveDebit = useMemo(() => {
+    if (parsedCustomBet !== null) return parsedCustomBet;
+    if (detectedPgBet !== null && usePgFeatureConversion) return detectedPgBet;
+    return parsed.totalDebit;
+  }, [parsedCustomBet, detectedPgBet, usePgFeatureConversion, parsed.totalDebit]);
+
+  const isPgFeatureActive = detectedPgBet !== null && usePgFeatureConversion && parsedCustomBet === null;
   const isCustomBetActive = parsedCustomBet !== null && parsedCustomBet !== parsed.totalDebit;
+  const isConvertedBetActive = isPgFeatureActive || isCustomBetActive;
   const effectiveMultiplier = effectiveDebit > 0 ? (parsed.totalCredit / effectiveDebit) : 0;
 
   // Validation Rules Evaluation
   const validation: ValidationResult = useMemo(() => {
-    if (!rawText.trim() || (parsed.totalDebit === 0 && parsedCustomBet === null)) {
+    if (!rawText.trim() || (parsed.totalDebit === 0 && parsedCustomBet === null && detectedPgBet === null)) {
       return {
         isScatterEligible: false,
         scatterReason: 'Data kosong atau belum ditempel transaksi DEBIT (nilai taruhan).',
@@ -1706,14 +1926,34 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => {
+              setRawText(SAMPLE_BUY_FITUR_PG_150K);
+              setCustomBetInput('');
+              setUsePgFeatureConversion(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/30 hover:bg-purple-500/40 text-purple-200 border border-purple-400 font-black text-xs font-mono transition-all cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.35)] active:scale-95"
+            title="Contoh: Beli Fitur PG 150k > Bet 2k (medanxxxx - Menang 904k = x452)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-300 fill-purple-300" />
+            <span>Contoh: Beli Fitur PG 150k (medanxxxx)</span>
+          </button>
+          <button
+            onClick={() => setShowPgRatesModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+            title="Buka tabel daftar rincian 23 nominal beli fitur PG Soft (Rasio 75x)"
+          >
+            <List className="w-3.5 h-3.5 text-cyan-400" />
+            <span>📋 Tabel 23 Beli Fitur PG</span>
+          </button>
+          <button
+            onClick={() => {
               setRawText(SAMPLE_BUY_SPIN_PG);
               setCustomBetInput('1200');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-bold text-xs font-mono transition-all cursor-pointer shadow-[0_0_12px_rgba(168,85,247,0.25)]"
-            title="Contoh: Buy Spin PG Soft (jaya66 - Beli 90k, Bet Asli 1.2k, Menang 4.88 Juta = x4,068.4)"
+            title="Contoh: Buy Spin PG Soft (jayaxxxx - Beli 90k, Bet Asli 1.2k, Menang 4.88 Juta = x4,068.4)"
           >
             <Zap className="w-3.5 h-3.5 text-purple-400 fill-purple-400" />
-            <span>Contoh: Buy Spin PG (jaya66 - Bet 1.2k)</span>
+            <span>Contoh: Buy Spin PG (jayaxxxx - Bet 1.2k)</span>
           </button>
           <button
             onClick={() => {
@@ -1721,10 +1961,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
               setCustomBetInput('');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
-            title="Contoh 1: Hanya Bonus Scatter Mahjong (ruben77 - Menang 198k, Bet 4k)"
+            title="Contoh 1: Hanya Bonus Scatter Mahjong (rubenxxxx - Menang 198k, Bet 4k)"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Contoh: Scatter Sah (ruben77)</span>
+            <span>Contoh: Scatter Sah (rubenxxxx)</span>
           </button>
           <button
             onClick={() => {
@@ -1732,10 +1972,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
               setCustomBetInput('');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
-            title="Contoh 2: Scatter & Harian Slot Sah (isna - Menang 433k, Bet 1.2k = x361.6)"
+            title="Contoh 2: Scatter & Harian Slot Sah (isnaxxxx - Menang 433k, Bet 1.2k = x361.6)"
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Contoh: Keduanya Sah (isna)</span>
+            <span>Contoh: Keduanya Sah (isnaxxxx)</span>
           </button>
           <button
             onClick={() => {
@@ -1743,10 +1983,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
               setCustomBetInput('');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
-            title="Contoh 3: Hanya Bonus Harian Slot (nirwana04 - Fortune Of Olympus / Pragmatic Play)"
+            title="Contoh 3: Hanya Bonus Harian Slot (nirwanaxxxx - Fortune Of Olympus / Pragmatic Play)"
           >
             <Gamepad2 className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Contoh: Harian Sah (nirwana04)</span>
+            <span>Contoh: Harian Sah (nirwanaxxxx)</span>
           </button>
           <button
             onClick={() => {
@@ -1754,10 +1994,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
               setCustomBetInput('');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-bold text-xs font-mono transition-all cursor-pointer"
-            title="Contoh 4: Ditolak (2 Kode Tiket Berbeda / Multi Spin - 2409heri)"
+            title="Contoh 4: Ditolak (2 Kode Tiket Berbeda / Multi Spin - 2409xxxx)"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-            <span>Contoh: Ditolak (2 Tiket - 2409heri)</span>
+            <span>Contoh: Ditolak (2 Tiket - 2409xxxx)</span>
           </button>
           <button
             onClick={() => {
@@ -1765,10 +2005,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
               setCustomBetInput('');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-            title="Contoh: Mahjong Ways Tabbed Format (ceya77 - Menang 269k, Bet 2k = x134.5)"
+            title="Contoh: Mahjong Ways Tabbed Format (ceyaxxxx - Menang 269k, Bet 2k = x134.5)"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Contoh: Mahjong Ways (ceya77)</span>
+            <span>Contoh: Mahjong Ways (ceyaxxxx)</span>
           </button>
           <button
             onClick={() => {
@@ -1776,10 +2016,10 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
               setCustomBetInput('');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs font-mono transition-all cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-            title="Contoh: Mighty Mania Tabbed Format (lepenk - Menang 666k, Bet 90k = x7.4)"
+            title="Contoh: Mighty Mania Tabbed Format (lepenxxxx - Menang 666k, Bet 90k = x7.4)"
           >
             <Zap className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Contoh: Mighty Mania (lepenk)</span>
+            <span>Contoh: Mighty Mania (lepenxxxx)</span>
           </button>
           <button
             onClick={() => {
@@ -2109,14 +2349,17 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
 
                 {/* Editable Nilai Taruhan (Bet) Box */}
                 <div className={`p-3 rounded-2xl border transition-all space-y-1 ${
-                  isCustomBetActive 
+                  isPgFeatureActive
+                    ? 'bg-purple-950/50 border-purple-400/60 shadow-[0_0_20px_rgba(168,85,247,0.25)]'
+                    : isCustomBetActive 
                     ? 'bg-purple-950/40 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]' 
                     : 'bg-black/60 border-white/5'
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="text-[9px] font-bold text-gray-400 font-mono uppercase flex items-center gap-1">
                       <span>NILAI TARUHAN</span>
-                      {isCustomBetActive && <span className="text-purple-400">(DIEDIT)</span>}
+                      {isPgFeatureActive && <span className="text-purple-300 font-extrabold">(BELI FITUR PG 75x)</span>}
+                      {isCustomBetActive && !isPgFeatureActive && <span className="text-purple-400">(DIEDIT)</span>}
                     </div>
                     <button
                       type="button"
@@ -2131,7 +2374,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
 
                   <div className="text-lg font-black text-cyan-300 font-mono flex items-baseline gap-1.5">
                     <span>Rp {effectiveDebit.toLocaleString('en-US')}</span>
-                    {isCustomBetActive && (
+                    {(isCustomBetActive || isPgFeatureActive) && (
                       <span className="text-[10px] text-gray-400 font-normal line-through">
                         Rp {parsed.totalDebit.toLocaleString('en-US')}
                       </span>
@@ -2139,6 +2382,59 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                   </div>
                 </div>
               </div>
+
+              {/* PG Soft Feature Buy Indicator Card */}
+              {detectedPgBet !== null && (
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-950/60 to-black border border-purple-400/50 text-[11px] font-mono space-y-2 shadow-[0_0_15px_rgba(168,85,247,0.2)] animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-300 font-extrabold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400 fill-purple-400" />
+                      <span>BELI FITUR PG SOFT TERDETEKSI</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPgRatesModal(true)}
+                      className="text-[10px] text-cyan-300 hover:text-cyan-200 underline font-bold cursor-pointer flex items-center gap-1"
+                      title="Buka rincian 23 nominal beli fitur PG Soft"
+                    >
+                      <List className="w-3 h-3" />
+                      <span>Lihat 23 Rincian</span>
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-black/60 border border-white/10">
+                    <div className="leading-tight">
+                      <div className="text-[9px] text-gray-400">HARGA BELI FITUR ➔ BETTINGAN ASLI:</div>
+                      <div className="text-xs text-white">
+                        <span className="text-purple-300 font-bold">Rp {parsed.totalDebit.toLocaleString('en-US')}</span>
+                        <span className="mx-1 text-gray-400 font-bold">➔</span>
+                        <span className="text-cyan-300 font-black text-sm">Rp {detectedPgBet.toLocaleString('en-US')}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUsePgFeatureConversion(!usePgFeatureConversion);
+                        setCustomBetInput('');
+                      }}
+                      className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold border transition-all cursor-pointer ${
+                        usePgFeatureConversion && parsedCustomBet === null
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                          : 'bg-white/10 text-gray-400 border-white/20'
+                      }`}
+                    >
+                      {usePgFeatureConversion && parsedCustomBet === null ? '✓ Bet Asli Aktif' : 'Pakai Debit Log'}
+                    </button>
+                  </div>
+
+                  <div className="text-[10px] text-gray-300 flex items-center justify-between">
+                    <span>Win Up: <strong className="text-cyan-300 font-mono">x{effectiveMultiplier.toFixed(1)}</strong></span>
+                    <span className={effectiveMultiplier >= 300 ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                      {effectiveMultiplier >= 300 ? '✓ Sah Klaim Harian Slot (≥x300)' : '✗ Belum Capai x300'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Collapsible or always accessible Edit Bet Panel */}
               {(isEditingBet || isCustomBetActive) && (
@@ -2148,7 +2444,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                       <SlidersHorizontal className="w-3 h-3" />
                       <span>Sesuaikan Nilai Taruhan Asli (Buy Spin / Scatter):</span>
                     </span>
-                    {isCustomBetActive && (
+                    {(isCustomBetActive || isPgFeatureActive) && (
                       <button
                         type="button"
                         onClick={() => {
@@ -2180,6 +2476,27 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
                   {/* Quick Preset Buttons for Buy Spin */}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                     <span className="text-[9px] text-gray-400 font-mono">Quick Set:</span>
+                    {detectedPgBet !== null && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomBetInput(String(detectedPgBet));
+                          setUsePgFeatureConversion(true);
+                        }}
+                        className="px-2 py-0.5 rounded-lg bg-purple-500/30 hover:bg-purple-500/40 text-purple-200 border border-purple-400 text-[10px] font-mono font-bold cursor-pointer"
+                        title={`Terapkan Bet Asli PG Soft Rp ${detectedPgBet.toLocaleString('en-US')}`}
+                      >
+                        ⚡ Bet Asli PG ({detectedPgBet.toLocaleString('en-US')})
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowPgRatesModal(true)}
+                      className="px-2 py-0.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold cursor-pointer flex items-center gap-1"
+                    >
+                      <List className="w-2.5 h-2.5" />
+                      <span>23 Rincian PG</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setCustomBetInput('1200')}
@@ -2494,6 +2811,104 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal / Dialog: Daftar 23 Rincian Beli Fitur PG Soft */}
+      {showPgRatesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#10141d] border border-purple-500/40 rounded-3xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] flex flex-col space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono font-bold border border-purple-500/40">
+                    PG SOFT FEATURE BUY
+                  </span>
+                  <span className="text-xs text-gray-400 font-mono">Rasio x75 Taruhan Dasar</span>
+                </div>
+                <h3 className="text-xl font-black text-white font-['Rajdhani'] uppercase tracking-wider mt-1">
+                  Daftar 23 Rincian Beli Fitur PG Soft
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPgRatesModal(false)}
+                className="p-1.5 rounded-xl text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 cursor-pointer transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 font-mono leading-relaxed">
+              Bila member melakukan <strong className="text-purple-300">Beli Fitur</strong> pada game PG Soft, sistem otomatis mengonversi harga beli fitur menjadi <strong className="text-cyan-300">Nominal Bettingan Asli</strong> di bawah ini agar kalkulasi Win Up Bonus Harian Slot akurat:
+            </p>
+
+            {/* List 23 Nominal */}
+            <div className="overflow-y-auto pr-1 max-h-[52vh] space-y-2 font-mono text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PGSOFT_FEATURE_BUY_RATES.map((item, idx) => {
+                  const isMatch = parsed.totalDebit === item.beliFitur;
+                  const isMinBetValid = item.betAsli >= 1000;
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                        isMatch
+                          ? 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                          : 'bg-black/50 border-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="text-[10px] text-gray-400 flex items-center gap-1">
+                          <span>Beli Fitur:</span>
+                          {isMatch && <span className="text-purple-400 font-bold">(SESUAI LOG)</span>}
+                        </div>
+                        <div className="font-extrabold text-white text-sm">
+                          Rp {item.beliFitur.toLocaleString('en-US')}
+                        </div>
+                        <span className={`text-[9px] font-bold block ${isMinBetValid ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {isMinBetValid ? '✓ Memenuhi Min Bet 1k' : '✗ Di Bawah Min Bet 1k'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <div className="text-[9px] text-cyan-400 font-bold uppercase">Bet Asli</div>
+                          <div className="text-sm font-black text-cyan-300">
+                            Rp {item.betAsli.toLocaleString('en-US')}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomBetInput(String(item.betAsli));
+                            setUsePgFeatureConversion(true);
+                            setShowPgRatesModal(false);
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-black text-[10px] font-bold border border-cyan-500/40 transition-all cursor-pointer shadow-sm active:scale-95"
+                          title={`Terapkan bet Rp ${item.betAsli.toLocaleString('en-US')}`}
+                        >
+                          Pilih
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+              <span className="text-gray-400">Total: 23 Nominal Beli Fitur Terdaftar</span>
+              <button
+                type="button"
+                onClick={() => setShowPgRatesModal(false)}
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold cursor-pointer transition-all active:scale-95"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
