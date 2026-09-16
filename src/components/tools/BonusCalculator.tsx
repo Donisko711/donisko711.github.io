@@ -1593,16 +1593,46 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     };
   }, [rawText, autoClearEnabled, autoClearSeconds]);
 
+  // Fallback clipboard copying helper for iframe / webview compatibility
+  const copyToClipboard = (text: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(() => {
+        fallbackExecCopy(text);
+      });
+    } else {
+      fallbackExecCopy(text);
+    }
+  };
+
+  const fallbackExecCopy = (text: string) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '-9999px';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+    }
+  };
+
   // Copy Scatter (Tab-separated values matching user's exact requested copy line format)
   // Format: {userId}\t\t\t{permainan}\t{kodeTicket}\t{totalCredit}\t{effectiveDebit}
-  const handleCopyScatter = () => {
-    if (!validation.isScatterEligible) return;
+  const handleCopyScatter = (force: boolean = false) => {
+    if (!force && !validation.isScatterEligible) return;
+    if (!parsed.userId) return;
     const formattedCredit = parsed.totalCredit.toLocaleString('en-US');
     const formattedDebit = effectiveDebit.toLocaleString('en-US');
     const namaRek = parsed.namaRekening === '-' ? '' : parsed.namaRekening;
     const noRek = parsed.nomorRekening === '-' ? '' : parsed.nomorRekening;
     const text = `${parsed.userId}\t${namaRek}\t${noRek}\t${parsed.permainan}\t${parsed.kodeTicket}\t${formattedCredit}\t${formattedDebit}`;
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopiedScatter(true);
     setTimeout(() => setCopiedScatter(false), 2000);
   };
@@ -1623,8 +1653,9 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
 
   // Copy Harian Slot (Tab-separated values matching user's exact requested copy line format)
   // Format: {userId}\t{namaRek}\t{noRek}\t{provider}\t{permainan}\t{roundId}\t{superBuy}\t{totalCredit}\t{effectiveDebit}
-  const handleCopyHarian = () => {
-    if (!validation.isHarianEligible) return;
+  const handleCopyHarian = (force: boolean = false) => {
+    if (!force && !validation.isHarianEligible) return;
+    if (!parsed.userId) return;
     const formattedCredit = parsed.totalCredit.toLocaleString('en-US');
     const formattedDebit = effectiveDebit.toLocaleString('en-US');
     const namaRek = parsed.namaRekening === '-' ? '' : parsed.namaRekening;
@@ -1633,7 +1664,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
     const ticketToUse = parsed.roundId || parsed.kodeTicket;
     const superBuy = parsed.superBuy === '-' ? '' : parsed.superBuy;
     const text = `${parsed.userId}\t${namaRek}\t${noRek}\t${providerFormatted}\t${parsed.permainan}\t${ticketToUse}\t${superBuy}\t${formattedCredit}\t${formattedDebit}`;
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopiedHarian(true);
     setTimeout(() => setCopiedHarian(false), 2000);
   };
@@ -1887,8 +1918,8 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
         
         {/* Left Card: Input Textarea */}
         <div className="lg:col-span-7 rounded-3xl bg-[#121212]/90 backdrop-blur-md border border-white/10 p-5 shadow-xl space-y-4 flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-xs font-black text-white font-mono uppercase tracking-wider">
                 PASTE DATA DI BAWAH INI 👇
               </span>
@@ -1899,8 +1930,75 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
               )}
             </div>
 
+            {/* Quick Action: Button Copy Bonus Scatter | Button Copy Harian Slot */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Button Copy Bonus Scatter */}
+              <button
+                type="button"
+                id="btn-copy-bonus-scatter-quick"
+                onClick={() => handleCopyScatter(true)}
+                disabled={!parsed.userId}
+                className={`px-2.5 py-1 rounded-xl font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                  copiedScatter
+                    ? 'bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.5)] border border-emerald-400'
+                    : validation.isScatterEligible
+                    ? 'bg-amber-400 hover:bg-amber-300 text-black font-extrabold border border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.35)]'
+                    : parsed.userId
+                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                    : 'bg-white/5 text-gray-500 border border-white/10 opacity-40 cursor-not-allowed'
+                }`}
+                title={
+                  !parsed.userId
+                    ? 'Tempel data log statement transaksi terlebih dahulu'
+                    : validation.isScatterEligible
+                    ? 'Salin data format klaim Bonus Scatter Mahjong (SAH & BISA CLAIM)'
+                    : `Salin format Bonus Scatter (${validation.scatterReason})`
+                }
+              >
+                {copiedScatter ? (
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 stroke-[2.5]" />
+                )}
+                <span>{copiedScatter ? 'TERSALIN!' : 'COPY BONUS SCATTER'}</span>
+              </button>
+
+              <span className="text-white/20 text-xs font-mono select-none">|</span>
+
+              {/* Button Copy Harian Slot */}
+              <button
+                type="button"
+                id="btn-copy-harian-slot-quick"
+                onClick={() => handleCopyHarian(true)}
+                disabled={!parsed.userId}
+                className={`px-2.5 py-1 rounded-xl font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                  copiedHarian
+                    ? 'bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.5)] border border-emerald-400'
+                    : validation.isHarianEligible
+                    ? 'bg-cyan-400 hover:bg-cyan-300 text-black font-extrabold border border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
+                    : parsed.userId
+                    ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40'
+                    : 'bg-white/5 text-gray-500 border border-white/10 opacity-40 cursor-not-allowed'
+                }`}
+                title={
+                  !parsed.userId
+                    ? 'Tempel data log statement transaksi terlebih dahulu'
+                    : validation.isHarianEligible
+                    ? 'Salin data format klaim Bonus Harian Slot (SAH & BISA CLAIM)'
+                    : `Salin format Bonus Harian Slot (${validation.harianReason})`
+                }
+              >
+                {copiedHarian ? (
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 stroke-[2.5]" />
+                )}
+                <span>{copiedHarian ? 'TERSALIN!' : 'COPY HARIAN SLOT'}</span>
+              </button>
+            </div>
+
             {/* Auto Delete / Auto Clear Control Toggle (5s) */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/60 border border-white/10 text-xs font-mono">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/60 border border-white/10 text-xs font-mono flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setAutoClearEnabled(!autoClearEnabled)}
@@ -2188,7 +2286,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
           </div>
 
           <button
-            onClick={handleCopyScatter}
+            onClick={() => handleCopyScatter(false)}
             disabled={!validation.isScatterEligible}
             className="px-4 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-extrabold text-xs font-mono flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
           >
@@ -2296,7 +2394,7 @@ export const BonusCalculator: React.FC<BonusCalculatorProps> = () => {
           </div>
 
           <button
-            onClick={handleCopyHarian}
+            onClick={() => handleCopyHarian(false)}
             disabled={!validation.isHarianEligible}
             className="px-4 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-extrabold text-xs font-mono flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
           >
