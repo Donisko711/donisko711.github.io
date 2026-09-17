@@ -236,7 +236,7 @@ export const getGantiDataNB = (item: {
 };
 
 export const LaporanCS: React.FC<LaporanCSProps> = ({ initialTab = 'GANTI_DATA', currentUser }) => {
-  const [activeTab, setActiveTab] = useState<'GANTI_DATA' | 'LOCKED'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'GANTI_DATA' | 'LOCKED' | 'CROSSCHECK'>(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -1005,12 +1005,18 @@ User ID :
             </span>
           </div>
           <h1 className="text-2xl font-black text-white font-sans uppercase tracking-wider">
-            {activeTab === 'GANTI_DATA' ? 'LAPORAN GANTI DATA CS' : 'LAPORAN LOCKED / UNLOCK CS'}
+            {activeTab === 'GANTI_DATA' 
+              ? 'LAPORAN GANTI DATA CS' 
+              : activeTab === 'LOCKED' 
+                ? 'LAPORAN LOCKED / UNLOCK CS'
+                : 'CROSSCHECK ID LOCKED CS'}
           </h1>
           <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
             {activeTab === 'GANTI_DATA' 
               ? 'Ekstraksi log pergantian rekening/identitas member ke format laporan baku CS yang siap dikirim.'
-              : 'Ekstraksi log penguncian/pembukaan akun member ke format laporan baku CS yang siap dikirim.'}
+              : activeTab === 'LOCKED'
+                ? 'Ekstraksi log penguncian/pembukaan akun member ke format laporan baku CS yang siap dikirim.'
+                : 'Pemeriksaan otomatis batas waktu lock (1x24 jam untuk Spam Form Kosong, 2x24 jam untuk kendala lain, dan permanen untuk Invest/Hantu Togel).'}
           </p>
         </div>
 
@@ -1068,12 +1074,30 @@ User ID :
               <Lock className="w-4 h-4" />
               <span>LOCKED / UNLOCK</span>
             </button>
+            <button
+              onClick={() => {
+                setActiveTab('CROSSCHECK');
+                setCountdown(null);
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer ${
+                activeTab === 'CROSSCHECK'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-black shadow-[0_0_15px_rgba(245,158,11,0.4)]'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              <span>CROSSCHECK LOCKED</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Auto Clear Setting Alert Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#09101d] border border-cyan-500/20 text-xs shadow-md">
+      {activeTab === 'CROSSCHECK' ? (
+        <CrosscheckLocked currentUser={currentUser} />
+      ) : (
+        <>
+          {/* Auto Clear Setting Alert Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#09101d] border border-cyan-500/20 text-xs shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
           <Info className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -1533,6 +1557,8 @@ User ID :
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

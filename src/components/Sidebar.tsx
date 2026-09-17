@@ -48,6 +48,7 @@ export type ActiveView =
   | 'laporan-cs'
   | 'laporan-cs-ganti-data'
   | 'laporan-cs-locked'
+  | 'laporan-cs-crosscheck'
   | 'jobdesk-kasir'
   | 'wd-auto-flop'
   | 'info-wd'
@@ -600,7 +601,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={(e) => handleItemClick(e, 'laporan-cs', undefined, 'tools-cs')}
                   id="menu-laporan-cs"
                   className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
-                    isViewInGroup(['laporan-cs', 'laporan-cs-ganti-data', 'laporan-cs-locked'])
+                    isViewInGroup(['laporan-cs', 'laporan-cs-ganti-data', 'laporan-cs-locked', 'laporan-cs-crosscheck'])
                       ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
                       : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
                   }`}
@@ -610,13 +611,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {isOpen && (
                       <div className="text-left">
                         <span className="font-semibold text-xs block">LAPORAN CS</span>
-                        <span className="text-[9px] text-gray-400 font-mono">Ganti Data & Locked</span>
+                        <span className="text-[9px] text-gray-400 font-mono">Ganti Data, Lock &amp; Crosscheck</span>
                       </div>
                     )}
                   </div>
                   {isOpen && (
                     <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-[#00F3FF] font-mono font-bold border border-cyan-500/30">
-                      GANTI &amp; LOCK
+                      3 MODUL
                     </span>
                   )}
                 </a>

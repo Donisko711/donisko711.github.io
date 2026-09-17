@@ -382,9 +382,10 @@ export default function App() {
       case 'bagi-bonus-parlay': return { category: 'TOOLS KERJA CS', title: 'Bagi Bonus Mix Parlay Win Full' };
       case 'edit-pembayaran': return { category: 'TOOLS KERJA CS', title: 'Edit & Generator Pembayaran' };
       case 'isi-rekapan': return { category: 'TOOLS KERJA CS', title: 'Isi Rekapan & Validasi PL CS' };
-      case 'laporan-cs': return { category: 'LAPORAN CS', title: 'Laporan CS (Ganti Data & Locked)' };
+      case 'laporan-cs': return { category: 'LAPORAN CS', title: 'Laporan CS (Ganti Data, Locked & Crosscheck)' };
       case 'laporan-cs-ganti-data': return { category: 'LAPORAN CS', title: 'Laporan Ganti Data' };
       case 'laporan-cs-locked': return { category: 'LAPORAN CS', title: 'Laporan Locked / Unlock' };
+      case 'laporan-cs-crosscheck': return { category: 'LAPORAN CS', title: 'Crosscheck ID Locked' };
       case 'jobdesk-kasir': return { category: 'KASIR & REKAPAN', title: `Jobdesk Kasir (${activeShift})` };
       case 'wd-auto-flop': return { category: 'KASIR & FINANSIAL', title: 'WD Auto Flop Engine' };
       case 'info-wd': return { category: 'KASIR & FINANSIAL', title: 'INFO DP / WD & Bank' };
@@ -589,6 +590,10 @@ export default function App() {
 
               {activeView === 'laporan-cs-locked' && (
                 <LaporanCS initialTab="LOCKED" currentUser={currentUser} />
+              )}
+
+              {activeView === 'laporan-cs-crosscheck' && (
+                <LaporanCS initialTab="CROSSCHECK" currentUser={currentUser} />
               )}
 
               {activeView === 'wd-auto-flop' && <WdAutoFlop />}
