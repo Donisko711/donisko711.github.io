@@ -600,14 +600,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   href="?view=laporan-cs"
                   onClick={(e) => handleItemClick(e, 'laporan-cs', undefined, 'tools-cs')}
                   id="menu-laporan-cs"
-                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between ${
+                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center ${
                     isViewInGroup(['laporan-cs', 'laporan-cs-ganti-data', 'laporan-cs-locked', 'laporan-cs-crosscheck'])
                       ? 'bg-[#1F1F1F] border border-[#00F3FF] text-[#00F3FF] shadow-[0_0_10px_rgba(0,243,255,0.1)] font-semibold'
                       : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-300 hover:text-white border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <FileSpreadsheet className="w-4 h-4 text-gray-400" />
+                    <FileSpreadsheet className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     {isOpen && (
                       <div className="text-left">
                         <span className="font-semibold text-xs block">LAPORAN CS</span>
@@ -615,11 +615,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     )}
                   </div>
-                  {isOpen && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-[#00F3FF] font-mono font-bold border border-cyan-500/30">
-                      3 MODUL
-                    </span>
-                  )}
                 </a>
               </div>
             )}
