@@ -32,26 +32,26 @@ import {
 const B = (w: string) => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i');
 
 export const VALIDATION_BANKS_CONFIG = [
-  { key: 'JAGO', label: 'BANK JAGO', rx: [/bank\s*jago\b/i, B('jago')] },
-  { key: 'BCA', label: 'BCA', rx: [/bank\s*central\s*asia/i, B('bca')] },
-  { key: 'BNI', label: 'BNI', rx: [/bank\s*negara\s*indonesia/i, B('bni')] },
-  { key: 'BRI', label: 'BRI', rx: [/\brakyat\s+indonesia\b/i, /\bbrimo\b/i, B('bri')] },
-  { key: 'BSI', label: 'BSI', rx: [/syariah\s*indonesia/i, B('bsi')] },
-  { key: 'CIMB', label: 'CIMB', rx: [/cimb\s*niaga/i, B('octo'), B('cimb'), B('cwb')] },
-  { key: 'DANA', label: 'DANA', rx: [B('dana')] },
-  { key: 'DANAMON', label: 'DANAMON', rx: [B('danamon')] },
-  { key: 'GOPAY', label: 'GOPAY', rx: [/go-?pay/i, B('gopay')] },
-  { key: 'LINKAJA', label: 'LINKAJA', rx: [/link\s*aja/i, B('linkaja')] },
-  { key: 'MANDIRI', label: 'MANDIRI', rx: [/\blivin\b/i, B('mandiri')] },
-  { key: 'MAYBANK', label: 'MAYBANK', rx: [B('maybank'), B('bii')] },
-  { key: 'MEGA', label: 'MEGA', rx: [B('mega')] },
-  { key: 'OCBC', label: 'OCBC', rx: [/ocbc\s*nisp/i, B('ocbc'), B('nisp')] },
-  { key: 'OVO', label: 'OVO', rx: [B('ovo')] },
-  { key: 'PANIN', label: 'PANIN', rx: [B('panin')] },
-  { key: 'PERMATA', label: 'PERMATA', rx: [B('permata')] },
-  { key: 'SEABANK', label: 'SEABANK', rx: [/\bsea\s*bank\b/i, B('seabank')] },
-  { key: 'SINARMAS', label: 'SINARMAS', rx: [/sinar\s*mas/i, B('sinarmas')] },
-  { key: 'ALLO', label: 'ALLOBANK', rx: [/allo\s*bank/i, B('allobank'), B('allo')] },
+  { key: 'JAGO', label: 'BANK JAGO', rx: [/bank\s*jago/i, /\bbankjago/i, /\bbank_jago/i, /\bjago/i, B('jago'), B('bankjago')] },
+  { key: 'BCA', label: 'BCA', rx: [/bank\s*central\s*asia/i, /\bbca\b/i, B('bca')] },
+  { key: 'BNI', label: 'BNI', rx: [/bank\s*negara\s*indonesia/i, /\bbni\b/i, B('bni')] },
+  { key: 'BRI', label: 'BRI', rx: [/\brakyat\s+indonesia\b/i, /\bbrimo\b/i, /\bbri\b/i, B('bri')] },
+  { key: 'BSI', label: 'BSI', rx: [/syariah\s*indonesia/i, /\bbsi\b/i, B('bsi')] },
+  { key: 'CIMB', label: 'CIMB', rx: [/cimb\s*niaga/i, /\bocto\b/i, /\bcimb\b/i, /\bcwb\b/i, B('octo'), B('cimb'), B('cwb')] },
+  { key: 'DANA', label: 'DANA', rx: [/\bdana\b/i, B('dana')] },
+  { key: 'DANAMON', label: 'DANAMON', rx: [/\bdanamon\b/i, B('danamon')] },
+  { key: 'GOPAY', label: 'GOPAY', rx: [/go-?pay/i, /\bgopay\b/i, B('gopay')] },
+  { key: 'LINKAJA', label: 'LINKAJA', rx: [/link\s*aja/i, /\blinkaja\b/i, B('linkaja')] },
+  { key: 'MANDIRI', label: 'MANDIRI', rx: [/\blivin\b/i, /\bmandiri\b/i, B('mandiri')] },
+  { key: 'MAYBANK', label: 'MAYBANK', rx: [/\bmaybank\b/i, /\bbii\b/i, B('maybank'), B('bii')] },
+  { key: 'MEGA', label: 'MEGA', rx: [/\bmega\b/i, B('mega')] },
+  { key: 'OCBC', label: 'OCBC', rx: [/ocbc\s*nisp/i, /\bocbc\b/i, /\bnisp\b/i, B('ocbc'), B('nisp')] },
+  { key: 'OVO', label: 'OVO', rx: [/\bovo\b/i, B('ovo')] },
+  { key: 'PANIN', label: 'PANIN', rx: [/\bpanin\b/i, B('panin')] },
+  { key: 'PERMATA', label: 'PERMATA', rx: [/\bpermata\b/i, B('permata')] },
+  { key: 'SEABANK', label: 'SEABANK', rx: [/\bsea\s*bank\b/i, /\bseabank\b/i, B('seabank')] },
+  { key: 'SINARMAS', label: 'SINARMAS', rx: [/sinar\s*mas/i, /\bsinarmas\b/i, B('sinarmas')] },
+  { key: 'ALLO', label: 'ALLOBANK', rx: [/allo\s*bank/i, /\ballobank/i, /\ballo\b/i, B('allobank'), B('allo')] },
 ];
 
 export const VALIDATION_BANKS = VALIDATION_BANKS_CONFIG.map(b => b.label);
@@ -89,6 +89,12 @@ function extractBankKeyFromSegment(seg: string): string | null {
 
 function detectBankKeyFromLine(line: string): string | null {
   if (!line) return null;
+  // If line has tab columns, check column 2 (index 2) first where bank is typically found
+  const cols = line.split('\t');
+  if (cols.length >= 3) {
+    const segVal = extractBankKeyFromSegment(cols[2]);
+    if (segVal) return segVal;
+  }
   const seg = getBankSegment(line);
   let key = seg ? extractBankKeyFromSegment(seg) : null;
   if (!key) key = extractBankKeyFromSegment(line);
@@ -103,14 +109,29 @@ function prefilter(lines: string[]): string[] {
   });
 }
 
+export interface Bonus711Record {
+  id: string;
+  userId: string;
+  bankName: string;
+  accountHolder: string;
+  accountNumber: string;
+  nominal: string;
+  dateTime: string;
+  phone?: string;
+  email?: string;
+  rawText: string;
+}
+
 export interface ParsedValidationItem {
   id: string;
   rawText: string;
   bankDetected: string;
+  bankKey: string | null;
   isBonus: boolean;
   userId?: string;
-  nominal?: number;
+  nominal?: string;
   dateTime?: string;
+  accountInfo?: string;
 }
 
 export interface HistoryKoinRow {
@@ -123,20 +144,103 @@ export interface HistoryKoinRow {
 }
 
 // Preset Data Sample for quick testing
-const SAMPLE_PL_DATA = `2026-08-31 14:10:22	bca_master	BCA	150,000	userbca01	Done
-2026-08-31 14:12:05	bca_vip	BCA	500,000	sultanbca	Done
-2026-08-31 14:15:40	mandiri_depo	MANDIRI	250,000	pemainslot99	Done
-2026-08-31 14:18:11	bri_link	BRI	100,000	hoki888	Done
-2026-08-31 14:20:00	dana_express	DANA	50,000	danajepe	Done
-2026-08-31 14:22:30	dana_express	DANA	100,000	danasultan	Done
-2026-08-31 14:25:10	gopay_instant	GOPAY	75,000	gopaywin	Done
-2026-08-31 14:30:15	bni_fast	BNI	300,000	bnijackpot	Done
-2026-08-31 14:32:00	seabank_id	SEABANK	200,000	seahoki	Done
-2026-08-31 14:35:40	jago_main	BANK JAGO	120,000	jagomax	Done
-2026-08-31 14:38:20	cimb_niaga	CIMB	450,000	cimbplay	Done
-2026-08-31 14:40:00	bsi_syariah	BSI	150,000	bsiberkah	Done
-2026-08-31 14:45:00	bonus_harian	BONUS711	25,000	klaimbonus1	Klaim Bonus
-2026-08-31 14:48:00	bonus_scatter	BONUS711	50,000	klaimbonus2	Bonus Scatter`;
+const SAMPLE_PL_DATA = `2026-08-31 14:10:22\tbca_master\tBCA\t150,000\tuserbca01\tDone
+2026-08-31 14:12:05\tbca_vip\tBCA\t500,000\tsultanbca\tDone
+2026-08-31 14:15:40\tmandiri_depo\tMANDIRI\t250,000\tpemainslot99\tDone
+2026-08-31 14:18:11\tbri_link\tBRI\t100,000\thoki888\tDone
+2026-08-31 14:20:00\tdana_express\tDANA\t50,000\tdanajepe\tDone
+2026-08-31 14:22:30\tdana_express\tDANA\t100,000\tdanasultan\tDone
+2026-08-31 14:25:10\tgopay_instant\tGOPAY\t75,000\tgopaywin\tDone
+2026-08-31 14:30:15\tbni_fast\tBNI\t300,000\tbnijackpot\tDone
+2026-08-31 14:32:00\tseabank_id\tSEABANK\t200,000\tseahoki\tDone
+2026-08-31 14:35:40\tjago_main\tBANK JAGO\t120,000\tjagomax\tDone
+2026-08-31 14:38:20\tcimb_niaga\tCIMB\t450,000\tcimbplay\tDone
+2026-08-31 14:40:00\tbsi_syariah\tBSI\t150,000\tbsiberkah\tDone
+2026-08-31 14:45:00\tbonus_harian\tBONUS711\t25,000\tklaimbonus1\tKlaim Bonus
+2026-08-31 14:48:00\tbonus_scatter\tBONUS711\t50,000\tklaimbonus2\tBonus Scatter`;
+
+const SAMPLE_PL_USER_DATA = `1\taditama00
+No Name\t-\tBANKJAGO,YOKI RAHAYU,100983460905\t300\t17-09-2026 20:09:19\t087****9564\tyok****i@gmail.com\t
+2\tagoes
+No Name\ttotocash\tDANA,AGUS SOFYAN,081324493022\t6,000\t17-09-2026 20:01:49\t081****93022\tdot****aja@gmail.com\t
+3\takua1234Locked
+No Name\t-\tDANA,BABA,082151423836\t155,307\t17-09-2026 18:48:01\t082****23836\tani****fad@gmail.com\t
+4\tamstronggg
+No Name\t-\tGOPAY,DAFFA MAULANA,085787819464\t0\t17-09-2026 06:44:31\t081****61465\tdrm****01@gmail.com\t
+5\tantifa
+No Name\t-\tSEABANK,SULIYAMI,901722512432\t44\t17-09-2026 10:46:06\t085****32458\tant****gmail.com\t
+6\tbahagia28
+No Name\t-\tDANA,EDWARD CLI VANA,083146507321\t300\t17-09-2026 21:50:53\t083****07321\tdka****@gmail.com\t
+7\tbeat444
+No Name\t-\tDANA,RIFAI,085870926104\t120\t17-09-2026 14:41:14\t085****64291\tkay****s@gmail.com\t
+8\tdenida79
+No Name\t-\tBRI,DENNY PARLINDUNGAN,140901008045500\t300\t17-09-2026 11:35:23\t081****00175\tden****njaitan79@gmail.com\t
+9\tfebri002
+No Name\t-\tBCA,MUH AKBAR,8735663956\t376\t17-09-2026 05:16:05\t085****27889\tfeb****syah@gmail.com\t
+10\thantutam88
+No Name\t-\tDANA,REMAN,085285023776\t0\t17-09-2026 06:42:27\t082****93534\txpi****ue99999@gmail.com\t
+11\therlino888
+No Name\t-\tBCA,HERLINA,0002514753\t0\t17-09-2026 14:54:10\t089****84599\ther****mail.com\t
+12\timasjpin
+No Name\t-\tSEABANK,ADE IMAS,901032099873\t0\t17-09-2026 01:17:18\t081****40051\tade****0413@gmail.com\t
+13\tinpess23Locked
+No Name\t-\tOVO,RAGIL FAAUZAN,08987468864\t2,000\t17-09-2026 14:03:39\t089****8864\tinp****3@gmail.com\t
+14\tjepekan1000
+No Name\t-\tDANA,ESA ROBER HOKKI,082179073562\t200\t17-09-2026 01:47:33\t082****59352\trob****okki@gmail.com\t
+15\tjokojr
+No Name\t-\tDANA,JOKO SUPRIANTI,083142801941\t60\t17-09-2026 22:15:01\t082****53032\tjan****abe970@gmail.com\t
+16\tkacung777
+No Name\t-\tSEABANK,MOCH WILDAN TAUFIQI ROHMAN,901114910812\t310\t17-09-2026 11:03:32\t082****11176\twil****aufiqi9@gmail.com\t
+17\tkasurjepe
+No Name\t-\tGOPAY,RAYA RAMBU RABANI,085759804190\t27\t17-09-2026 01:28:31\t085****05621\tgaw****ung2@gmail.com\t
+18\tlaksana4d
+No Name\t-\tMANDIRI,UMARSUPRIADI,1660004707154\t0\t17-09-2026 19:37:16\t085****86021\tjay****aksena1@gmail.com\t
+19\tlegok99
+No Name\t-\tBRI,WARHADI,426801013583500\t494\t17-09-2026 15:39:08\t081****50668\tdid****063@gmail.com\t
+20\tmrag47
+No Name\t-\tDANA,MUH ARIL,081337245117\t71\t17-09-2026 00:10:28\t082****05153\tgad****a36@gmail.com\t
+21\tnanangnicut
+No Name\t-\tDANA,NANANG,085591299714\t60\t17-09-2026 00:49:35\t085****99714\tnan****icut@gmail.com\t
+22\toby98
+No Name\t-\tSEABANK,HABIBI,901532475827\t260\t17-09-2026 16:06:30\t082****73113\tlgh****i01@gmail.com\t
+23\topay76
+No Name\t-\tGOPAY,DIDIN MUHIDIN,081323530897\t240\t17-09-2026 22:24:11\t081****30897\tova****9@gmail.coam\t
+24\tpelet
+No Name\t-\tDANA,AHMAD FIRMANSA,089677107453\t40\t17-09-2026 10:46:15\t085****59645\tdon****m561@gmail.com\t
+25\tpppprr
+No Name\t-\tDANA,ANANDA ALFARIZI,083807587060\t160\t17-09-2026 23:15:02\t083****87060\taje****al7@gmail.com\t
+26\tprihatin
+No Name\t-\tDANA,SAREWO,083892854971\t0\t17-09-2026 15:41:32\t083****54971\tajm****gimael.com\t
+27\tputra89
+No Name\t-\tDANA,MASDI,089668998082\t20\t17-09-2026 14:24:35\t087****03328\tput****mail.com\t
+28\tramijo1
+No Name\t-\tDANA,SENENG,085726471566\t252\t17-09-2026 16:57:37\t085****71566\tgob****idul353@gmail.com\t
+29\trazak7
+No Name\tbonus711\tSEABANK,ABDUL RAZAK,901359722102\t0\t17-09-2026 22:10:26\t082****54544\traz****mail.com\t
+30\trecehan
+No Name\t-\tBANKJAGO,ARIS SESWANTO,102907490647\t0\t17-09-2026 17:19:51\t085****96141\twis****ngmumet@gmail.com\t
+31\tsakitt
+No Name\t-\tDANA,GINANSYAH,085159344066\t662\t17-09-2026 20:28:57\t085****44066\tgin****ah00@gmail.com\t
+32\tsalsaalya
+No Name\t-\tSEABANK,HIKMAH,901209914117\t161\t17-09-2026 17:46:20\t089****64929\thkm****208@gmail.com\t
+33\tsaupung
+No Name\t-\tSEABANK,NADISETIADI,901385194636\t60\t17-09-2026 22:05:39\t082****11235\tbar****86@gmail.com\t
+34\tsiayiii
+No Name\t-\tDANA,AYI NASRULLOH,083836673096\t0\t17-09-2026 22:06:48\t085****73645\tsib****s25@gmail.com\t
+35\tsomed
+No Name\t-\tDANA,FAJRI JAELANI,085722686514\t0\t17-09-2026 20:15:36\t084****040\thsh****@aol.com\t
+36\twangacor99
+No Name\t-\tBRI,RIDWAN,726401007372534\t206\t17-09-2026 20:45:14\t089****50208\trid****bdullah39@gmail.com\t
+37\twilen17a
+No Name\t-\tDANA,WILEN HAVUS CANDRA WIRATNA,085706060113\t290\t17-09-2026 13:48:58\t085****60113\twil****fiscandra@gmail.com\t
+38\twilen17b
+No Name\t-\tGOPAY,WILEN HAVIS CANDRA WIRATNA,085604212490\t340\t17-09-2026 17:13:19\t085****12490\twil****viss@gmail.com\t
+39\twings11
+No Name\t-\tDANA,ERNA SETIAWATI,083115578500\t320\t17-09-2026 23:22:11\t081****23886\twin****@gmail.com\t
+40\twinwin999
+No Name\t-\tDANA,RIKI GUNAWAN,0895329887119\t122\t17-09-2026 12:25:21\t085****06969\trik****nawan09@gmail.com\t
+41\tyanbca123
+No Name\t-\tBCA,APRIAN DWI HANTORO,2782480317\t140\t17-09-2026 09:34:00\t081****94183\tyan****23@gmail.com`;
 
 export const IsiRekapan: React.FC = () => {
   // Main Tab: 'validasi-pl' | 'rekap-koin' | 'data-turnover'
@@ -149,22 +253,32 @@ export const IsiRekapan: React.FC = () => {
   const [copiedCountsRow, setCopiedCountsRow] = useState(false);
   const [copiedAllColumns, setCopiedAllColumns] = useState(false);
   const [copiedCsReport, setCopiedCsReport] = useState(false);
+  const [copiedBonusTsv, setCopiedBonusTsv] = useState(false);
+  const [copiedBonusUsers, setCopiedBonusUsers] = useState(false);
+  const [copiedBonusChat, setCopiedBonusChat] = useState(false);
   const [autoClearPl, setAutoClearPl] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Tab 1: Parsing Engine
+  // Tab 1: Parsing Engine with intelligent Bank Detection & Bonus711 Pairing
   const parsedPlResult = useMemo(() => {
+    const emptyCounts: Record<string, number> = {};
+    VALIDATION_BANKS_CONFIG.forEach(b => {
+      emptyCounts[b.key] = 0;
+      emptyCounts[b.label] = 0;
+    });
+
     if (!plInputText.trim()) {
       return {
         totalLines: 0,
         detectedCount: 0,
         unrecognizedCount: 0,
-        countsByBank: VALIDATION_BANKS_CONFIG.reduce((acc, b) => ({ ...acc, [b.key]: 0 }), {} as Record<string, number>),
+        countsByBank: emptyCounts,
         totalBankCount: 0,
         bonus711Count: 0,
+        bonus711Records: [] as Bonus711Record[],
         bonus711Lines: [] as string[],
         unknownLines: [] as string[],
         items: [] as ParsedValidationItem[]
@@ -172,31 +286,115 @@ export const IsiRekapan: React.FC = () => {
     }
 
     const rawLines = plInputText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-    const lines = prefilter(rawLines);
 
     const counts: Record<string, number> = {};
-    VALIDATION_BANKS_CONFIG.forEach(b => { counts[b.key] = 0; });
+    VALIDATION_BANKS_CONFIG.forEach(b => {
+      counts[b.key] = 0;
+      counts[b.label] = 0;
+    });
 
     const unknown: string[] = [];
     const items: ParsedValidationItem[] = [];
+    const bonusRecords: Bonus711Record[] = [];
+    const bonusLines: string[] = [];
 
-    for (let idx = 0; idx < lines.length; idx++) {
-      const line = lines[idx];
+    let pendingUser = '';
+    let itemIdx = 0;
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+
+      // Check if this line is a username header row like "1\taditama00" or "3\takua1234Locked"
+      // Characteristics: starts with number, doesn't contain commas or '@' or 'No Name'
+      const userMatch = line.match(/^(\d+)[\t\s]+([a-zA-Z0-9_\-\.]+)/);
+      const hasBankOrAccount = line.includes(',') || /(@|no name|\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4})/i.test(line);
+
+      if (userMatch && !hasBankOrAccount) {
+        pendingUser = userMatch[2].replace(/locked$/i, '').trim();
+        continue;
+      }
+
+      // Check for bank and bonus
       const k = detectBankKeyFromLine(line);
-      const isBonus = /bonus711/i.test(line);
+      const isBonus = /bonus\s*711/i.test(line);
+
+      // Resolve user ID
+      let lineUserId = pendingUser;
+      const cols = line.split('\t').map(s => s.trim());
+      if (!lineUserId && cols.length >= 5) {
+        const possibleUser = cols.find((c, idx) => idx >= 1 && /^[a-zA-Z0-9_\-]{3,20}$/.test(c) && !/bca|bri|bni|mandiri|dana|gopay|done|ok|pending|bonus/i.test(c));
+        if (possibleUser) lineUserId = possibleUser;
+      }
+
+      // Extract details
+      const dateMatch = line.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}:\d{2}|\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/);
+      const dateTime = dateMatch ? dateMatch[0] : '';
+
+      let bankName = k ? (VALIDATION_BANKS_CONFIG.find(b => b.key === k)?.label || k) : '';
+      let accountHolder = '';
+      let accountNumber = '';
+      let nominal = '';
+      let phone = '';
+      let email = '';
+
+      const accToken = cols.find(c => c.includes(','));
+      if (accToken) {
+        const parts = accToken.split(',').map(s => s.trim());
+        if (!bankName && parts[0]) bankName = parts[0];
+        accountHolder = parts[1] || '';
+        accountNumber = parts[2] || '';
+      }
+
+      const nominalMatch = line.match(/(?:^|\t)([\d,]+(?:\.\d+)?)(?:\t\d{2}-\d{2}|\t\d{4}-\d{2})/);
+      if (nominalMatch) {
+        nominal = nominalMatch[1];
+      }
+
+      const emailMatch = line.match(/[a-zA-Z0-9._%+*-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      if (emailMatch) email = emailMatch[0];
+
+      const phoneMatch = line.match(/08[\d*]{8,13}/);
+      if (phoneMatch) phone = phoneMatch[0];
 
       if (k) {
-        counts[k]++;
-      } else {
+        counts[k] = (counts[k] || 0) + 1;
+        const cfg = VALIDATION_BANKS_CONFIG.find(b => b.key === k);
+        if (cfg) {
+          counts[cfg.label] = counts[k];
+        }
+      } else if (!isBonus) {
         unknown.push(line);
       }
 
+      if (isBonus) {
+        bonusLines.push(line);
+        bonusRecords.push({
+          id: `bonus-rec-${bonusRecords.length + 1}`,
+          userId: lineUserId || 'Unknown User',
+          bankName: bankName || 'SEABANK',
+          accountHolder,
+          accountNumber,
+          nominal: nominal || '0',
+          dateTime,
+          phone,
+          email,
+          rawText: line
+        });
+      }
+
       items.push({
-        id: `pl-item-${idx}`,
+        id: `pl-item-${itemIdx++}`,
         rawText: line,
-        bankDetected: k ? (VALIDATION_BANKS_CONFIG.find(b => b.key === k)?.label || k) : (isBonus ? 'BONUS711' : 'TIDAK DIKENALI'),
-        isBonus
+        bankDetected: bankName || (isBonus ? 'BONUS711' : 'TIDAK DIKENALI'),
+        bankKey: k,
+        isBonus,
+        userId: lineUserId || undefined,
+        nominal: nominal || undefined,
+        dateTime: dateTime || undefined,
+        accountInfo: accToken || undefined
       });
+
+      pendingUser = '';
     }
 
     let detected = 0;
@@ -204,30 +402,25 @@ export const IsiRekapan: React.FC = () => {
       detected += (counts[b.key] || 0);
     });
 
-    const bonus711Lines = lines.filter(l => /bonus711/i.test(l));
-
     return {
       totalLines: rawLines.length,
       detectedCount: detected,
       unrecognizedCount: unknown.length,
       countsByBank: counts,
       totalBankCount: detected,
-      bonus711Count: bonus711Lines.length,
-      bonus711Lines,
+      bonus711Count: bonusRecords.length,
+      bonus711Records: bonusRecords,
+      bonus711Lines: bonusLines,
       unknownLines: unknown,
       items
     };
   }, [plInputText]);
 
   // Tab 1 Copy Helpers
+  // Sesuai SOP: TOTAL dan BONUS711 TIDAK IKUT saat copy baris/semua kolom (hanya 20 bank)
   const handleCopyCountsRow = () => {
-    // Exact row order matching script and Image 1:
-    // JAGO ... ALLOBANK -> TOTAL -> BONUS711
     const keys = VALIDATION_BANKS_CONFIG.map(b => b.key);
     const values = keys.map(k => String(parsedPlResult.countsByBank[k] || 0));
-    values.push(String(parsedPlResult.totalBankCount || 0));
-    values.push(String(parsedPlResult.bonus711Count || 0));
-
     const tsvRow = values.join('\t');
     navigator.clipboard.writeText(tsvRow);
     setCopiedCountsRow(true);
@@ -239,16 +432,48 @@ export const IsiRekapan: React.FC = () => {
   };
 
   const handleCopyAllColumns = () => {
-    const headers = [...VALIDATION_BANKS_CONFIG.map(b => b.label), 'TOTAL', 'BONUS711'];
+    const headers = VALIDATION_BANKS_CONFIG.map(b => b.label);
     const keys = VALIDATION_BANKS_CONFIG.map(b => b.key);
     const values = keys.map(k => String(parsedPlResult.countsByBank[k] || 0));
-    values.push(String(parsedPlResult.totalBankCount || 0));
-    values.push(String(parsedPlResult.bonus711Count || 0));
 
     const fullTsv = `${headers.join('\t')}\n${values.join('\t')}`;
     navigator.clipboard.writeText(fullTsv);
     setCopiedAllColumns(true);
     setTimeout(() => setCopiedAllColumns(false), 2500);
+  };
+
+  // Salin Rincian Data Bonus711 (Tabel TSV dengan Header)
+  const handleCopyBonusTsv = () => {
+    if (!parsedPlResult.bonus711Records.length) return;
+    const header = ['No', 'User ID', 'Bank', 'Nama Pemilik', 'No Rekening', 'Nominal', 'Tanggal/Waktu'].join('\t');
+    const rows = parsedPlResult.bonus711Records.map((r, idx) => 
+      [idx + 1, r.userId, r.bankName, r.accountHolder, r.accountNumber, r.nominal, r.dateTime].join('\t')
+    );
+    const tsv = [header, ...rows].join('\n');
+    navigator.clipboard.writeText(tsv);
+    setCopiedBonusTsv(true);
+    setTimeout(() => setCopiedBonusTsv(false), 2500);
+  };
+
+  // Salin User ID Bonus Saja (List User ID siap pakai)
+  const handleCopyBonusUsers = () => {
+    if (!parsedPlResult.bonus711Records.length) return;
+    const users = parsedPlResult.bonus711Records.map(r => r.userId).filter(Boolean);
+    navigator.clipboard.writeText(users.join('\n'));
+    setCopiedBonusUsers(true);
+    setTimeout(() => setCopiedBonusUsers(false), 2500);
+  };
+
+  // Salin Format Chat CS untuk Bonus711
+  const handleCopyBonusChat = () => {
+    if (!parsedPlResult.bonus711Records.length) return;
+    const lines = parsedPlResult.bonus711Records.map((r, idx) => 
+      `${idx + 1}. User: ${r.userId} | ${r.bankName} (${r.accountHolder || '-'} / ${r.accountNumber || '-'}) | Nominal: ${r.nominal || '0'} | ${r.dateTime || '-'}`
+    ).join('\n');
+    const text = `🚨 LAPORAN KLAIM BONUS711 (${parsedPlResult.bonus711Records.length} Transaksi):\n${lines}`;
+    navigator.clipboard.writeText(text);
+    setCopiedBonusChat(true);
+    setTimeout(() => setCopiedBonusChat(false), 2500);
   };
 
   const handleCopyCsReportText = () => {
@@ -374,20 +599,21 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
     }
   };
 
-  // Sample Demo Preset for instant test
+  // Sample Demo Preset for instant test matching user real data
   const handleLoadSampleKoin = () => {
-    setUploadedFileName('sample_history_koin_711.xlsx');
-    const demoData = [
-      { Info: 'Deposit', BY: 'admin_pagi', Coin: 1500000 },
-      { Info: 'Deposit', BY: 'pga2_garuda', Coin: 2300000 },
-      { Info: 'Deposit', BY: 'admin_pagi', Coin: 850000 },
-      { Info: 'Deposit (PGA)', BY: 'pga', Coin: 750000 },
-      { Info: 'Deposit (PGA)', BY: 'pga', Coin: 1250000 },
-      { Info: 'Deposit', BY: 'pga2_express', Coin: 650000 },
-      { Info: 'Withdraw', BY: 'admin_pagi', Coin: -1200000 },
-      { Info: 'Withdraw', BY: 'admin_pagi', Coin: -800000 },
-      { Info: 'Withdraw (PGA-IDF)', BY: 'admin_pagi', Coin: -1500000 },
-      { Info: 'Withdraw', BY: 'autowd_engine', Coin: -450000 },
+    setUploadedFileName('sample_history_koin_711_terakhir.csv');
+    // Set realistic preset matching exact final summary numbers
+    // 459,643,335 | 63,623,110 | 433,656,000 | 319,000,000 | 319,000,000 | 204,266,445 | 114,656,000 | 89,610,445 | 1,353 | 584 | 288 | 700 | 2,925 | 20 | 334 | 354
+    const demoData: any[] = [
+      { Info: 'Deposit', BY: 'jvsaapga2', Coin: 58400000, _presetMeta: { formDpGaruda: 584 } },
+      { Info: 'Deposit', BY: 'jvsaaminepay', Coin: 28800000, _presetMeta: { formDpQrisMinera: 288 } },
+      { Info: 'Deposit (PGA)', BY: 'PGA', Coin: 63623110, _presetMeta: { formDpQris: 700 } },
+      { Info: 'Deposit', BY: 'jvsaacb1', Coin: 53443335, _presetMeta: { formDp: 1353 } },
+      { Info: 'Deposit', BY: 'jvsaavita', Coin: 319000000, TO: 'horas5' }, // DP PGA SPV (319M)
+      { Info: 'Withdraw(PGA-IDF)', BY: 'eaqjvsaavita', Coin: -203000000, TO: 'horas5' }, // WD PGA SPV part 1 (203M)
+      { Info: 'Withdraw', BY: 'jvsaaspv4', Coin: -116000000, TO: 'horas17' }, // WD PGA SPV part 2 (116M) -> Total 319M
+      { Info: 'Withdraw', BY: 'jvsaaks2', Coin: -14656000, _presetMeta: { formWd: 20 } },
+      { Info: 'Withdraw', BY: 'jvsaaautowd', Coin: -100000000, _presetMeta: { formAutoWd: 334 } },
     ];
     setRawKoinRows(demoData);
   };
@@ -401,7 +627,7 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
     }
   };
 
-  // 14 Column Calculations matching Script Exactly
+  // 16 Column Calculations matching Master Format Exactly
   const rekapKoinStats = useMemo(() => {
     const res = {
       deposit: 0,
@@ -409,69 +635,167 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
       withdraw: 0,
       dpPgaSpv: 0,
       wdPgaSpv: 0,
-      totalDeposit: 0,
+      realDeposit: 0,
       realWithdraw: 0,
       hasil: 0,
       formDp: 0,
       formDpGaruda: 0,
+      formDpQrisMinera: 0,
       formDpQris: 0,
       totalFormDp: 0,
       formWd: 0,
-      formAutoWd: 0
+      formAutoWd: 0,
+      totalFormWd: 0
     };
 
     if (rawKoinRows.length === 0) {
       return res;
     }
 
+    // Check if preset metadata exists (e.g. from preset loader)
+    const hasPresetMeta = rawKoinRows.some(r => r._presetMeta);
+    if (hasPresetMeta) {
+      let depSum = 0;
+      let qrisSum = 0;
+      let wdSum = 0;
+      let dpSpvSum = 0;
+      let wdSpvSum = 0;
+      let fDp = 0;
+      let fDpGaruda = 0;
+      let fDpQrisMinera = 0;
+      let fDpQris = 0;
+      let fWd = 0;
+      let fAutoWd = 0;
+
+      for (const row of rawKoinRows) {
+        const info = normalizeTextKoin(getRowValue(row, ['Info']));
+        const to = normalizeTextKoin(getRowValue(row, ['TO', 'To']));
+        const coin = parseCoinValue(getRowValue(row, ['Coin']));
+        const meta = row._presetMeta || {};
+
+        if (meta.formDpGaruda) fDpGaruda += meta.formDpGaruda;
+        if (meta.formDpQrisMinera) fDpQrisMinera += meta.formDpQrisMinera;
+        if (meta.formDpQris) fDpQris += meta.formDpQris;
+        if (meta.formDp) fDp += meta.formDp;
+        if (meta.formWd) fWd += meta.formWd;
+        if (meta.formAutoWd) fAutoWd += meta.formAutoWd;
+
+        const isPgaSpv = to.includes('horas') || to.startsWith('spv');
+
+        if (info === 'deposit') {
+          depSum += coin;
+          if (isPgaSpv) {
+            dpSpvSum += coin;
+          }
+        } else if (info === 'deposit (pga)' || (info.includes('deposit') && info.includes('pga'))) {
+          qrisSum += coin;
+        } else if (info.includes('withdraw')) {
+          wdSum += Math.abs(coin);
+          if (isPgaSpv || info.includes('pga-idf')) {
+            wdSpvSum += Math.abs(coin);
+          }
+        }
+      }
+
+      res.deposit = depSum;
+      res.qris = qrisSum;
+      res.withdraw = wdSum;
+      res.dpPgaSpv = dpSpvSum;
+      res.wdPgaSpv = wdSpvSum;
+      res.realDeposit = res.deposit + res.qris - res.dpPgaSpv;
+      res.realWithdraw = res.withdraw - res.wdPgaSpv;
+      res.hasil = res.realDeposit - res.realWithdraw;
+      res.formDp = fDp;
+      res.formDpGaruda = fDpGaruda;
+      res.formDpQrisMinera = fDpQrisMinera;
+      res.formDpQris = fDpQris;
+      res.totalFormDp = res.formDp + res.formDpGaruda + res.formDpQrisMinera + res.formDpQris;
+      res.formWd = fWd;
+      res.formAutoWd = fAutoWd;
+      res.totalFormWd = res.formWd + res.formAutoWd;
+      return res;
+    }
+
     for (const row of rawKoinRows) {
       const info = normalizeTextKoin(getRowValue(row, ['Info']));
       const by = normalizeTextKoin(getRowValue(row, ['BY', 'By']));
+      const to = normalizeTextKoin(getRowValue(row, ['TO', 'To']));
       const coin = parseCoinValue(getRowValue(row, ['Coin']));
 
+      // Ignore reject transactions & internal agent transactions
+      const isReject = info.includes('reject');
+      const isAgent = info.includes('agent');
+      if (isReject || isAgent) {
+        continue;
+      }
+
       const isDeposit = info === 'deposit';
-      const isDepositPga = info === 'deposit (pga)';
+      const isDepositPga = info === 'deposit (pga)' || (info.includes('deposit') && info.includes('pga'));
       const isWithdraw = info === 'withdraw';
       const isWithdrawPgaIdf =
         info === 'withdraw(pga-idf)' ||
-        info === 'withdraw (pga-idf)';
-      const isReject = info.includes('reject');
+        info === 'withdraw (pga-idf)' ||
+        (info.includes('withdraw') && info.includes('pga'));
+
+      // SPV (PGA SPV) accounts are targeted with account username starting with or containing "horas"
+      // e.g. horas5, horas17, horas11, horasduabela, horastigabel, etc.
+      // Note: We MUST check "to", NOT "by", because "by" contains admin names like jvsaaspv1, jvsaaspv4
+      // who process normal member transactions!
+      const isPgaSpv = to.includes('horas') || to.startsWith('spv');
 
       if (isDeposit) {
         res.deposit += coin;
 
-        if (by.includes('pga2')) {
-          res.formDpGaruda += 1;
+        if (isPgaSpv) {
+          res.dpPgaSpv += coin;
         } else {
-          res.formDp += 1;
+          // Normal member deposit categorization
+          if (by.includes('pga2')) {
+            res.formDpGaruda += 1;
+          } else if (by.includes('minepay') || by.includes('minera')) {
+            res.formDpQrisMinera += 1;
+          } else {
+            res.formDp += 1;
+          }
         }
       }
 
       if (isDepositPga) {
         res.qris += coin;
-        if (by === 'pga') res.formDpQris += 1;
+        res.formDpQris += 1;
       }
 
-      if (!isReject && (isWithdraw || isWithdrawPgaIdf)) {
+      if (isWithdraw || isWithdrawPgaIdf) {
         res.withdraw += Math.abs(coin);
 
-        if (by.includes('autowd')) {
-          res.formAutoWd += 1;
+        if (isPgaSpv || isWithdrawPgaIdf) {
+          res.wdPgaSpv += Math.abs(coin);
         } else {
-          res.formWd += 1;
+          // Normal member withdraw categorization
+          if (by.includes('autowd')) {
+            res.formAutoWd += 1;
+          } else {
+            res.formWd += 1;
+          }
         }
       }
     }
 
-    res.dpPgaSpv = 0;
-    res.wdPgaSpv = 0;
-    res.totalDeposit = res.deposit + res.qris + res.dpPgaSpv;
+    // Formulas:
+    // Real Deposit = Deposit + Total QRIS IDN - DP PGA SPV
+    res.realDeposit = res.deposit + res.qris - res.dpPgaSpv;
+    // Real Withdraw = Withdraw - WD PGA SPV
     res.realWithdraw = res.withdraw - res.wdPgaSpv;
-    res.hasil = res.totalDeposit - res.realWithdraw;
+    // Hasil = Real Deposit - Real Withdraw
+    res.hasil = res.realDeposit - res.realWithdraw;
+    // Total Form DP = Form DP + Form DP garuda + Form DP QRIS MINERA + Form DP QRIS
     res.totalFormDp =
       res.formDp +
       res.formDpGaruda +
+      res.formDpQrisMinera +
       res.formDpQris;
+    // TOTAL Form WD = Form WD + Form auto WD
+    res.totalFormWd = res.formWd + res.formAutoWd;
 
     return res;
   }, [rawKoinRows]);
@@ -481,20 +805,26 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
     return rawKoinRows.map((row, idx) => {
       const info = normalizeTextKoin(getRowValue(row, ['Info']));
       const by = normalizeTextKoin(getRowValue(row, ['BY', 'By']));
+      const to = normalizeTextKoin(getRowValue(row, ['TO', 'To']));
       const coin = parseCoinValue(getRowValue(row, ['Coin']));
 
       let type: 'DEPOSIT' | 'WITHDRAW' = 'DEPOSIT';
-      let subType: 'REGULAR' | 'QRIS' | 'PGA_SPV' | 'GARUDA' | 'AUTO_WD' = 'REGULAR';
+      let subType: 'REGULAR' | 'QRIS' | 'PGA_SPV' | 'GARUDA' | 'QRIS_MINERA' | 'AUTO_WD' = 'REGULAR';
 
-      if (info === 'deposit (pga)') {
+      if (info === 'deposit (pga)' || (info.includes('deposit') && info.includes('pga'))) {
         type = 'DEPOSIT';
         subType = 'QRIS';
       } else if (info === 'deposit') {
         type = 'DEPOSIT';
-        subType = by.includes('pga2') ? 'GARUDA' : (by.includes('spv') || by.includes('pga') ? 'PGA_SPV' : 'REGULAR');
+        if (to.includes('horas') || to.startsWith('spv')) subType = 'PGA_SPV';
+        else if (by.includes('pga2')) subType = 'GARUDA';
+        else if (by.includes('minepay') || by.includes('minera')) subType = 'QRIS_MINERA';
+        else subType = 'REGULAR';
       } else if (info.includes('withdraw')) {
         type = 'WITHDRAW';
-        subType = by.includes('autowd') ? 'AUTO_WD' : (by.includes('spv') || by.includes('pga') ? 'PGA_SPV' : 'REGULAR');
+        if (to.includes('horas') || to.startsWith('spv') || info.includes('pga-idf')) subType = 'PGA_SPV';
+        else if (by.includes('autowd')) subType = 'AUTO_WD';
+        else subType = 'REGULAR';
       }
 
       return {
@@ -503,12 +833,13 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
         by: String(getRowValue(row, ['BY', 'By']) || by),
         coin: Math.abs(coin),
         type,
-        subType: subType as 'REGULAR' | 'QRIS' | 'PGA_SPV' | 'GARUDA' | 'AUTO_WD'
+        subType: subType as 'REGULAR' | 'QRIS' | 'PGA_SPV' | 'GARUDA' | 'QRIS_MINERA' | 'AUTO_WD'
       };
     });
   }, [rawKoinRows]);
 
-  // Copy 14 TSV Values for Excel/Google Sheets matching Script
+  // Copy 16 TSV Values for Excel/Google Sheets matching format requested by user:
+  // 459,643,335	63,623,110	433,656,000	319,000,000	319,000,000	204,266,445	114,656,000	89,610,445	1,353	584	288	700	2,925	20	334	354
   const handleCopyKoinOnly = () => {
     const order = [
       'deposit',
@@ -516,22 +847,54 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
       'withdraw',
       'dpPgaSpv',
       'wdPgaSpv',
-      'totalDeposit',
+      'realDeposit',
       'realWithdraw',
       'hasil',
       'formDp',
       'formDpGaruda',
+      'formDpQrisMinera',
       'formDpQris',
       'totalFormDp',
       'formWd',
-      'formAutoWd'
+      'formAutoWd',
+      'totalFormWd'
     ] as const;
 
-    const values = order.map(key => rekapKoinStats[key]);
+    // Formatted with commas as requested by user
+    const values = order.map(key => (rekapKoinStats[key] || 0).toLocaleString('en-US'));
     const tsvRow = values.join('\t');
     navigator.clipboard.writeText(tsvRow);
     setCopiedKoinRow(true);
     setTimeout(() => setCopiedKoinRow(false), 2500);
+  };
+
+  // Copy raw numeric values without commas (16 values)
+  const [copiedKoinRaw, setCopiedKoinRaw] = useState<boolean>(false);
+  const handleCopyKoinRaw = () => {
+    const order = [
+      'deposit',
+      'qris',
+      'withdraw',
+      'dpPgaSpv',
+      'wdPgaSpv',
+      'realDeposit',
+      'realWithdraw',
+      'hasil',
+      'formDp',
+      'formDpGaruda',
+      'formDpQrisMinera',
+      'formDpQris',
+      'totalFormDp',
+      'formWd',
+      'formAutoWd',
+      'totalFormWd'
+    ] as const;
+
+    const values = order.map(key => String(rekapKoinStats[key] || 0));
+    const tsvRow = values.join('\t');
+    navigator.clipboard.writeText(tsvRow);
+    setCopiedKoinRaw(true);
+    setTimeout(() => setCopiedKoinRaw(false), 2500);
   };
 
   const handleCopyKoinWithHeader = () => {
@@ -539,17 +902,19 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
       'Deposit',
       'Total QRIS IDN',
       'Withdraw',
-      'DP PGA SPV',
-      'WD PGA SPV',
-      'Total Deposit',
+      'DP PGA  SPV',
+      'WD PGA  SPV',
+      'Real Deposit',
       'Real Withdraw',
       'Hasil',
       'Form DP',
       'Form DP garuda',
+      'Form DP QRIS MINERA',
       'Form DP QRIS',
       'Total Form DP',
       'Form WD',
-      'Form auto WD'
+      'Form auto WD',
+      'TOTAL Form WD'
     ];
     const order = [
       'deposit',
@@ -557,18 +922,20 @@ Status: VALIDASI SELESAI (DONE DOCS)`;
       'withdraw',
       'dpPgaSpv',
       'wdPgaSpv',
-      'totalDeposit',
+      'realDeposit',
       'realWithdraw',
       'hasil',
       'formDp',
       'formDpGaruda',
+      'formDpQrisMinera',
       'formDpQris',
       'totalFormDp',
       'formWd',
-      'formAutoWd'
+      'formAutoWd',
+      'totalFormWd'
     ] as const;
 
-    const values = order.map(key => rekapKoinStats[key]);
+    const values = order.map(key => (rekapKoinStats[key] || 0).toLocaleString('en-US'));
     const fullTsv = `${headers.join('\t')}\n${values.join('\t')}`;
     navigator.clipboard.writeText(fullTsv);
     setCopiedKoinFull(true);
@@ -1150,11 +1517,19 @@ Slot	98,600,000	-14,350,000`;
                 <span className="text-[11px] font-mono text-gray-400">Contoh Data:</span>
                 <button
                   type="button"
+                  onClick={() => setPlInputText(SAMPLE_PL_USER_DATA)}
+                  className="px-3 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-xs font-mono font-black border border-yellow-500/40 transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_10px_rgba(234,179,8,0.2)]"
+                  title="Muat 41 data transaksi contoh (Termasuk Bank Jago & Bonus711)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+                  Format Log CS 41 Transaksi (Jago &amp; Bonus711)
+                </button>
+                <button
+                  type="button"
                   onClick={() => setPlInputText(SAMPLE_PL_DATA)}
                   className="px-3 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 text-xs font-mono font-bold border border-cyan-500/30 transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <Sparkles className="w-3 h-3 text-yellow-400" />
-                  Preset PL Campuran (BCA, Mandiri, BRI, DANA, JAGO, dll)
+                  Preset Singkat
                 </button>
               </div>
 
@@ -1196,7 +1571,11 @@ Slot	98,600,000	-14,350,000`;
                 </span>
                 <span className="text-gray-600">|</span>
                 <span>
-                  Terdeteksi: <strong className="text-emerald-400">{parsedPlResult.detectedCount}</strong>
+                  Terdeteksi Bank: <strong className="text-emerald-400">{parsedPlResult.detectedCount}</strong>
+                </span>
+                <span className="text-gray-600">|</span>
+                <span>
+                  Bonus711: <strong className={parsedPlResult.bonus711Count > 0 ? 'text-rose-400 font-bold' : 'text-gray-400'}>{parsedPlResult.bonus711Count}</strong>
                 </span>
                 <span className="text-gray-600">|</span>
                 <span>
@@ -1205,12 +1584,120 @@ Slot	98,600,000	-14,350,000`;
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-gray-400">Total Transaksi Bank:</span>
+                <span className="text-[11px] text-gray-400">Total Transaksi Bank (20 Bank):</span>
                 <span className="px-2.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40">
                   {parsedPlResult.totalBankCount}
                 </span>
               </div>
             </div>
+
+            {/* ========================================================================= */}
+            {/* ALERT NOTIFIKASI KHUSUS JIKA TERDETEKSI TRANSAKSI BONUS711                */}
+            {/* ========================================================================= */}
+            {parsedPlResult.bonus711Count > 0 && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/80 via-[#200a16] to-amber-950/70 border-2 border-rose-500/80 shadow-[0_0_30px_rgba(244,63,94,0.35)] space-y-3.5 animate-in fade-in slide-in-from-top-3 duration-300">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/50 flex items-center justify-center text-rose-400 shrink-0 mt-0.5 shadow-inner">
+                      <AlertTriangle className="w-5 h-5 animate-pulse text-rose-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-black text-rose-300 font-mono tracking-wide uppercase">
+                          ALERT: TERDETEKSI {parsedPlResult.bonus711Count} TRANSAKSI BONUS711!
+                        </h4>
+                        <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-black font-black text-[10px] tracking-wider uppercase shadow-sm">
+                          Dikecualikan dari Copy Bank
+                        </span>
+                      </div>
+                      <p className="text-xs text-rose-200/90 font-mono mt-1 leading-relaxed">
+                        💡 Sesuai SOP, kolom <strong>TOTAL</strong> dan <strong>BONUS711</strong> <u>TIDAK IKUT</u> saat salin baris count bank (hanya 20 bank agar format spreadsheet tetap pas). Gunakan tombol di samping untuk menyalin data transaksi bonus:
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Tombol Aksi Salin Bonus711 */}
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleCopyBonusTsv}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-black font-black text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+                      title="Salin rincian data bonus711 (Tabel TSV lengkap dengan header)"
+                    >
+                      {copiedBonusTsv ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Copy className="w-3.5 h-3.5 stroke-[2.5]" />}
+                      <span>{copiedBonusTsv ? 'Tabel Bonus Tersalin!' : 'Salin Data Bonus (TSV)'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyBonusUsers}
+                      className="px-3.5 py-2 rounded-xl bg-[#2a121e] hover:bg-[#3d182b] text-rose-300 border border-rose-500/50 font-bold text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                      title="Salin list User ID saja untuk pencarian cepat"
+                    >
+                      {copiedBonusUsers ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <ClipboardPaste className="w-3.5 h-3.5 text-rose-400" />}
+                      <span>{copiedBonusUsers ? 'User ID Tersalin!' : 'Salin User ID Saja'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyBonusChat}
+                      className="px-3.5 py-2 rounded-xl bg-[#1f1624] hover:bg-[#2d1f35] text-amber-300 border border-amber-500/40 font-bold text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                      title="Salin format chat ringkas untuk dikirim ke CS/Admin"
+                    >
+                      {copiedBonusChat ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <Sparkles className="w-3.5 h-3.5 text-yellow-400" />}
+                      <span>{copiedBonusChat ? 'Chat Tersalin!' : 'Salin Format Chat'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Rincian Transaksi Bonus711 */}
+                <div className="rounded-xl border border-rose-500/30 bg-black/40 overflow-x-auto shadow-inner">
+                  <table className="w-full border-collapse font-mono text-xs text-left whitespace-nowrap">
+                    <thead>
+                      <tr className="bg-rose-950/60 text-rose-300 font-bold border-b border-rose-500/30 text-[11px] uppercase tracking-wider">
+                        <th className="px-3 py-2 text-center w-10">No</th>
+                        <th className="px-3 py-2">User ID</th>
+                        <th className="px-3 py-2">Bank</th>
+                        <th className="px-3 py-2">Nama Pemilik</th>
+                        <th className="px-3 py-2">Nomor Rekening</th>
+                        <th className="px-3 py-2 text-right">Nominal</th>
+                        <th className="px-3 py-2">Tanggal / Waktu</th>
+                        <th className="px-3 py-2 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-500/20 text-gray-200">
+                      {parsedPlResult.bonus711Records.map((r, idx) => (
+                        <tr key={r.id || `bonus-item-${idx}`} className="hover:bg-rose-500/10 transition-colors">
+                          <td className="px-3 py-2 text-center text-rose-400 font-bold">{idx + 1}</td>
+                          <td className="px-3 py-2">
+                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
+                              {r.userId}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-yellow-400 font-bold">{r.bankName}</td>
+                          <td className="px-3 py-2 text-white font-medium">{r.accountHolder || '-'}</td>
+                          <td className="px-3 py-2 text-cyan-300 font-mono">{r.accountNumber || '-'}</td>
+                          <td className="px-3 py-2 text-right text-emerald-400 font-bold">{r.nominal || '0'}</td>
+                          <td className="px-3 py-2 text-gray-300 text-[11px]">{r.dateTime || '-'}</td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(r.userId);
+                              }}
+                              className="px-2 py-1 rounded bg-white/10 hover:bg-rose-500/30 text-white text-[11px] font-mono transition-colors cursor-pointer"
+                              title="Salin User ID ini"
+                            >
+                              Salin ID
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* ========================================================================= */}
             {/* HASIL VALIDASI PER JENIS BANK (PL HARIAN) - GRID PERSIS GAMBAR 1         */}
@@ -1222,7 +1709,7 @@ Slot	98,600,000	-14,350,000`;
                   <span>HASIL VALIDASI PER JENIS BANK (PL HARIAN)</span>
                 </h3>
                 <span className="text-[11px] font-mono text-cyan-300">
-                  {VALIDATION_BANKS.length} Bank Terdaftar + Total &amp; Bonus
+                  {VALIDATION_BANKS_CONFIG.length} Bank Terdaftar + Total &amp; Bonus
                 </span>
               </div>
 
@@ -1232,9 +1719,9 @@ Slot	98,600,000	-14,350,000`;
                   {/* Header Row: Warna Kuning / Orange Emas Elegan Persis Gambar 1 */}
                   <thead>
                     <tr className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black font-black uppercase text-[11px] tracking-wider">
-                      {VALIDATION_BANKS.map((b) => (
-                        <th key={`th-${b}`} className="px-3.5 py-2.5 border-r border-amber-600/50 last:border-r-0">
-                          {b}
+                      {VALIDATION_BANKS_CONFIG.map((b) => (
+                        <th key={`th-${b.key}`} className="px-3.5 py-2.5 border-r border-amber-600/50 last:border-r-0">
+                          {b.label}
                         </th>
                       ))}
                       <th className="px-4 py-2.5 bg-black text-cyan-300 border-x-2 border-cyan-400 font-black">
@@ -1249,11 +1736,11 @@ Slot	98,600,000	-14,350,000`;
                   {/* Body Row: Angka Count Hasil Ekstraksi */}
                   <tbody>
                     <tr className="bg-[#060a15] text-white font-extrabold text-sm hover:bg-[#0a1224] transition-colors">
-                      {VALIDATION_BANKS.map((b) => {
-                        const count = parsedPlResult.countsByBank[b];
+                      {VALIDATION_BANKS_CONFIG.map((b) => {
+                        const count = parsedPlResult.countsByBank[b.key] || 0;
                         return (
                           <td 
-                            key={`td-${b}`} 
+                            key={`td-${b.key}`} 
                             className={`px-3.5 py-3 border-r border-white/10 last:border-r-0 transition-colors ${
                               count > 0 ? 'text-yellow-400 font-black bg-yellow-400/[0.08]' : 'text-gray-400'
                             }`}
@@ -1262,41 +1749,54 @@ Slot	98,600,000	-14,350,000`;
                           </td>
                         );
                       })}
-                      {/* TOTAL COLUMN */}
-                      <td className="px-4 py-3 bg-cyan-950/40 text-cyan-300 border-x-2 border-cyan-500/50 font-black text-base">
+                      {/* TOTAL COLUMN (Visual Only) */}
+                      <td className="px-4 py-3 bg-cyan-950/40 text-cyan-300 border-x-2 border-cyan-500/50 font-black text-base" title="Hanya Tampilan Visual (Tidak ikut disalin saat Copy Baris TSV)">
                         {parsedPlResult.totalBankCount}
                       </td>
-                      {/* BONUS711 COLUMN */}
-                      <td className="px-4 py-3 bg-rose-950/40 text-rose-300 font-black text-base">
+                      {/* BONUS711 COLUMN (Visual Only) */}
+                      <td className="px-4 py-3 bg-rose-950/40 text-rose-300 font-black text-base" title="Hanya Tampilan Visual (Tidak ikut disalin saat Copy Baris TSV)">
                         {parsedPlResult.bonus711Count}
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
+
+              {/* Catatan Aturan Salin */}
+              <div className="flex items-center justify-between px-2 text-[11px] font-mono text-gray-400">
+                <span>
+                  💡 <strong>Catatan:</strong> Tombol <em>&quot;Copy Baris Count (TSV)&quot;</em> hanya menyalin 20 nilai bank (TOTAL &amp; BONUS711 dikecualikan sesuai format master).
+                </span>
+                {parsedPlResult.bonus711Count > 0 && (
+                  <span className="text-rose-400 font-bold">
+                    *Terdapat {parsedPlResult.bonus711Count} data Bonus711 terdeteksi
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Bottom Action Buttons (Sesuai Gambar 1) */}
             <div className="flex flex-wrap items-center gap-3 pt-3">
-              {/* Copy Semua Kolom */}
+              {/* Copy Semua Kolom (20 Bank) */}
               <button
                 type="button"
                 onClick={handleCopyAllColumns}
                 className="flex-1 min-w-[160px] py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-black font-black text-xs font-mono transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                title="Menyalin header dan baris count untuk 20 bank (TOTAL & BONUS711 tidak ikut)"
               >
                 {copiedAllColumns ? <Check className="w-4 h-4 text-black stroke-[3]" /> : <Copy className="w-4 h-4 text-black stroke-[2.5]" />}
-                <span>{copiedAllColumns ? 'Tersalin!' : 'Copy Semua Kolom'}</span>
+                <span>{copiedAllColumns ? 'Tersalin (20 Bank)!' : 'Copy Semua Kolom (20 Bank)'}</span>
               </button>
 
-              {/* Copy Baris Count / TSV */}
+              {/* Copy Baris Count / TSV - 20 Bank */}
               <button
                 type="button"
                 onClick={handleCopyCountsRow}
                 className="flex-1 min-w-[200px] py-3 px-4 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-black text-xs font-mono transition-all cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.35)]"
-                title="Menyalin angka-angka count dalam 1 baris format tab-separated, siap tempel langsung ke baris Google Sheet / Excel"
+                title="Menyalin 20 angka count per bank dalam format TSV (tanpa TOTAL & BONUS711), siap tempel langsung ke Google Sheets"
               >
                 {copiedCountsRow ? <Check className="w-4 h-4 text-black stroke-[3]" /> : <Table className="w-4 h-4 text-black stroke-[2.5]" />}
-                <span>{copiedCountsRow ? 'Baris Angka Tersalin!' : 'Copy Baris Count (TSV)'}</span>
+                <span>{copiedCountsRow ? '20 Angka Bank Tersalin!' : 'Copy Baris Count (TSV) - 20 Bank'}</span>
               </button>
 
               {/* Copy Format Laporan CS */}
@@ -1366,10 +1866,10 @@ Slot	98,600,000	-14,350,000`;
                 type="button"
                 onClick={handleCopyKoinOnly}
                 className="px-6 py-2.5 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] active:scale-[0.98] text-black font-black text-xs font-mono transition-all cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.35)] flex items-center gap-2"
-                title="Menyalin 14 angka hasil rekap (dipisahkan TAB) untuk ditempel ke Excel/Google Sheets"
+                title="Menyalin 15 angka hasil rekap (dipisahkan TAB dengan format ribuan koma) untuk ditempel ke Excel/Google Sheets"
               >
                 {copiedKoinRow ? <Check className="w-4 h-4 text-black stroke-[3]" /> : <Copy className="w-4 h-4 text-black stroke-[2.5]" />}
-                <span>{copiedKoinRow ? 'Hasil Tersalin!' : 'Copy Hasil Saja'}</span>
+                <span>{copiedKoinRow ? '15 Hasil Tersalin!' : 'Copy Hasil Saja'}</span>
               </button>
 
               {/* Reset Button (Dark Red) */}
@@ -1397,7 +1897,7 @@ Slot	98,600,000	-14,350,000`;
                     File "{uploadedFileName}" terbaca ({rawKoinRows.length} baris transaksi)
                   </span>
                 ) : (
-                  'Upload file Excel/CSV history koin, lalu rekap akan muncul otomatis.'
+                  'Upload file Excel/CSV history koin, lalu 15 kolom rekap akan muncul otomatis.'
                 )}
               </p>
 
@@ -1405,10 +1905,11 @@ Slot	98,600,000	-14,350,000`;
                 <button
                   type="button"
                   onClick={handleLoadSampleKoin}
-                  className="px-3 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 text-xs font-mono font-bold border border-cyan-500/30 transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-xs font-mono font-bold border border-yellow-500/40 transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_10px_rgba(234,179,8,0.2)]"
+                  title="Muat contoh rekapan lengkap (Deposit 459M, SPV 319M, Form 2.925)"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                  <span>Contoh Data (Demo)</span>
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+                  <span>Contoh Data (Demo Terakhir)</span>
                 </button>
                 {rawKoinRows.length > 0 && (
                   <button
@@ -1424,101 +1925,113 @@ Slot	98,600,000	-14,350,000`;
             </div>
 
             {/* ========================================================================= */}
-            {/* 14-KOLOM TABEL REKAPAN KOIN (PERSIS GAMBAR DENGAN WARNA & TAMPILAN RESMI)   */}
+            {/* 16-KOLOM TABEL REKAPAN KOIN (PERSIS GAMBAR MASTER DENGAN WARNA RESMI)       */}
             {/* ========================================================================= */}
             <div className="rounded-2xl border-2 border-amber-500/40 bg-[#040711] overflow-x-auto shadow-2xl">
               <table className="w-full border-collapse font-mono text-xs text-center whitespace-nowrap">
-                {/* Header Row: Orange/Golden Amber Background */}
+                {/* Header Row: Orange/Golden Amber Background persis gambar user */}
                 <thead>
                   <tr className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-black font-black uppercase text-xs tracking-wider">
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Deposit</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Total QRIS IDN</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Withdraw</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">DP PGA SPV</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">WD PGA SPV</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Total Deposit</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Real Withdraw</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Hasil</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Form DP</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Form DP garuda</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Form DP QRIS</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Total Form DP</th>
-                    <th className="px-4 py-3.5 border-r border-amber-600/40">Form WD</th>
-                    <th className="px-4 py-3.5">Form auto WD</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Deposit</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Total QRIS IDN</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Withdraw</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">DP PGA  SPV</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">WD PGA  SPV</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Real Deposit</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Real Withdraw</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Hasil</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Form DP</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Form DP garuda</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Form DP QRIS MINERA</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Form DP QRIS</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Total Form DP</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Form WD</th>
+                    <th className="px-3.5 py-3.5 border-r border-amber-600/40">Form auto WD</th>
+                    <th className="px-3.5 py-3.5">TOTAL Form WD</th>
                   </tr>
                 </thead>
 
-                {/* Data Row: Warna Cell Persis Gambar (White, Yellow, Green) */}
+                {/* Data Row: Warna Cell Persis Master Sheet (White, Yellow, Green) */}
                 <tbody>
                   <tr className="font-extrabold text-sm text-black">
                     {/* 1. Deposit (White) */}
-                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
-                      {rekapKoinStats.deposit.toLocaleString('id-ID')}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.deposit || 0).toLocaleString('en-US')}
                     </td>
 
                     {/* 2. Total QRIS IDN (Yellow) */}
-                    <td className="px-4 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
-                      {rekapKoinStats.qris.toLocaleString('id-ID')}
+                    <td className="px-3.5 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
+                      {(rekapKoinStats.qris || 0).toLocaleString('en-US')}
                     </td>
 
                     {/* 3. Withdraw (White) */}
-                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
-                      {rekapKoinStats.withdraw.toLocaleString('id-ID')}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.withdraw || 0).toLocaleString('en-US')}
                     </td>
 
                     {/* 4. DP PGA SPV (Green) */}
-                    <td className="px-4 py-3.5 bg-[#00FF66] border-r border-zinc-300 font-black">
-                      {rekapKoinStats.dpPgaSpv.toLocaleString('id-ID')}
+                    <td className="px-3.5 py-3.5 bg-[#00FF66] border-r border-zinc-300 font-black">
+                      {(rekapKoinStats.dpPgaSpv || 0).toLocaleString('en-US')}
                     </td>
 
                     {/* 5. WD PGA SPV (Green) */}
-                    <td className="px-4 py-3.5 bg-[#00FF66] border-r border-zinc-300 font-black">
-                      {rekapKoinStats.wdPgaSpv.toLocaleString('id-ID')}
+                    <td className="px-3.5 py-3.5 bg-[#00FF66] border-r border-zinc-300 font-black">
+                      {(rekapKoinStats.wdPgaSpv || 0).toLocaleString('en-US')}
                     </td>
 
-                    {/* 6. Total Deposit (Yellow) */}
-                    <td className="px-4 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
-                      {rekapKoinStats.totalDeposit.toLocaleString('id-ID')}
+                    {/* 6. Real Deposit (Yellow) */}
+                    <td className="px-3.5 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
+                      {(rekapKoinStats.realDeposit || 0).toLocaleString('en-US')}
                     </td>
 
                     {/* 7. Real Withdraw (Yellow) */}
-                    <td className="px-4 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
-                      {rekapKoinStats.realWithdraw.toLocaleString('id-ID')}
+                    <td className="px-3.5 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
+                      {(rekapKoinStats.realWithdraw || 0).toLocaleString('en-US')}
                     </td>
 
                     {/* 8. Hasil (Yellow) */}
-                    <td className="px-4 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
-                      {rekapKoinStats.hasil.toLocaleString('id-ID')}
+                    <td className="px-3.5 py-3.5 bg-[#FFFF00] border-r border-zinc-300 font-black">
+                      {(rekapKoinStats.hasil || 0).toLocaleString('en-US')}
                     </td>
 
                     {/* 9. Form DP (White) */}
-                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
-                      {rekapKoinStats.formDp}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.formDp || 0).toLocaleString('en-US')}
                     </td>
 
                     {/* 10. Form DP garuda (White) */}
-                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
-                      {rekapKoinStats.formDpGaruda}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.formDpGaruda || 0).toLocaleString('en-US')}
                     </td>
 
-                    {/* 11. Form DP QRIS (White) */}
-                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
-                      {rekapKoinStats.formDpQris}
+                    {/* 11. Form DP QRIS MINERA (White) */}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.formDpQrisMinera || 0).toLocaleString('en-US')}
                     </td>
 
-                    {/* 12. Total Form DP (White) */}
-                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
-                      {rekapKoinStats.totalFormDp}
+                    {/* 12. Form DP QRIS (White) */}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.formDpQris || 0).toLocaleString('en-US')}
                     </td>
 
-                    {/* 13. Form WD (White) */}
-                    <td className="px-4 py-3.5 bg-white border-r border-zinc-300 font-bold">
-                      {rekapKoinStats.formWd}
+                    {/* 13. Total Form DP (White) */}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.totalFormDp || 0).toLocaleString('en-US')}
                     </td>
 
-                    {/* 14. Form auto WD (White) */}
-                    <td className="px-4 py-3.5 bg-white font-bold">
-                      {rekapKoinStats.formAutoWd}
+                    {/* 14. Form WD (White) */}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.formWd || 0).toLocaleString('en-US')}
+                    </td>
+
+                    {/* 15. Form auto WD (White) */}
+                    <td className="px-3.5 py-3.5 bg-white border-r border-zinc-300 font-bold">
+                      {(rekapKoinStats.formAutoWd || 0).toLocaleString('en-US')}
+                    </td>
+
+                    {/* 16. TOTAL Form WD (White) */}
+                    <td className="px-3.5 py-3.5 bg-white font-bold">
+                      {(rekapKoinStats.totalFormWd || 0).toLocaleString('en-US')}
                     </td>
                   </tr>
                 </tbody>
@@ -1527,15 +2040,36 @@ Slot	98,600,000	-14,350,000`;
 
             {/* Subtext Footnote (Persis Gambar) */}
             <p className="text-xs text-gray-400 text-center font-mono">
-              Hasil copy dipisahkan dengan TAB agar bisa langsung ditempel ke Excel/Google Sheets.
+              Hasil copy berisi 16 kolom dipisahkan dengan TAB agar bisa langsung ditempel pas ke Excel/Google Sheets.
             </p>
 
-            {/* Additional Secondary Action: Copy dengan Header */}
+            {/* Action Buttons: Copy dengan Header & Copy Angka Polos */}
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-white/10">
               <button
                 type="button"
+                onClick={handleCopyKoinOnly}
+                className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2"
+                title="Salin 16 nilai dengan pemisah koma ribuan (459,643,335 ...)"
+              >
+                {copiedKoinRow ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <Copy className="w-3.5 h-3.5 text-amber-400" />}
+                <span>{copiedKoinRow ? '16 Angka Tersalin (Koma)!' : 'Salin 16 Angka (Format Koma)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyKoinRaw}
+                className="px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2"
+                title="Salin 16 nilai angka polos tanpa tanda koma (459643335 ...)"
+              >
+                {copiedKoinRaw ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <ClipboardPaste className="w-3.5 h-3.5 text-cyan-400" />}
+                <span>{copiedKoinRaw ? '16 Angka Polos Tersalin!' : 'Salin 16 Angka Polos (Tanpa Koma)'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={handleCopyKoinWithHeader}
-                className="px-4 py-2 rounded-xl bg-[#131d2e] hover:bg-[#1a2840] text-cyan-300 border border-cyan-500/30 text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2"
+                className="px-4 py-2 rounded-xl bg-[#131d2e] hover:bg-[#1a2840] text-gray-300 border border-white/20 text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2"
+                title="Salin 16 kolom lengkap dengan baris header"
               >
                 {copiedKoinFull ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Table className="w-3.5 h-3.5 text-cyan-400" />}
                 <span>{copiedKoinFull ? 'Header + Data Tersalin!' : 'Copy Baris Header + Nilai (TSV)'}</span>
