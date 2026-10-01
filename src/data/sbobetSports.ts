@@ -11,9 +11,7 @@ export interface SbobetSportItem {
 export const SBOBET_SPORTS_LIST: SbobetSportItem[] = [
   { id: 'soccer', name: 'Sepak Bola', icon: '⚽', count: 748, badgeColor: 'orange' },
   { id: 'basketball', name: 'Bola Basket', icon: '🏀', count: 184, badgeColor: 'orange' },
-  { id: 'table_tennis', name: 'Tenis Meja', icon: '🏓', count: 501, badgeColor: 'orange' },
   { id: 'baseball', name: 'Bola Kasti', icon: '⚾', count: 41, badgeColor: 'orange' },
-  { id: 'tennis', name: 'Tenis', icon: '🎾', count: 313, badgeColor: 'orange' },
   { id: 'esports', name: 'eSports SBO', icon: '🎮', count: 6, badgeColor: 'blue' },
   { id: 'american_football', name: 'Sepak Bola Amerika', icon: '🏈', count: 164, badgeColor: 'orange' },
   { id: 'badminton', name: 'Bulu Tangkis', icon: '🏸', count: 22, badgeColor: 'orange' },
@@ -22,8 +20,6 @@ export const SBOBET_SPORTS_LIST: SbobetSportItem[] = [
   { id: 'cycling', name: 'Balap Sepeda', icon: '🚴', count: 28, badgeColor: 'blue' },
   { id: 'darts', name: 'Dart', icon: '🎯', count: 32, badgeColor: 'orange' },
   { id: 'specials', name: 'Spesial', icon: '👑', count: 17, badgeColor: 'blue' },
-  { id: 'field_hockey', name: 'Hoki Lapangan', icon: '🏑', count: 5, badgeColor: 'blue' },
-  { id: 'ice_hockey', name: 'Hoki Es', icon: '🏒', count: 130, badgeColor: 'orange' },
   { id: 'mma', name: 'Seni Bela Diri Campuran', icon: '🥋', count: 25, badgeColor: 'blue' },
   { id: 'motorsport', name: 'Balap Motor', icon: '🏁', count: 72, badgeColor: 'blue' },
   { id: 'billiards', name: 'Billiard/Snooker', icon: '🎱', count: 19, badgeColor: 'orange' },
@@ -71,48 +67,6 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
     odds: { home: string; away: string; draw?: string; over: string; under: string };
     events?: Array<{ minute: string; type: string; player: string; team: 'home' | 'away'; detail?: string }>;
   }> = [
-    // 1. Tenis Meja (Table Tennis)
-    {
-      sport: 'table_tennis',
-      sportLabel: 'Tenis Meja',
-      league: 'WTT Champions Macao - Men Singles',
-      home: 'Fan Zhendong',
-      homeShort: 'Fan Z.',
-      away: 'Wang Chuqin',
-      awayShort: 'Wang C.',
-      status: isPast ? 'FINISHED' : 'LIVE',
-      statusDetail: isPast ? 'FT (Selesai)' : 'Game 5 • 8-7',
-      displayClock: isPast ? 'FT' : 'Set 5',
-      homeScore: 3,
-      awayScore: 2,
-      periodScores: [11, 9, 11, 8, 8],
-      wibTime: '14:30 WIB',
-      venue: 'Tap Seac Multisport Pavilion, Macao',
-      country: 'Internasional',
-      hdp: '-1.5',
-      ou: '78.5',
-      odds: { home: '1.82', away: '1.98', over: '1.90', under: '1.90' }
-    },
-    {
-      sport: 'table_tennis',
-      sportLabel: 'Tenis Meja',
-      league: 'Table Tennis Setka Cup (Liga Setka)',
-      home: 'Truls Moregard',
-      homeShort: 'T. Moregard',
-      away: 'Tomokazu Harimoto',
-      awayShort: 'T. Harimoto',
-      status: isPast ? 'FINISHED' : 'SCHEDULED',
-      statusDetail: isPast ? 'FT (Selesai)' : '19:00 WIB',
-      displayClock: '',
-      homeScore: isPast ? 3 : 0,
-      awayScore: isPast ? 1 : 0,
-      wibTime: '19:00 WIB',
-      venue: 'Kyiv Setka Arena',
-      country: 'Ukraina',
-      hdp: '0.0',
-      ou: '74.5',
-      odds: { home: '1.95', away: '1.85', over: '1.88', under: '1.92' }
-    },
 
     // 2. Bulu Tangkis (Badminton)
     {
@@ -179,49 +133,26 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
       odds: { home: '1.78', away: '2.10', over: '1.92', under: '1.88' }
     },
 
-    // 4. Tenis (Tennis)
-    {
-      sport: 'tennis',
-      sportLabel: 'Tenis',
-      league: 'ATP Grand Slam - Wimbledon Championships',
-      home: 'Carlos Alcaraz',
-      homeShort: 'C. Alcaraz',
-      away: 'Jannik Sinner',
-      awayShort: 'J. Sinner',
-      status: isPast ? 'FINISHED' : 'LIVE',
-      statusDetail: isPast ? 'FT (Selesai)' : 'Set 4 • 4-3 (40-30)',
-      displayClock: isPast ? 'FT' : 'Set 4',
-      homeScore: 2,
-      awayScore: 1,
-      periodScores: [6, 4, 7, 4],
-      wibTime: '20:00 WIB',
-      venue: 'Centre Court Wimbledon, London',
-      country: 'Inggris',
-      hdp: '-1.5',
-      ou: '38.5',
-      odds: { home: '1.80', away: '2.00', over: '1.90', under: '1.90' }
-    },
-
-    // 5. eSports SBO
+    // 5. eSports SBO (Mobile Legends / CS2)
     {
       sport: 'esports',
       sportLabel: 'eSports SBO',
-      league: 'Dota 2 - The International (Main Stage)',
-      home: 'Team Spirit',
-      homeShort: 'Team Spirit',
-      away: 'Gaimin Gladiators',
-      awayShort: 'GG',
+      league: 'MLBB - M6 World Championship',
+      home: 'ONIC Esports [INA]',
+      homeShort: 'ONIC',
+      away: 'Blacklist International [PH]',
+      awayShort: 'Blacklist',
       status: isPast ? 'FINISHED' : 'LIVE',
-      statusDetail: isPast ? 'FT (Selesai)' : 'Game 2 • 28 Min',
-      displayClock: isPast ? 'FT' : 'Map 2',
-      homeScore: 1,
-      awayScore: 0,
+      statusDetail: isPast ? 'FT (Selesai)' : 'Game 3 • 14 Min',
+      displayClock: isPast ? 'FT' : 'Map 3',
+      homeScore: 2,
+      awayScore: 1,
       wibTime: '17:00 WIB',
-      venue: 'Royal Arena, Copenhagen',
+      venue: 'Axiata Arena, Kuala Lumpur',
       country: 'Internasional',
       hdp: '-1.5',
-      ou: '48.5 (Kills)',
-      odds: { home: '1.72', away: '2.15', over: '1.85', under: '1.95' }
+      ou: '28.5 (Kills)',
+      odds: { home: '1.68', away: '2.20', over: '1.85', under: '1.95' }
     },
     {
       sport: 'esports',
@@ -352,28 +283,6 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
       hdp: '-1.5',
       ou: '7.5 (Sets)',
       odds: { home: '1.75', away: '2.10', over: '1.85', under: '1.95' }
-    },
-
-    // 11. Hoki Es (Ice Hockey)
-    {
-      sport: 'ice_hockey',
-      sportLabel: 'Hoki Es',
-      league: 'NHL (National Hockey League)',
-      home: 'Edmonton Oilers',
-      homeShort: 'Oilers',
-      away: 'Florida Panthers',
-      awayShort: 'Panthers',
-      status: isPast ? 'FINISHED' : 'SCHEDULED',
-      statusDetail: isPast ? 'FT (Selesai)' : '08:00 WIB',
-      displayClock: '',
-      homeScore: isPast ? 4 : 0,
-      awayScore: isPast ? 2 : 0,
-      wibTime: '08:00 WIB',
-      venue: 'Rogers Place, Edmonton',
-      country: 'Kanada',
-      hdp: '-0.5',
-      ou: '5.5',
-      odds: { home: '1.85', away: '1.95', over: '1.90', under: '1.90' }
     },
 
     // 12. Seni Bela Diri Campuran (MMA)
@@ -609,28 +518,6 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
       odds: { home: '1.82', away: '1.98', over: '1.90', under: '1.90' }
     },
 
-    // 22. Hoki Lapangan (Field Hockey)
-    {
-      sport: 'field_hockey',
-      sportLabel: 'Hoki Lapangan',
-      league: 'FIH Hockey Pro League Men',
-      home: 'Belgia Red Lions',
-      homeShort: 'Belgia',
-      away: 'Belanda Hockey Team',
-      awayShort: 'Belanda',
-      status: isPast ? 'FINISHED' : 'SCHEDULED',
-      statusDetail: isPast ? 'FT (Selesai)' : '22:30 WIB',
-      displayClock: '',
-      homeScore: isPast ? 3 : 0,
-      awayScore: isPast ? 2 : 0,
-      wibTime: '22:30 WIB',
-      venue: 'Wilrijkse Plein, Antwerpen',
-      country: 'Belgia',
-      hdp: '0.0',
-      ou: '4.5',
-      odds: { home: '2.10', away: '1.78', draw: '4.20', over: '1.85', under: '1.95' }
-    },
-
     // 23. Spesial (Special Markets)
     {
       sport: 'specials',
@@ -702,10 +589,8 @@ export function generateSbobetSpecialtyMatches(targetDateStr?: string): LiveMatc
       const diff = currentTotalMins - matchTotalMins;
 
       // Typical match duration in minutes
-      const matchDuration = item.sport === 'table_tennis' ? 45 
-        : item.sport === 'badminton' ? 65 
+      const matchDuration = item.sport === 'badminton' ? 65 
         : item.sport === 'volleyball' ? 80 
-        : item.sport === 'tennis' ? 95 
         : item.sport === 'futsal' ? 60 
         : 75;
 

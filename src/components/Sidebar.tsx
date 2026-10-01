@@ -25,7 +25,8 @@ import {
   Table,
   Radio,
   Activity,
-  Gift
+  Gift,
+  ShieldCheck
 } from 'lucide-react';
 import { ShiftType, UserProfile } from '../types';
 
@@ -57,7 +58,8 @@ export type ActiveView =
   | 'modul-togel-cara'
   | 'modul-togel-hadiah'
   | 'modul-togel-jadwal'
-  | 'modul-slot';
+  | 'modul-slot'
+  | 'validator-rekening';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -92,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (['generate-artikel', 'bbfs-angka-tarung', 'kalkulator-parlay'].includes(activeView)) {
       return 'alat-generate';
     }
-    if (['jobdesk-cs', 'bagi-bonus', 'bagi-bonus-slot', 'bagi-bonus-parlay', 'edit-pembayaran', 'isi-rekapan', 'laporan-cs', 'laporan-cs-ganti-data', 'laporan-cs-locked'].includes(activeView)) {
+    if (['jobdesk-cs', 'bagi-bonus', 'bagi-bonus-slot', 'bagi-bonus-parlay', 'edit-pembayaran', 'isi-rekapan', 'laporan-cs', 'laporan-cs-ganti-data', 'laporan-cs-locked', 'validator-rekening'].includes(activeView)) {
       return 'tools-cs';
     }
     if (['jobdesk-kasir', 'wd-auto-flop', 'info-wd', 'info-data-pl'].includes(activeView)) {
@@ -214,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className="w-2 h-2 rounded-full bg-[#00F3FF] animate-pulse"></span>
                   <span className="text-[10px] font-black uppercase tracking-wider text-white font-sans flex items-center gap-1">
                     <span>MENU HIGHLIGHT</span>
-                    <span className="text-yellow-400 font-mono text-[9px]">(TOP 3)</span>
+                    <span className="text-yellow-400 font-mono text-[9px]">(TOP 4)</span>
                   </span>
                 </div>
                 <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded-full bg-yellow-400 text-black shadow-[0_0_10px_rgba(250,204,21,0.5)]">
@@ -233,10 +235,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={(e) => handleItemClick(e, 'livescore')}
               id="menu-livescore"
               title="LiveScore - Skor & Jadwal (WIB)"
-              className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group ${
+              className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group animate-kelap-kelip-livescore ${
                 activeView === 'livescore'
-                  ? 'bg-gradient-to-r from-rose-500/30 via-cyan-500/20 to-rose-500/20 border-2 border-rose-400 text-white shadow-[0_0_18px_rgba(244,63,94,0.4)] font-bold'
-                  : 'bg-[#141724]/90 hover:bg-[#1E2235] text-gray-200 hover:text-white border border-rose-500/30 hover:border-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.1)]'
+                  ? 'bg-gradient-to-r from-rose-500/30 via-cyan-500/20 to-rose-500/20 border-2 border-rose-400 text-white shadow-[0_0_22px_rgba(244,63,94,0.6)] font-bold'
+                  : 'bg-[#141724]/90 hover:bg-[#1E2235] text-gray-200 hover:text-white border border-rose-500/50 hover:border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.25)]'
               }`}
             >
               <div className={`flex items-center ${isOpen ? 'gap-2.5' : 'justify-center'}`}>
@@ -246,8 +248,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {isOpen && (
                   <div className="text-left min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-black tracking-wide text-white">LIVESCORE</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-black font-mono animate-pulse">
+                      <span className="text-xs font-black tracking-wide text-white drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]">LIVESCORE</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-black font-mono animate-kelap-kelip-badge shadow-[0_0_8px_rgba(244,63,94,0.8)]">
                         LIVE
                       </span>
                     </div>
@@ -256,8 +258,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </div>
               {isOpen && (
-                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold flex-shrink-0">
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold flex-shrink-0 animate-pulse">
                   WIB
+                </span>
+              )}
+            </a>
+
+            {/* 2. VALIDATOR REKENING & E-WALLET (HIGHLIGHT) */}
+            <a
+              href="?view=validator-rekening"
+              onClick={(e) => handleItemClick(e, 'validator-rekening')}
+              id="menu-validator-rekening-highlight"
+              title="Validator Rekening & E-Wallet (Bank & GoPay Mandiri)"
+              className={`w-full px-2.5 py-2 rounded-[18px] transition-all duration-200 cursor-pointer flex items-center ${isOpen ? 'justify-between' : 'justify-center'} group animate-kelap-kelip-validator ${
+                activeView === 'validator-rekening'
+                  ? 'bg-gradient-to-r from-amber-500/30 via-cyan-500/20 to-emerald-500/20 border-2 border-yellow-400 text-white shadow-[0_0_22px_rgba(250,204,21,0.6)] font-bold'
+                  : 'bg-[#141724]/90 hover:bg-[#1E2235] text-gray-200 hover:text-white border border-[#00F3FF]/50 hover:border-yellow-400 shadow-[0_0_12px_rgba(0,243,255,0.25)]'
+              }`}
+            >
+              <div className={`flex items-center ${isOpen ? 'gap-2.5' : 'justify-center'}`}>
+                <div className="p-1.5 rounded-xl bg-amber-400/25 text-amber-400 border border-amber-400/50 group-hover:scale-105 transition-transform shadow-[0_0_8px_rgba(250,204,21,0.4)] flex-shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-amber-400 animate-pulse" />
+                </div>
+                {isOpen && (
+                  <div className="text-left min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-black tracking-wide text-white drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]">VALIDATOR REKENING</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-black font-mono animate-kelap-kelip-badge shadow-[0_0_8px_rgba(250,204,21,0.8)]">
+                        AKTIF
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-amber-300 font-mono block truncate">Bank &amp; E-Wallet Mandiri</span>
+                  </div>
+                )}
+              </div>
+              {isOpen && (
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-yellow-400/20 text-yellow-300 border border-yellow-400/50 font-bold flex-shrink-0 animate-pulse">
+                  AUTO
                 </span>
               )}
             </a>
@@ -615,6 +652,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     )}
                   </div>
+                </a>
+
+                {/* 6. VALIDATOR REKENING */}
+                <a
+                  href="?view=validator-rekening"
+                  onClick={(e) => handleItemClick(e, 'validator-rekening', undefined, 'tools-cs')}
+                  id="menu-validator-rekening"
+                  className={`w-full px-3.5 py-2.5 rounded-[24px] transition-all cursor-pointer flex items-center justify-between border ${
+                    activeView === 'validator-rekening'
+                      ? 'bg-[#1F1F1F] border-yellow-400 text-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.4)] font-bold animate-kelap-kelip-validator'
+                      : 'bg-[#1A1A1A] hover:bg-[#222222] text-gray-200 hover:text-white border-amber-500/40 hover:border-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.15)] animate-kelap-kelip-validator'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <ShieldCheck className="w-4 h-4 text-yellow-400 animate-pulse" />
+                    {isOpen && (
+                      <div className="text-left">
+                        <span className="block font-black text-xs text-white drop-shadow-[0_0_4px_rgba(250,204,21,0.5)]">VALIDATOR REKENING</span>
+                        <span className="text-[9px] text-yellow-300/90 font-mono">Bank &amp; E-Wallet Premium</span>
+                      </div>
+                    )}
+                  </div>
+                  {isOpen && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-mono font-black animate-kelap-kelip-badge shadow-[0_0_8px_rgba(250,204,21,0.8)]">
+                      AKTIF
+                    </span>
+                  )}
                 </a>
               </div>
             )}

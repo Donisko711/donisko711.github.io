@@ -21,7 +21,9 @@ interface HomeDashboardProps {
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftName, currentUser }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const quickPills = [
+  const quickPills: { label: string; view: ActiveView; isSpecial?: 'validator' | 'livescore' }[] = [
+    { label: 'VALIDATOR REKENING', view: 'validator-rekening' as ActiveView, isSpecial: 'validator' },
+    { label: 'LIVESCORE (WIB)', view: 'livescore' as ActiveView, isSpecial: 'livescore' },
     { label: 'PHISING CHECKER', view: 'phising-checker' as ActiveView },
     { label: 'CEK STATUS NAWALA', view: 'nawala-checker' as ActiveView },
     { label: 'AUTO WD FLOP', view: 'wd-auto-flop' as ActiveView },
@@ -68,10 +70,15 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 SISTEM ONLINE
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[10px] font-mono font-bold">
+              <button
+                type="button"
+                onClick={() => onNavigate('livescore')}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-400 text-rose-300 text-[10px] font-mono font-black animate-kelap-kelip-livescore cursor-pointer hover:scale-105 transition-transform"
+                title="Buka LiveScore & Jadwal Lengkap (WIB)"
+              >
                 <Radio className="w-3 h-3 text-rose-400 animate-pulse" />
-                LIVESCORE WIB AKTIF
-              </span>
+                <span>LIVESCORE WIB AKTIF</span>
+              </button>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
@@ -157,15 +164,41 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
             <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1 mr-1 font-mono">
               ⚡ PINTASAN CEPAT:
             </span>
-            {quickPills.map(pill => (
-              <button
-                key={pill.label}
-                onClick={() => onNavigate(pill.view)}
-                className="px-3.5 py-1.5 rounded-full bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-[#00F3FF] hover:text-white border border-white/10 hover:border-[#00F3FF]/40 text-xs font-semibold transition-all cursor-pointer backdrop-blur-sm shadow-sm"
-              >
-                {pill.label}
-              </button>
-            ))}
+            {quickPills.map(pill => {
+              if (pill.isSpecial === 'validator') {
+                return (
+                  <button
+                    key={pill.label}
+                    onClick={() => onNavigate(pill.view)}
+                    className="px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-emerald-500/20 text-yellow-300 hover:text-white border-2 border-yellow-400 text-xs font-black transition-all cursor-pointer backdrop-blur-sm shadow-[0_0_15px_rgba(250,204,21,0.4)] animate-kelap-kelip-validator flex items-center gap-1.5"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-yellow-400 animate-kelap-kelip-badge"></span>
+                    <span>{pill.label}</span>
+                  </button>
+                );
+              }
+              if (pill.isSpecial === 'livescore') {
+                return (
+                  <button
+                    key={pill.label}
+                    onClick={() => onNavigate(pill.view)}
+                    className="px-4 py-1.5 rounded-full bg-gradient-to-r from-rose-500/25 via-red-500/20 to-cyan-500/20 text-rose-300 hover:text-white border-2 border-rose-400 text-xs font-black transition-all cursor-pointer backdrop-blur-sm shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-kelap-kelip-livescore flex items-center gap-1.5"
+                  >
+                    <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                    <span>{pill.label}</span>
+                  </button>
+                );
+              }
+              return (
+                <button
+                  key={pill.label}
+                  onClick={() => onNavigate(pill.view)}
+                  className="px-3.5 py-1.5 rounded-full bg-[#1A1A1A]/80 hover:bg-[#222222]/90 text-[#00F3FF] hover:text-white border border-white/10 hover:border-[#00F3FF]/40 text-xs font-semibold transition-all cursor-pointer backdrop-blur-sm shadow-sm"
+                >
+                  {pill.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -643,6 +643,16 @@ export const INITIAL_TOGEL_PASARAN: TogelPasaran[] = [
 
 export const DASHBOARD_MODULE_CARDS: DashboardModuleCard[] = [
   {
+    id: 'mod-validator-rekening',
+    title: 'VALIDATOR REKENING & E-WALLET',
+    category: 'CS',
+    categoryLabel: 'TOOLS CS & KASIR',
+    description: 'Validasi nomor rekening bank, format panjang digit resmi, dan status akun E-Wallet (Premium / Basic) tanpa sensor (nama lengkap jelas).',
+    badge: 'BARU',
+    icon: 'ShieldCheck',
+    actionMenuId: 'validator-rekening'
+  },
+  {
     id: 'mod-phising',
     title: 'PHISING CHECKER',
     category: 'SISTEM',

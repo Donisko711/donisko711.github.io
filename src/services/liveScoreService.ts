@@ -675,50 +675,7 @@ export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<Li
       }
     });
 
-    // 2. Fetch real tennis scoreboards if tennis or all sports requested
-    const tennisPromises: Promise<LiveMatch[]>[] = [];
-    if (!options.sport || options.sport === 'all' || options.sport === 'tennis') {
-      const tennisEndpoints = [
-        { url: `https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard${dateQuery}`, label: 'ATP World Tour' },
-        { url: `https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard${dateQuery}`, label: 'WTA Tour' }
-      ];
-
-      tennisEndpoints.forEach((t) => {
-        tennisPromises.push((async () => {
-          try {
-            const res = await fetch(t.url);
-            if (!res.ok) return [];
-            const data = await res.json();
-            const tennisList: LiveMatch[] = [];
-            for (const ev of data.events || []) {
-              const tourName = ev.name || t.label;
-              for (const group of ev.groupings || []) {
-                for (const comp of group.competitions || []) {
-                  const compDate = comp.date || ev.date;
-                  const wibKey = getWibDateKey(compDate);
-                  const utcDateKey = compDate ? compDate.slice(0, 10).replace(/-/g, '') : '';
-                  const isLive = comp.status?.type?.state === 'in';
-                  const isTargetDate = !dateStr || wibKey === dateStr || utcDateKey === dateStr;
-
-                  // Only show live in-play matches or matches on the selected date (WIB or UTC)
-                  if (isLive || isTargetDate) {
-                    const mapped = mapEspnTennisEvent(ev, comp, tourName);
-                    if (mapped) {
-                      tennisList.push(mapped);
-                    }
-                  }
-                }
-              }
-            }
-            return tennisList;
-          } catch {
-            return [];
-          }
-        })());
-      });
-    }
-
-    const settled = await Promise.allSettled([...fetchPromises, ...tennisPromises]);
+    const settled = await Promise.allSettled(fetchPromises);
     settled.forEach((res) => {
       if (res.status === 'fulfilled' && Array.isArray(res.value)) {
         results.push(...res.value);
@@ -766,7 +723,7 @@ export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<Li
       }
     }
 
-    // 5. Incorporate specialty sports matches for all 26 SBOBET sports
+    // 5. Incorporate specialty sports matches for active SBOBET sports (excluding Tennis, NHL, Dota 2)
     const specialtyMatches = generateSbobetSpecialtyMatches(options.dateStr);
     for (const spec of specialtyMatches) {
       if (!options.sport || options.sport === 'all' || options.sport === spec.sport) {
@@ -777,10 +734,29 @@ export async function fetchAllLiveScores(options: FetchOptions = {}): Promise<Li
     console.error('Failed to fetch official live scores:', err);
   }
 
-  // Deduplicate matches by unique id and apply event enrichment (pencetak gol, kartu kuning, menit lengkap)
+  // Deduplicate matches by unique id and apply event enrichment
+  // Exclude Tennis, Table Tennis, NHL / Ice Hockey, and Dota 2 to optimize dashboard performance
   const seenIds = new Set<string>();
   const uniqueMatches: LiveMatch[] = [];
   for (const m of results) {
+    const s = (m.sport || '').toLowerCase();
+    const l = (m.league || '').toUpperCase();
+    const h = (m.homeTeam?.name || m.homeTeam?.shortName || '').toUpperCase();
+    const a = (m.awayTeam?.name || m.awayTeam?.shortName || '').toUpperCase();
+
+    // Skip Tennis & Table Tennis
+    if (s === 'tennis' || s === 'table_tennis' || l.includes('TENNIS') || l.includes('TENIS') || l.includes('WIMBLEDON') || l.includes('SETKA')) {
+      continue;
+    }
+    // Skip NHL & Hockey
+    if (s === 'ice_hockey' || s === 'field_hockey' || l.includes('NHL') || l.includes('HOCKEY') || l.includes('HOKI')) {
+      continue;
+    }
+    // Skip Dota 2
+    if (l.includes('DOTA') || h.includes('DOTA') || a.includes('DOTA')) {
+      continue;
+    }
+
     if (!seenIds.has(m.id)) {
       seenIds.add(m.id);
       uniqueMatches.push(enrichMatchWithEvents(m));

@@ -367,7 +367,7 @@ export const LiveScore: React.FC = () => {
         const diffMins = (Date.now() - kickoff) / 60000;
         if (m.sport === 'soccer' && diffMins > 125) return true;
         if (m.sport === 'basketball' && diffMins > 140) return true;
-        if (['table_tennis', 'badminton', 'tennis', 'volleyball'].includes(m.sport) && diffMins > 105) return true;
+        if (['badminton', 'volleyball'].includes(m.sport) && diffMins > 105) return true;
       }
     }
     return false;
@@ -639,7 +639,7 @@ export const LiveScore: React.FC = () => {
               <span className="text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]">JADWAL PERTANDINGAN</span>
             </h1>
             <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
-              Jadwal pertandingan, skor langsung (LIVE), dan riwayat hasil tim olahraga resmi dunia (Sepak Bola, Basket, Badminton, Tenis &amp; eSports). Seluruh waktu otomatis tersinkronisasi dalam <strong className="text-yellow-300 font-bold">WIB (Waktu Indonesia Barat)</strong> untuk memudahkan staf kasir dan CS mengecek tiket dan melayani member.
+              Jadwal pertandingan, skor langsung (LIVE), dan riwayat hasil tim olahraga resmi dunia (Sepak Bola, Basket, Bulu Tangkis &amp; eSports). Seluruh waktu otomatis tersinkronisasi dalam <strong className="text-yellow-300 font-bold">WIB (Waktu Indonesia Barat)</strong> untuk memudahkan staf kasir dan CS mengecek tiket dan melayani member.
             </p>
           </div>
 
@@ -1245,7 +1245,7 @@ export const LiveScore: React.FC = () => {
 
                         {/* Sport Pill Badge */}
                         <span className="bg-yellow-400 text-black font-black text-[11px] sm:text-xs px-3 py-0.5 rounded-full uppercase tracking-wider shadow-[0_0_10px_rgba(250,204,21,0.5)] whitespace-nowrap">
-                          {group.sport === 'soccer' ? 'Sepak Bola' : group.sport === 'basketball' ? 'Bola Basket' : group.sport === 'badminton' ? 'Bulu Tangkis' : group.sport === 'tennis' ? 'Tenis' : 'Olahraga Resmi'}
+                          {group.sport === 'soccer' ? 'Sepak Bola' : group.sport === 'basketball' ? 'Bola Basket' : group.sport === 'badminton' ? 'Bulu Tangkis' : 'Olahraga Resmi'}
                         </span>
 
                         {/* Live Matches Indicator in Header */}

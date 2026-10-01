@@ -120,9 +120,9 @@ export const WdAutoFlop: React.FC = () => {
   const [autoClearSeconds, setAutoClearSeconds] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('hs_wd_autoflop_autoclear_seconds');
-      return saved !== null ? JSON.parse(saved) : 10;
+      return saved !== null ? JSON.parse(saved) : 5;
     } catch {
-      return 10;
+      return 5;
     }
   });
   const [countdown, setCountdown] = useState<number>(0);
@@ -589,55 +589,40 @@ export const WdAutoFlop: React.FC = () => {
             </div>
           </div>
 
-          {/* Action Buttons: Auto Clear Control, Quick Toggles, Contoh Data & Clear Cache */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Auto Delete / Clear Cache Toggle */}
-            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-all ${
-              autoClearEnabled 
-                ? 'bg-emerald-950/40 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
-                : 'bg-black/60 border-white/10'
-            }`}>
+          {/* Action Buttons: Auto Clear Control, Quick Toggles, Contoh Data & Clear Cache (Compact & Sleek) */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Auto Delete / Auto Clear Control Toggle (Persis Bonus Mahjong) */}
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-[11px] font-mono flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setAutoClearEnabled(!autoClearEnabled)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
                   autoClearEnabled 
-                    ? 'bg-emerald-500 text-black font-extrabold shadow-[0_0_10px_rgba(16,185,129,0.4)] hover:bg-emerald-400' 
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                    ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 shadow-[0_0_10px_rgba(234,179,8,0.2)]' 
+                    : 'text-gray-400 hover:text-gray-300'
                 }`}
-                title={autoClearEnabled 
-                  ? 'Status: SELALU AKTIF (Tersimpan). Klik untuk MEMATIKAN (OFF).' 
-                  : 'Status: NONAKTIF. Klik untuk MENGHIDUPKAN (ON) - akan selalu aktif sampai dimatikan.'}
+                title="Aktifkan/Nonaktifkan Auto Clear 5 Detik Anti-Double"
               >
-                <Timer className={`w-3.5 h-3.5 ${autoClearEnabled ? 'text-black animate-spin' : 'text-gray-500'}`} style={{ animationDuration: '6s' }} />
-                <span>AUTO CLEAR: {autoClearEnabled ? `ON (${autoClearSeconds}S)` : 'OFF'}</span>
+                <Timer className={`w-3 h-3 ${autoClearEnabled ? 'text-yellow-400 animate-spin' : 'text-gray-500'}`} style={{ animationDuration: '6s' }} />
+                <span>AUTO CLEAR: {autoClearEnabled ? `${autoClearSeconds}S` : 'OFF'}</span>
               </button>
 
               {autoClearEnabled && (
-                <div className="flex items-center gap-1 pl-1.5 border-l border-emerald-500/30">
-                  {[3, 5, 10, 30].map((sec) => (
+                <div className="flex items-center gap-1 pl-1 border-l border-white/10">
+                  {[3, 5, 10].map((sec) => (
                     <button
                       key={sec}
                       type="button"
                       onClick={() => setAutoClearSeconds(sec)}
                       className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
                         autoClearSeconds === sec
-                          ? 'bg-emerald-400 text-black font-extrabold shadow-sm'
-                          : 'text-emerald-300/70 hover:text-emerald-200 hover:bg-emerald-500/20'
+                          ? 'bg-yellow-400 text-black font-extrabold'
+                          : 'text-gray-400 hover:text-white hover:bg-white/10'
                       }`}
-                      title={`Pilih jeda waktu auto clear ${sec} detik`}
                     >
                       {sec}s
                     </button>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => setAutoClearEnabled(false)}
-                    className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-rose-300 hover:text-rose-100 hover:bg-rose-500/30 cursor-pointer border border-rose-500/30 transition-all"
-                    title="Klik untuk mematikan Auto Clear (OFF)"
-                  >
-                    OFF
-                  </button>
                 </div>
               )}
             </div>
@@ -646,14 +631,14 @@ export const WdAutoFlop: React.FC = () => {
             <button
               type="button"
               onClick={() => setAutoCopyOnPaste(!autoCopyOnPaste)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-mono font-bold whitespace-nowrap transition-all cursor-pointer ${
                 autoCopyOnPaste 
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]' 
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.2)]' 
                   : 'bg-black/60 border-white/10 text-gray-400 hover:text-gray-300'
               }`}
               title="Salin otomatis ke clipboard seketika saat data ditempel"
             >
-              <Zap className={`w-3.5 h-3.5 ${autoCopyOnPaste ? 'text-amber-400 fill-amber-400' : 'text-gray-500'}`} />
+              <Zap className={`w-3 h-3 ${autoCopyOnPaste ? 'text-amber-400 fill-amber-400' : 'text-gray-500'}`} />
               <span>AUTO SALIN: {autoCopyOnPaste ? 'ON' : 'OFF'}</span>
             </button>
 
@@ -661,10 +646,10 @@ export const WdAutoFlop: React.FC = () => {
             <button
               type="button"
               onClick={() => setTimeDisplayFormat(timeDisplayFormat === 'standard' ? 'compact' : 'standard')}
-              className="px-2.5 py-1.5 rounded-xl bg-black/60 border border-white/10 text-gray-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-gray-300 hover:text-white text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer"
               title="Format Jam: HH:mm:ss (2 Digit) atau H:mm:ss (Ringkas)"
             >
-              <Clock className="w-3.5 h-3.5 text-yellow-400" />
+              <Clock className="w-3 h-3 text-yellow-400" />
               <span>{timeDisplayFormat === 'standard' ? 'HH:mm:ss' : 'H:mm:ss'}</span>
             </button>
 
@@ -672,24 +657,25 @@ export const WdAutoFlop: React.FC = () => {
             <button
               type="button"
               onClick={() => setSortByTime(!sortByTime)}
-              className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded-lg border text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer ${
                 sortByTime 
                   ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' 
                   : 'bg-black/60 text-gray-400 border-white/10'
               }`}
               title="Urutkan baris: Urut Waktu Jam (ASC) atau Sesuai Urutan Asli Input"
             >
-              <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" />
+              <ArrowUpDown className="w-3 h-3 text-cyan-400" />
               <span>{sortByTime ? 'JAM (ASC)' : 'ASLI'}</span>
             </button>
 
             {/* Contoh Data Dropdown */}
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setShowExampleMenu(!showExampleMenu)}
-                className="px-3 py-2 rounded-xl bg-[#1C1C1C] hover:bg-[#282828] text-emerald-400 hover:text-emerald-300 border border-emerald-500/40 text-xs font-bold font-mono flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-[#1C1C1C] hover:bg-[#282828] text-emerald-400 hover:text-emerald-300 border border-emerald-500/40 text-[11px] font-bold font-mono whitespace-nowrap flex items-center gap-1 shadow-sm transition-all cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <Sparkles className="w-3 h-3 text-emerald-400" />
                 <span>CONTOH</span>
               </button>
 
@@ -732,11 +718,12 @@ export const WdAutoFlop: React.FC = () => {
 
             {/* Clear Cache / Reset Button */}
             <button
+              type="button"
               onClick={handleReset}
-              className="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 hover:text-rose-300 border border-rose-500/30 text-xs font-bold font-mono flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 hover:text-rose-300 border border-rose-500/30 text-[11px] font-bold font-mono whitespace-nowrap flex items-center gap-1 shadow-sm transition-all cursor-pointer"
               title="Bersihkan Data & Cache Seketika"
             >
-              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <Trash2 className="w-3 h-3 text-rose-400" />
               <span>CLEAR CACHE</span>
             </button>
           </div>
@@ -757,7 +744,7 @@ export const WdAutoFlop: React.FC = () => {
             <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1 rounded-xl bg-black/80 border border-yellow-400/50 backdrop-blur-md shadow-lg pointer-events-none animate-in fade-in">
               <span className="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
               <span className="text-[11px] font-mono font-bold text-yellow-300">
-                Auto Hapus Input: {countdown}s
+                Auto Hapus: {countdown}s
               </span>
             </div>
           )}

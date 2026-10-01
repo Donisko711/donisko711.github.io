@@ -54,6 +54,7 @@ const InfoDataPL = safeLazy(() => import('./components/tools/InfoDataPL').then(m
 const ModulBelajar = safeLazy(() => import('./components/tools/ModulBelajar').then(m => ({ default: m.ModulBelajar })));
 const HadiahTogelOnline = safeLazy(() => import('./components/tools/HadiahTogelOnline').then(m => ({ default: m.HadiahTogelOnline })));
 const JadwalPasaranTogel = safeLazy(() => import('./components/tools/JadwalPasaranTogel').then(m => ({ default: m.JadwalPasaranTogel })));
+const ValidatorRekening = safeLazy(() => import('./components/tools/ValidatorRekening').then(m => ({ default: m.ValidatorRekening })));
 
 function ToolLoadingFallback() {
   return (
@@ -395,6 +396,7 @@ export default function App() {
       case 'modul-togel-hadiah': return { category: 'INFO PRODUK & GAMES', title: 'HADIAH TOGEL ONLINE' };
       case 'modul-togel-jadwal': return { category: 'INFO PRODUK & GAMES', title: 'JADWAL PASARAN TOGEL' };
       case 'modul-slot': return { category: 'INFO PRODUK & GAMES', title: 'PANDUAN GAME SLOT' };
+      case 'validator-rekening': return { category: 'TOOLS KERJA CS & KASIR', title: 'Validator Rekening & E-Wallet' };
       default: return { category: 'TOOLS', title: 'Menu Utama' };
     }
   };
@@ -620,6 +622,10 @@ export default function App() {
 
               {activeView === 'modul-slot' && (
                 <ModulBelajar initialCategory="Slot" />
+              )}
+
+              {activeView === 'validator-rekening' && (
+                <ValidatorRekening />
               )}
             </Suspense>
           </ErrorBoundary>
