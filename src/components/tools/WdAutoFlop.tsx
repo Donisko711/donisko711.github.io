@@ -589,51 +589,112 @@ export const WdAutoFlop: React.FC = () => {
             </div>
           </div>
 
-          {/* Action Buttons: Auto Clear Control, Quick Toggles, Contoh Data & Clear Cache (Compact & Sleek) */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Auto Delete / Auto Clear Control Toggle (Persis Bonus Mahjong) */}
-            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-[11px] font-mono flex-shrink-0">
+          {/* Simple Auto Clear Toggle (Persis seperti di Bonus Mahjong) */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/60 border border-white/10 text-xs font-mono self-start sm:self-auto flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setAutoClearEnabled(!autoClearEnabled)}
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                autoClearEnabled 
+                  ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 shadow-[0_0_10px_rgba(234,179,8,0.2)]' 
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+              title="Aktifkan/Nonaktifkan Auto Clear Otomatis Anti-Double"
+            >
+              <Timer className={`w-3.5 h-3.5 ${autoClearEnabled ? 'text-yellow-400 animate-spin' : 'text-gray-500'}`} style={{ animationDuration: '6s' }} />
+              <span>AUTO CLEAR: {autoClearEnabled ? `${autoClearSeconds}S` : 'OFF'}</span>
+            </button>
+
+            {autoClearEnabled && (
+              <div className="flex items-center gap-1 pl-1 border-l border-white/10">
+                {[3, 5, 10].map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => setAutoClearSeconds(sec)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
+                      autoClearSeconds === sec
+                        ? 'bg-yellow-400 text-black font-extrabold'
+                        : 'text-gray-400 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {sec}s
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Textarea Input Data Mentah + Auto Clear Progress Bar Indicator */}
+        <div className="relative">
+          <textarea
+            rows={5}
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+            placeholder="Tempel / Paste data mentah withdraw di sini... (Data otomatis diparsing ke 4 kolom: Waktu, User ID, Bank Asal, Amount)"
+            className="w-full p-3.5 rounded-2xl bg-[#0D0D0D]/90 border border-white/15 focus:border-[#00F3FF] focus:shadow-[0_0_20px_rgba(0,243,255,0.25)] font-mono text-xs text-gray-100 placeholder-gray-600 outline-none leading-relaxed resize-y min-h-[120px] selection:bg-[#00F3FF] selection:text-black transition-all"
+          />
+
+          {/* Floating Countdown Bar if text is present */}
+          {rawText.trim() && autoClearEnabled && countdown > 0 && (
+            <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1 rounded-xl bg-black/80 border border-yellow-400/50 backdrop-blur-md shadow-lg pointer-events-none animate-in fade-in">
+              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
+              <span className="text-[11px] font-mono font-bold text-yellow-300">
+                Auto Hapus: {countdown}s
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Format Salin Toolbar & Action Buttons (Compact, Sleek, Not Bulky) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+          {/* Format Radio Pills & Quick Helpers */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 bg-black/60 p-1 rounded-xl border border-white/10 text-xs font-mono">
+              <span className="text-[10px] text-gray-400 px-1 font-bold">Format:</span>
               <button
                 type="button"
-                onClick={() => setAutoClearEnabled(!autoClearEnabled)}
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  autoClearEnabled 
-                    ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 shadow-[0_0_10px_rgba(234,179,8,0.2)]' 
-                    : 'text-gray-400 hover:text-gray-300'
+                onClick={() => setCopyFormat('tab')}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold font-mono transition-all cursor-pointer ${
+                  copyFormat === 'tab'
+                    ? 'bg-yellow-400 text-black shadow-sm font-black'
+                    : 'text-gray-400 hover:text-white'
                 }`}
-                title="Aktifkan/Nonaktifkan Auto Clear 5 Detik Anti-Double"
               >
-                <Timer className={`w-3 h-3 ${autoClearEnabled ? 'text-yellow-400 animate-spin' : 'text-gray-500'}`} style={{ animationDuration: '6s' }} />
-                <span>AUTO CLEAR: {autoClearEnabled ? `${autoClearSeconds}S` : 'OFF'}</span>
+                TAB (EXCEL)
               </button>
-
-              {autoClearEnabled && (
-                <div className="flex items-center gap-1 pl-1 border-l border-white/10">
-                  {[3, 5, 10].map((sec) => (
-                    <button
-                      key={sec}
-                      type="button"
-                      onClick={() => setAutoClearSeconds(sec)}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
-                        autoClearSeconds === sec
-                          ? 'bg-yellow-400 text-black font-extrabold'
-                          : 'text-gray-400 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      {sec}s
-                    </button>
-                  ))}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => setCopyFormat('pipe')}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold font-mono transition-all cursor-pointer ${
+                  copyFormat === 'pipe'
+                    ? 'bg-yellow-400 text-black shadow-sm font-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                PIPE (|)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopyFormat('comma')}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold font-mono transition-all cursor-pointer ${
+                  copyFormat === 'comma'
+                    ? 'bg-yellow-400 text-black shadow-sm font-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                KOMA (,)
+              </button>
             </div>
 
-            {/* Auto Copy on Paste Toggle */}
+            {/* Auto Copy on Paste */}
             <button
               type="button"
               onClick={() => setAutoCopyOnPaste(!autoCopyOnPaste)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-mono font-bold whitespace-nowrap transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-mono font-bold whitespace-nowrap transition-all cursor-pointer ${
                 autoCopyOnPaste 
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.2)]' 
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm' 
                   : 'bg-black/60 border-white/10 text-gray-400 hover:text-gray-300'
               }`}
               title="Salin otomatis ke clipboard seketika saat data ditempel"
@@ -642,22 +703,22 @@ export const WdAutoFlop: React.FC = () => {
               <span>AUTO SALIN: {autoCopyOnPaste ? 'ON' : 'OFF'}</span>
             </button>
 
-            {/* Jam Display Format Toggle */}
+            {/* Jam Display Format */}
             <button
               type="button"
               onClick={() => setTimeDisplayFormat(timeDisplayFormat === 'standard' ? 'compact' : 'standard')}
-              className="px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-gray-300 hover:text-white text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer"
-              title="Format Jam: HH:mm:ss (2 Digit) atau H:mm:ss (Ringkas)"
+              className="px-2.5 py-1 rounded-xl bg-black/60 border border-white/10 text-gray-300 hover:text-white text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer"
+              title="Format Jam: HH:mm:ss atau H:mm:ss"
             >
               <Clock className="w-3 h-3 text-yellow-400" />
               <span>{timeDisplayFormat === 'standard' ? 'HH:mm:ss' : 'H:mm:ss'}</span>
             </button>
 
-            {/* Urut Waktu Toggle */}
+            {/* Urut Waktu */}
             <button
               type="button"
               onClick={() => setSortByTime(!sortByTime)}
-              className={`px-2 py-1 rounded-lg border text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-xl border text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer ${
                 sortByTime 
                   ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' 
                   : 'bg-black/60 text-gray-400 border-white/10'
@@ -673,145 +734,80 @@ export const WdAutoFlop: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowExampleMenu(!showExampleMenu)}
-                className="px-2.5 py-1 rounded-lg bg-[#1C1C1C] hover:bg-[#282828] text-emerald-400 hover:text-emerald-300 border border-emerald-500/40 text-[11px] font-bold font-mono whitespace-nowrap flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-xl bg-[#1C1C1C] hover:bg-[#282828] text-emerald-400 hover:text-emerald-300 border border-emerald-500/40 text-[11px] font-bold font-mono whitespace-nowrap flex items-center gap-1 shadow-sm transition-all cursor-pointer"
               >
                 <Sparkles className="w-3 h-3 text-emerald-400" />
                 <span>CONTOH</span>
               </button>
 
               {showExampleMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-[#181818] border border-white/15 shadow-2xl p-1.5 z-30 space-y-1 animate-in fade-in slide-in-from-top-2">
-                  <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono border-b border-white/10">
+                <div className="absolute right-0 top-full mt-1.5 w-60 rounded-xl bg-[#181818] border border-white/15 shadow-2xl p-1.5 z-30 space-y-1 animate-in fade-in slide-in-from-top-2">
+                  <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono border-b border-white/10">
                     PILIH FORMAT CONTOH:
                   </div>
                   <button
                     onClick={() => loadExample(4)}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-yellow-500/20 text-xs text-yellow-300 hover:text-yellow-200 transition-colors cursor-pointer flex items-center justify-between bg-yellow-500/10 border border-yellow-500/20"
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-yellow-500/20 text-xs text-yellow-300 hover:text-yellow-200 transition-colors cursor-pointer flex items-center justify-between bg-yellow-500/10 border border-yellow-500/20"
                   >
                     <span className="font-semibold">Format 4 (herman1 / ubay123)</span>
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-yellow-400 text-black font-extrabold">Standar FLOP</span>
                   </button>
                   <button
                     onClick={() => loadExample(1)}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
                   >
                     <span className="font-semibold">Format 1 (1 188888)</span>
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-yellow-400">Multi-Baris</span>
                   </button>
                   <button
                     onClick={() => loadExample(2)}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
                   >
                     <span className="font-semibold">Format 2 (Single-Line 188888)</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-emerald-400">Tab / Baris</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-emerald-400">Tab</span>
                   </button>
                   <button
                     onClick={() => loadExample(3)}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-xs text-gray-200 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
                   >
                     <span className="font-semibold">Format 3 (zenroel / BCA)</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-cyan-400">G5 Prioritas</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-cyan-400">G5</span>
                   </button>
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Clear Cache / Reset Button */}
+          {/* Action Buttons: Salin Semua & Bersihkan (Persis Bonus Mahjong) */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyAll}
+              disabled={displayRows.length === 0}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-extrabold text-xs font-mono flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(234,179,8,0.3)] transition-all cursor-pointer active:scale-[0.98]"
+            >
+              {copiedAll ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-black stroke-[3]" />
+                  <span>SEMUA TERSALIN!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-black stroke-[2.5]" />
+                  <span>SALIN SEMUA</span>
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={handleReset}
-              className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 hover:text-rose-300 border border-rose-500/30 text-[11px] font-bold font-mono whitespace-nowrap flex items-center gap-1 shadow-sm transition-all cursor-pointer"
-              title="Bersihkan Data & Cache Seketika"
+              className="px-3 py-1.5 rounded-xl bg-[#1A1A1A] hover:bg-rose-950/60 text-gray-300 hover:text-rose-300 border border-white/10 hover:border-rose-500/40 font-extrabold text-xs font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              title="Bersihkan Data & Reset Tabel"
             >
-              <Trash2 className="w-3 h-3 text-rose-400" />
-              <span>CLEAR CACHE</span>
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span>BERSIHKAN</span>
             </button>
           </div>
-        </div>
-
-        {/* Textarea Input Data Mentah + Auto Clear Progress Bar Indicator */}
-        <div className="relative">
-          <textarea
-            rows={6}
-            value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
-            placeholder="Tempel / Paste data mentah withdraw di sini... (Data otomatis diparsing ke 4 kolom: Waktu, User ID, Bank Asal, Amount)"
-            className="w-full p-4 rounded-2xl bg-[#0D0D0D]/90 border border-white/15 focus:border-[#00F3FF] focus:shadow-[0_0_20px_rgba(0,243,255,0.25)] font-mono text-xs text-gray-100 placeholder-gray-600 outline-none leading-relaxed resize-y min-h-[130px] selection:bg-[#00F3FF] selection:text-black transition-all"
-          />
-
-          {/* Floating Countdown Bar if text is present */}
-          {rawText.trim() && autoClearEnabled && countdown > 0 && (
-            <div className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1 rounded-xl bg-black/80 border border-yellow-400/50 backdrop-blur-md shadow-lg pointer-events-none animate-in fade-in">
-              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
-              <span className="text-[11px] font-mono font-bold text-yellow-300">
-                Auto Hapus: {countdown}s
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Format Salin Toolbar & Action Buttons */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-          {/* Format Radio Pills */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-gray-300 font-mono flex items-center gap-1">
-              Format Salin:
-            </span>
-            <div className="flex items-center gap-1.5 bg-black/50 p-1 rounded-2xl border border-white/10">
-              <button
-                type="button"
-                onClick={() => setCopyFormat('tab')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold font-mono transition-all cursor-pointer ${
-                  copyFormat === 'tab'
-                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black shadow-[0_0_12px_rgba(234,179,8,0.4)]'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                TAB (EXCEL)
-              </button>
-              <button
-                type="button"
-                onClick={() => setCopyFormat('pipe')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold font-mono transition-all cursor-pointer ${
-                  copyFormat === 'pipe'
-                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black shadow-[0_0_12px_rgba(234,179,8,0.4)]'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                PIPE (|)
-              </button>
-              <button
-                type="button"
-                onClick={() => setCopyFormat('comma')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold font-mono transition-all cursor-pointer ${
-                  copyFormat === 'comma'
-                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black shadow-[0_0_12px_rgba(234,179,8,0.4)]'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                KOMA (,)
-              </button>
-            </div>
-          </div>
-
-          {/* Salin Semua Data Button */}
-          <button
-            onClick={handleCopyAll}
-            disabled={displayRows.length === 0}
-            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-extrabold text-xs font-mono flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,179,8,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-          >
-            {copiedAll ? (
-              <>
-                <Check className="w-4 h-4 text-black stroke-[3]" />
-                <span>SEMUA DATA TERSALIN!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4 text-black stroke-[2.5]" />
-                <span>SALIN SEMUA DATA</span>
-              </>
-            )}
-          </button>
         </div>
 
         {/* Live Clipboard Preview Box */}

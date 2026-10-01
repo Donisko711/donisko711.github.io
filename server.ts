@@ -15,7 +15,7 @@ dotenv.config();
 // Bypass SSL certificate verification for domain security inspection (allows scanning domains with expired or self-signed certs)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Lazy initialization for Google GenAI client
 let genAIClient: GoogleGenAI | null = null;
@@ -434,7 +434,7 @@ async function startServer() {
           "Accept": "application/json",
           "User-Agent": "Mozilla/5.0 (AI Studio Core Banking Validator)"
         },
-        timeout: 6000
+        timeout: 10000
       }, (res) => {
         let data = "";
         res.on("data", chunk => data += chunk);
@@ -531,7 +531,7 @@ async function startServer() {
           },
           billing: apiRes.data.billing
         };
-      } else if (apiRes && apiRes.data && (apiRes.data.error_code === "not_found" || apiRes.status === 422)) {
+      } else if (apiRes && (apiRes.data?.success === false || apiRes.data?.error_code === "not_found" || apiRes.status >= 400)) {
         return {
           isValid: false,
           status: "NOT_FOUND" as const,

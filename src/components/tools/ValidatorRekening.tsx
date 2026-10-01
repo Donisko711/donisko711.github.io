@@ -43,7 +43,8 @@ import {
   ValidationResult,
   unmaskIndonesianName,
   registerCustomAccount,
-  CUSTOM_ACCOUNTS_REGISTRY
+  CUSTOM_ACCOUNTS_REGISTRY,
+  queryLiveAccountAPI
 } from '../../utils/accountValidationRules';
 import { playSuccessChime, playWarningChime } from '../../utils/audioAlert';
 
@@ -487,28 +488,9 @@ export const ValidatorRekening: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const resp = await fetch('/api/validate-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: provToUse,
-          bankId: providerObj.id,
-          accountNumber: numToUse,
-          hintName: hintToUse || undefined,
-          forcedNonPremium: Boolean(forcedNonPrem)
-        })
-      });
+      const res = await queryLiveAccountAPI(provToUse, numToUse, hintToUse || undefined, forcedNonPrem);
 
-      let res: ValidationResult;
-      if (resp.ok) {
-        const data = await resp.json();
-        res = data.result || validateAccountDetails(provToUse, numToUse, hintToUse || undefined, forcedNonPrem);
-      } else {
-        res = validateAccountDetails(provToUse, numToUse, hintToUse || undefined, forcedNonPrem);
-      }
-
-      if (res && res.accountName) {
-        res.accountName = unmaskIndonesianName(res.accountName, res.accountNumber, res.bankId);
+      if (res && res.accountName && res.accountName !== '-') {
         if (hintToUse && res.isValid) {
           handleSaveCustomName(res.cleanAccountNumber || res.accountNumber, res.bankId, hintToUse);
         }
@@ -543,12 +525,15 @@ export const ValidatorRekening: React.FC = () => {
         return updated;
       });
 
-    } catch {
-      // Local fallback
+    } catch (err: any) {
+      // Local fallback if network completely fails
       const res = validateAccountDetails(provToUse, numToUse, hintToUse || undefined, forcedNonPrem);
       setSingleResult(res);
       if (res.status === 'NON_PREMIUM') {
         setErrorMessage(`⚠️ Akun ${res.bankName} ${res.accountNumber} atas nama "${res.accountName}" BELUM PREMIUM / BASIC.`);
+        playWarningChime();
+      } else if (!res.isValid) {
+        setErrorMessage(res.alertMessage || 'Nomor rekening tidak ditemukan di sistem bank.');
         playWarningChime();
       } else {
         playSuccessChime();
