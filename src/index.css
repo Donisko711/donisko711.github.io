@@ -126,18 +126,16 @@
 }
 
 /* ======================================================== */
-/* EFEK KELAP-KELIP (FLASHING GLOW) MENU LIVESCORE & VALIDATOR */
+/* EFEK KELAP-KELIP (FLASHING GLOW) GPU-ACCELERATED         */
 /* ======================================================== */
 @keyframes kelap-kelip-livescore {
   0%, 100% {
     border-color: rgba(244, 63, 94, 0.45);
-    box-shadow: 0 0 8px rgba(244, 63, 94, 0.35), inset 0 0 6px rgba(244, 63, 94, 0.2);
-    filter: drop-shadow(0 0 2px rgba(244, 63, 94, 0.3));
+    box-shadow: 0 0 8px rgba(244, 63, 94, 0.35);
   }
   50% {
     border-color: rgba(244, 63, 94, 1);
-    box-shadow: 0 0 22px rgba(244, 63, 94, 0.9), 0 0 35px rgba(244, 63, 94, 0.55), inset 0 0 12px rgba(244, 63, 94, 0.4);
-    filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.8));
+    box-shadow: 0 0 18px rgba(244, 63, 94, 0.85), inset 0 0 8px rgba(244, 63, 94, 0.35);
     transform: translateY(-1px);
   }
 }
@@ -145,13 +143,11 @@
 @keyframes kelap-kelip-validator {
   0%, 100% {
     border-color: rgba(0, 243, 255, 0.45);
-    box-shadow: 0 0 8px rgba(0, 243, 255, 0.35), inset 0 0 6px rgba(0, 243, 255, 0.2);
-    filter: drop-shadow(0 0 2px rgba(0, 243, 255, 0.3));
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.35);
   }
   50% {
     border-color: rgba(250, 204, 21, 1);
-    box-shadow: 0 0 22px rgba(250, 204, 21, 0.95), 0 0 38px rgba(0, 243, 255, 0.6), inset 0 0 12px rgba(250, 204, 21, 0.4);
-    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.85));
+    box-shadow: 0 0 18px rgba(250, 204, 21, 0.9), 0 0 25px rgba(0, 243, 255, 0.35), inset 0 0 8px rgba(250, 204, 21, 0.35);
     transform: translateY(-1px);
   }
 }
@@ -160,23 +156,24 @@
   0%, 100% {
     opacity: 1;
     transform: scale(1);
-    filter: brightness(1);
   }
   50% {
     opacity: 0.35;
-    transform: scale(1.12);
-    filter: brightness(1.4);
+    transform: scale(1.1);
   }
 }
 
 .animate-kelap-kelip-livescore {
   animation: kelap-kelip-livescore 1.5s ease-in-out infinite;
+  will-change: box-shadow, border-color, transform;
 }
 
 .animate-kelap-kelip-validator {
   animation: kelap-kelip-validator 1.5s ease-in-out infinite;
+  will-change: box-shadow, border-color, transform;
 }
 
 .animate-kelap-kelip-badge {
   animation: kelap-kelip-badge 0.9s ease-in-out infinite;
+  will-change: opacity, transform;
 }

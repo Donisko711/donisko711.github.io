@@ -44,6 +44,87 @@ import { SBOBET_SPORTS_LIST } from '../../data/sbobetSports';
 
 const INITIAL_ALERTS: LiveScoreAlertItem[] = [];
 
+// Lightweight memoized clock widget (only re-renders itself every second, not the entire 2000-line match list)
+// Lightweight memoized clock widget (only re-renders itself every second, not the entire 2000-line match list)
+const WibClockWidget: React.FC = React.memo(function WibClockWidget() {
+  const [timeStr, setTimeStr] = useState<string>(() => {
+    const now = new Date();
+    const wib = new Date(now.getTime() + (7 * 3600 * 1000));
+    return `${String(wib.getUTCHours()).padStart(2, '0')}:${String(wib.getUTCMinutes()).padStart(2, '0')}:${String(wib.getUTCSeconds()).padStart(2, '0')} WIB`;
+  });
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const wib = new Date(now.getTime() + (7 * 3600 * 1000));
+      setTimeStr(`${String(wib.getUTCHours()).padStart(2, '0')}:${String(wib.getUTCMinutes()).padStart(2, '0')}:${String(wib.getUTCSeconds()).padStart(2, '0')} WIB`);
+    };
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="p-3.5 rounded-2xl bg-black border-2 border-[#00F3FF] shadow-[0_0_15px_rgba(0,243,255,0.35)] text-right w-full sm:w-auto">
+      <div className="text-[10px] uppercase font-mono text-yellow-400 tracking-wider flex items-center justify-end gap-1.5 font-bold">
+        <span className="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
+        Waktu Realtime WIB
+      </div>
+      <div className="text-xl sm:text-2xl font-black font-mono tracking-wider text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+        {timeStr}
+      </div>
+    </div>
+  );
+});
+WibClockWidget.displayName = 'WibClockWidget';
+
+// Lightweight memoized countdown button (only re-renders itself, not the match list)
+const AutoRefreshCountdownButton: React.FC<{
+  autoRefresh: boolean;
+  onToggle: () => void;
+  onTriggerRefresh: () => void;
+}> = React.memo(function AutoRefreshCountdownButton({ autoRefresh, onToggle, onTriggerRefresh }) {
+  const [countdown, setCountdown] = useState<number>(30);
+  const onTriggerRef = React.useRef(onTriggerRefresh);
+  onTriggerRef.current = onTriggerRefresh;
+
+  useEffect(() => {
+    if (!autoRefresh) {
+      setCountdown(30);
+      return;
+    }
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          // Defer the refresh trigger outside of the React state updater to avoid setState-in-render warning
+          setTimeout(() => {
+            onTriggerRef.current?.();
+          }, 0);
+          return 30;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [autoRefresh]);
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-black border-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+        autoRefresh 
+          ? 'bg-black text-emerald-300 border-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.35)] hover:bg-emerald-500/20' 
+          : 'bg-black text-gray-400 border-white/20 hover:border-white/40'
+      }`}
+      title="Toggle Auto Refresh Skor"
+    >
+      <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+      {autoRefresh ? `Auto: ON (${countdown}s)` : 'Auto: OFF'}
+    </button>
+  );
+});
+AutoRefreshCountdownButton.displayName = 'AutoRefreshCountdownButton';
+
 export const LiveScore: React.FC = () => {
   // State
   const [matches, setMatches] = useState<LiveMatch[]>([]);
@@ -60,8 +141,6 @@ export const LiveScore: React.FC = () => {
   const [expandedLeague, setExpandedLeague] = useState<string | null>(null);
   const [copiedMatchId, setCopiedMatchId] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
-  const [countdown, setCountdown] = useState<number>(30);
-  const [currentWibTime, setCurrentWibTime] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // View Navigation Mode (Hari Ini Live, Arsip Hasil Sejak Awal Musim, Klasemen Liga Per Musim)
@@ -104,7 +183,15 @@ export const LiveScore: React.FC = () => {
     });
   }, []);
 
-  // Trigger alert helper
+  const soundEnabledRef = React.useRef(soundEnabled);
+  soundEnabledRef.current = soundEnabled;
+
+  // Stable close popup callback
+  const handleClosePopup = useCallback(() => {
+    setActivePopupAlert(null);
+  }, []);
+
+  // Trigger alert helper (stable callback)
   const triggerAlert = useCallback((newAlert: LiveScoreAlertItem, playSound = true) => {
     setActivePopupAlert(newAlert);
     setAlerts((prev) => {
@@ -116,7 +203,7 @@ export const LiveScore: React.FC = () => {
     });
     setUnreadCount((prev) => prev + 1);
 
-    if (soundEnabled && playSound) {
+    if (soundEnabledRef.current && playSound) {
       if (newAlert.type === 'GOAL') {
         playGoalCelebration();
       } else if (newAlert.type === 'KICKOFF') {
@@ -125,24 +212,9 @@ export const LiveScore: React.FC = () => {
         playRefereeWhistle('fulltime');
       }
     }
-  }, [soundEnabled]);
-
-  // Live WIB Clock ticker
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      // Adjust to UTC+7 for WIB
-      const wibDate = new Date(now.getTime() + (7 * 3600 * 1000));
-      const hours = String(wibDate.getUTCHours()).padStart(2, '0');
-      const minutes = String(wibDate.getUTCMinutes()).padStart(2, '0');
-      const seconds = String(wibDate.getUTCSeconds()).padStart(2, '0');
-      setCurrentWibTime(`${hours}:${minutes}:${seconds} WIB`);
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
   }, []);
+
+
 
   // Fetch match data
   const loadMatches = useCallback(async (showLoader = false, forceFresh = false) => {
@@ -266,13 +338,13 @@ export const LiveScore: React.FC = () => {
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
-      setCountdown(30);
     }
   }, [selectedSport, selectedDateOffset, customDate, triggerAlert]);
 
   // Handler for audio check and notification test without altering real matches
   const handleTriggerSimulation = (type: 'whistle' | 'cheer' | 'kickoff_demo' | 'goal_demo') => {
-    const nowTime = currentWibTime || '21:15 WIB';
+    const nowWib = new Date(Date.now() + 7 * 3600 * 1000);
+    const nowTime = `${String(nowWib.getUTCHours()).padStart(2, '0')}:${String(nowWib.getUTCMinutes()).padStart(2, '0')} WIB`;
 
     if (type === 'whistle') {
       playRefereeWhistle();
@@ -323,23 +395,6 @@ export const LiveScore: React.FC = () => {
   useEffect(() => {
     loadMatches(true);
   }, [loadMatches]);
-
-  // Auto-refresh countdown (every 30 seconds)
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          loadMatches(false);
-          return 30;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [autoRefresh, loadMatches]);
 
   // Helper to reliably check if a match has finished playing
   const isFinishedMatch = (m: LiveMatch): boolean => {
@@ -566,7 +621,7 @@ export const LiveScore: React.FC = () => {
       {/* Big Match Alert Pop-Up Notification Modal */}
       <BigMatchAlertPopup
         alert={activePopupAlert}
-        onClose={() => setActivePopupAlert(null)}
+        onClose={handleClosePopup}
         soundEnabled={soundEnabled}
         onToggleSound={toggleSound}
       />
@@ -645,15 +700,7 @@ export const LiveScore: React.FC = () => {
 
           {/* Clock & Realtime Refresh Widget */}
           <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 flex-shrink-0">
-            <div className="p-3.5 rounded-2xl bg-black border-2 border-[#00F3FF] shadow-[0_0_15px_rgba(0,243,255,0.35)] text-right w-full sm:w-auto">
-              <div className="text-[10px] uppercase font-mono text-yellow-400 tracking-wider flex items-center justify-end gap-1.5 font-bold">
-                <span className="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
-                Waktu Realtime WIB
-              </div>
-              <div className="text-xl sm:text-2xl font-black font-mono tracking-wider text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
-                {currentWibTime || 'Memuat WIB...'}
-              </div>
-            </div>
+            <WibClockWidget />
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
               <button
@@ -666,19 +713,11 @@ export const LiveScore: React.FC = () => {
                 <span>Audio &amp; Notif</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-black border-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-                  autoRefresh 
-                    ? 'bg-black text-emerald-300 border-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.35)] hover:bg-emerald-500/20' 
-                    : 'bg-black text-gray-400 border-white/20 hover:border-white/40'
-                }`}
-                title="Toggle Auto Refresh Skor"
-              >
-                <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
-                {autoRefresh ? `Auto: ON (${countdown}s)` : 'Auto: OFF'}
-              </button>
+              <AutoRefreshCountdownButton
+                autoRefresh={autoRefresh}
+                onToggle={() => setAutoRefresh(prev => !prev)}
+                onTriggerRefresh={() => loadMatches(false)}
+              />
 
               <button
                 type="button"

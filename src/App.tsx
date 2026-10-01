@@ -149,12 +149,19 @@ export default function App() {
     return null;
   });
 
+  const lastSyncedRef = React.useRef<string | null>(lastSyncedAt);
+
   // Centralized sync function that pulls canonical tasks from server API
   const syncJobdesk = useCallback(async (silent = false) => {
     if (!silent) setIsSyncing(true);
     try {
       const data = await fetchJobdeskFromServer();
       if (data && Array.isArray(data.tasks)) {
+        if (data.updatedAt && data.updatedAt === lastSyncedRef.current) {
+          // No changes from server, skip re-rendering the entire App tree!
+          return;
+        }
+        lastSyncedRef.current = data.updatedAt || null;
         setTasks(data.tasks);
         setLastSyncedAt(data.updatedAt);
       }
@@ -170,11 +177,12 @@ export default function App() {
     syncJobdesk(false);
   }, [syncJobdesk]);
 
-  // 2. Real-time background auto-polling every 4 seconds across all staff PCs & IPs
+  // 2. Real-time background auto-polling (smart: pauses when tab is hidden, uses 12s interval for smooth performance)
   useEffect(() => {
     const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       syncJobdesk(true);
-    }, 4000);
+    }, 12000);
     return () => clearInterval(timer);
   }, [syncJobdesk]);
 
@@ -413,8 +421,8 @@ export default function App() {
         backgroundAttachment: 'fixed'
       }}
     >
-      {/* Dark & Glass Overlay if Background Applied */}
-      <div className={`min-h-screen ${bgImage ? 'bg-black/25 backdrop-blur-[0.5px]' : 'bg-[#0A0A0A]'}`}>
+      {/* Dark & Clean Overlay if Background Applied */}
+      <div className={`min-h-screen ${bgImage ? 'bg-black/40' : 'bg-[#0A0A0A]'}`}>
         {/* Top Header */}
         <Header
           sidebarOpen={isSidebarOpen}
@@ -494,7 +502,7 @@ export default function App() {
           </div>
 
           {/* Right Main Content Area - Otomatis Menyesuaikan Ukuran & Bergeser */}
-          <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-black/15 backdrop-blur-[0.5px] transition-all duration-300">
+          <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-black/20 transition-all duration-300">
             {/* Breadcrumb Navigation Bar */}
             <div className="flex items-center justify-between gap-2 mb-6 p-3.5 rounded-2xl bg-[#121216]/70 backdrop-blur-md border border-white/10 text-xs shadow-lg">
               <div className="flex items-center gap-2 text-gray-300 flex-wrap">

@@ -9,8 +9,9 @@ import {
 } from 'lucide-react';
 import { DASHBOARD_MODULE_CARDS } from '../data/initialData';
 import { ActiveView } from './Sidebar';
-import { LiveScore } from './tools/LiveScore';
 import { UserProfile } from '../types';
+
+const LiveScore = React.lazy(() => import('./tools/LiveScore').then(m => ({ default: m.LiveScore })));
 
 interface HomeDashboardProps {
   onNavigate: (view: ActiveView) => void;
@@ -205,7 +206,14 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
 
       {/* Tampilan LiveScore Utama di Bagian Depan (Dibawah Kolom Workstation CS & Kasir Terpadu) */}
       <div className="w-full">
-        <LiveScore />
+        <React.Suspense fallback={
+          <div className="w-full min-h-[260px] flex flex-col items-center justify-center p-8 rounded-3xl bg-[#121212]/80 border border-white/10 space-y-3">
+            <div className="w-8 h-8 border-2 border-[#00F3FF]/20 border-t-[#00F3FF] rounded-full animate-spin shadow-[0_0_15px_rgba(0,243,255,0.3)]"></div>
+            <div className="text-xs text-gray-400 font-mono tracking-wider">Memuat LiveScore Realtime (WIB)...</div>
+          </div>
+        }>
+          <LiveScore />
+        </React.Suspense>
       </div>
     </div>
   );

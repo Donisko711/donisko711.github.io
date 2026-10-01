@@ -35,6 +35,41 @@ interface HeaderProps {
   customLogoImg?: string;
 }
 
+const HeaderClock: React.FC = React.memo(function HeaderClock() {
+  const [timeStr, setTimeStr] = useState<string>(() => {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  });
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const day = pad(now.getDate());
+      const month = pad(now.getMonth() + 1);
+      const year = now.getFullYear();
+      const hours = pad(now.getHours());
+      const minutes = pad(now.getMinutes());
+      const seconds = pad(now.getSeconds());
+      setTimeStr(`${day}-${month}-${year} ${hours}:${minutes}:${seconds}`);
+    };
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="hidden md:flex flex-col border-l border-white/10 pl-3.5">
+      <span className="text-[9px] text-gray-400 uppercase tracking-wider font-mono">WAKTU SISTEM</span>
+      <p className="text-xs font-mono text-white flex items-center gap-1.5">
+        <Clock className="w-3 h-3 text-[#00F3FF]" />
+        <span>{timeStr}</span>
+      </p>
+    </div>
+  );
+});
+HeaderClock.displayName = 'HeaderClock';
+
 export const Header: React.FC<HeaderProps> = ({
   sidebarOpen,
   setSidebarOpen,
@@ -52,7 +87,6 @@ export const Header: React.FC<HeaderProps> = ({
   activeMenuTitle,
   customLogoImg
 }) => {
-  const [timeStr, setTimeStr] = useState<string>('');
   const [shiftDropdownOpen, setShiftDropdownOpen] = useState(false);
 
   const effectiveUser = user ?? currentUser ?? null;
@@ -79,23 +113,6 @@ export const Header: React.FC<HeaderProps> = ({
     }
     setShiftDropdownOpen(false);
   };
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const day = pad(now.getDate());
-      const month = pad(now.getMonth() + 1);
-      const year = now.getFullYear();
-      const hours = pad(now.getHours());
-      const minutes = pad(now.getMinutes());
-      const seconds = pad(now.getSeconds());
-      setTimeStr(`${day}-${month}-${year} ${hours}:${minutes}:${seconds}`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const getShiftIcon = (shift: ShiftType) => {
     switch (shift) {
@@ -133,14 +150,8 @@ export const Header: React.FC<HeaderProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Real-time Clock Badge */}
-        <div className="hidden md:flex flex-col border-l border-white/10 pl-3.5">
-          <span className="text-[9px] text-gray-400 uppercase tracking-wider font-mono">WAKTU SISTEM</span>
-          <p className="text-xs font-mono text-white flex items-center gap-1.5">
-            <Clock className="w-3 h-3 text-[#00F3FF]" />
-            <span>{timeStr || '29-08-2026 13:08:00'}</span>
-          </p>
-        </div>
+        {/* Real-time Clock Badge (Isolated component to avoid Header re-renders) */}
+        <HeaderClock />
 
         {/* Status Pill (ONLINE) */}
         <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00F3FF]/15 border border-[#00F3FF]/30 text-[10px] font-bold text-[#00F3FF] font-mono tracking-wider backdrop-blur-sm">

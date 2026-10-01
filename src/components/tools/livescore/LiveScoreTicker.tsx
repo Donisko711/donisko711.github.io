@@ -11,7 +11,7 @@ interface LiveScoreTickerProps {
   onSelectAlert?: (alert: LiveScoreAlertItem) => void;
 }
 
-export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = ({
+export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = React.memo(({
   alerts,
   soundEnabled,
   onToggleSound,
@@ -254,4 +254,4 @@ export const LiveScoreTicker: React.FC<LiveScoreTickerProps> = ({
       </div>
     </div>
   );
-};
+});
