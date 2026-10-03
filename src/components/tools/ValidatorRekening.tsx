@@ -1206,7 +1206,7 @@ export const ValidatorRekening: React.FC = () => {
                 {/* Background decorative glow */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-center relative z-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-center relative z-10">
 
                   {/* 1. STATUS */}
                   <div className="space-y-1">
@@ -1293,12 +1293,12 @@ export const ValidatorRekening: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 4. NAMA PEMILIK */}
+                  {/* 4. NAMA PEMILIK (KOLOM HASIL MURNI - LEGA, TANPA TOMBOL AGAR TIDAK TERPOTONG) */}
                   <div className="space-y-1 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/30">
-                    <div className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center justify-between">
+                    <div className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center justify-between gap-1 flex-wrap">
                       <span>NAMA PEMILIK</span>
                       {singleResult?.accountName && /[X\*]{2,}/i.test(singleResult.accountName) ? (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 font-mono">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 font-mono font-bold">
                           SENSOR GATEWAY (XXXX)
                         </span>
                       ) : (
@@ -1307,52 +1307,57 @@ export const ValidatorRekening: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <div
-                        id="accountValidatorName"
-                        className="font-black text-amber-400 text-sm sm:text-base tracking-wide truncate font-mono"
-                        title={singleResult?.accountName}
-                      >
-                        {singleResult?.accountName || '-'}
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {singleResult?.accountName && singleResult.accountName !== '-' && (
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(singleResult.accountName, 'name')}
-                            className="px-2 py-1 rounded bg-amber-400 hover:bg-amber-300 text-black font-black text-xs transition-colors flex items-center gap-1 cursor-pointer"
-                            title="Salin Nama Pemilik"
-                          >
-                            {copiedField === 'name' ? (
-                              <>
-                                <Check className="w-3 h-3 text-black" />
-                                <span className="text-[10px]">Tersalin</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3 text-black" />
-                                <span className="text-[10px]">Salin</span>
-                              </>
-                            )}
-                          </button>
-                        )}
-                        {singleResult && (
-                          <button
-                            type="button"
-                            onClick={() => setEditingAccountModal({
-                              isOpen: true,
-                              accountNumber: singleResult.cleanAccountNumber || singleResult.accountNumber,
-                              bankId: singleResult.bankId,
-                              currentName: singleResult.accountName,
-                              newName: /[X\*]{2,}/i.test(singleResult.accountName) ? '' : singleResult.accountName
-                            })}
-                            className="p-1 rounded bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                            title="Lengkapi / Simpan Nama Lengkap Resmi"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+                    <div
+                      id="accountValidatorName"
+                      className="font-black text-amber-400 text-sm sm:text-base tracking-wide font-mono break-words leading-snug select-all"
+                      title={singleResult?.accountName}
+                    >
+                      {singleResult?.accountName || '-'}
+                    </div>
+                  </div>
+
+                  {/* 5. TOMBOL AKSI (TERPISAH SENDIRI, TIDAK DIGABUNG DI DALAM KOLOM HASIL) */}
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                      AKSI
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {singleResult?.accountName && singleResult.accountName !== '-' && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(singleResult.accountName, 'name')}
+                          className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95 whitespace-nowrap"
+                          title="Salin Nama Pemilik"
+                        >
+                          {copiedField === 'name' ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-black" />
+                              <span className="text-[11px]">Tersalin</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-black" />
+                              <span className="text-[11px]">Salin</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                      {singleResult && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingAccountModal({
+                            isOpen: true,
+                            accountNumber: singleResult.cleanAccountNumber || singleResult.accountNumber,
+                            bankId: singleResult.bankId,
+                            currentName: singleResult.accountName,
+                            newName: /[X\*]{2,}/i.test(singleResult.accountName) ? '' : singleResult.accountName
+                          })}
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all cursor-pointer border border-white/10"
+                          title="Lengkapi / Simpan Nama Lengkap Resmi"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1945,44 +1950,16 @@ MANDIRI 1660004707154`}
                             </div>
                           </td>
 
-                          {/* 5. NAMA PEMILIK JELAS */}
+                          {/* 5. NAMA PEMILIK JELAS (KOLOM HASIL MURNI - TANPA TOMBOL) */}
                           <td className="p-3 font-bold">
                             {item.status === 'DONE' && item.result ? (
-                              <div className="flex items-center justify-between gap-2 max-w-sm">
-                                <span className={`font-mono text-sm tracking-wide ${
-                                  item.result.isValid 
-                                    ? 'text-yellow-400 font-black' 
-                                    : 'text-gray-400 line-through'
-                                }`}>
-                                  {item.result.accountName}
-                                </span>
-                                {item.result.accountName && item.result.accountName !== '-' && (
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCopy(item.result!.accountName, `name-${item.id}`)}
-                                      className="p-1 rounded bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white cursor-pointer"
-                                      title="Salin Nama Pemilik"
-                                    >
-                                      {copiedField === `name-${item.id}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingAccountModal({
-                                        isOpen: true,
-                                        accountNumber: item.accountNumber,
-                                        bankId: item.bankId,
-                                        currentName: item.result!.accountName,
-                                        newName: /[X\*]{2,}/i.test(item.result!.accountName) ? '' : item.result!.accountName
-                                      })}
-                                      className="p-1 rounded bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white cursor-pointer"
-                                      title="Isi / Simpan Nama Lengkap Resmi"
-                                    >
-                                      <Edit3 className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                              <span className={`font-mono text-sm tracking-wide break-words ${
+                                item.result.isValid 
+                                  ? 'text-yellow-400 font-black' 
+                                  : 'text-gray-400 line-through'
+                              }`}>
+                                {item.result.accountName}
+                              </span>
                             ) : item.status === 'CHECKING' ? (
                               <span className="text-amber-400/80 font-mono text-xs italic">
                                 Mengambil data dari core banking...
@@ -2017,9 +1994,45 @@ MANDIRI 1660004707154`}
                             )}
                           </td>
 
-                          {/* 7. AKSI */}
+                          {/* 7. AKSI (TERPISAH SENDIRI - TOMBOL TIDAK MENGGANGGU KOLOM HASIL) */}
                           <td className="p-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {item.status === 'DONE' && item.result?.accountName && item.result.accountName !== '-' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(item.result!.accountName, `name-${item.id}`)}
+                                    className="px-2 py-1 rounded bg-amber-400 hover:bg-amber-300 text-black font-black text-xs transition-colors cursor-pointer flex items-center gap-1 shadow-sm whitespace-nowrap"
+                                    title="Salin Nama Pemilik"
+                                  >
+                                    {copiedField === `name-${item.id}` ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-black" />
+                                        <span className="text-[10px]">Tersalin</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3 h-3 text-black" />
+                                        <span className="text-[10px]">Salin</span>
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingAccountModal({
+                                      isOpen: true,
+                                      accountNumber: item.accountNumber,
+                                      bankId: item.bankId,
+                                      currentName: item.result!.accountName,
+                                      newName: /[X\*]{2,}/i.test(item.result!.accountName) ? '' : item.result!.accountName
+                                    })}
+                                    className="p-1 rounded bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors cursor-pointer border border-white/10"
+                                    title="Isi / Simpan Nama Lengkap Resmi"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
                               {/* Re-check individual row */}
                               <button
                                 type="button"

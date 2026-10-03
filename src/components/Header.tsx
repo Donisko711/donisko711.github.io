@@ -138,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#121212]/80 backdrop-blur-md border-b border-white/10 px-4 sm:px-8 py-2.5 flex items-center justify-between shadow-[0_4px_25px_rgba(0,0,0,0.6)] relative">
+    <header className="relative z-40 w-full bg-[#121212]/90 backdrop-blur-md border-b border-white/10 px-4 sm:px-8 py-2.5 flex items-center justify-between shadow-[0_4px_25px_rgba(0,0,0,0.6)]">
       {/* Left: Sidebar Toggle, Time Clock, Status Tag */}
       <div className="flex items-center gap-3 sm:gap-4 z-10">
         <button

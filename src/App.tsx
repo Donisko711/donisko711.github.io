@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
+import { TopNavbar } from './components/TopNavbar';
 import { Sidebar, ActiveView } from './components/Sidebar';
 import { LoginModal } from './components/LoginModal';
 import { BackgroundSelectorModal } from './components/BackgroundSelectorModal';
@@ -270,23 +271,8 @@ export default function App() {
     }
   };
 
-  // Responsive sidebar collapse: automatically open when screen is wide, closed when resized to smaller screen
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true;
-  });
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Sidebar drawer state: default closed so the dashboard view is completely wide (full width)
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   // Sync active shift with user
   const handleShiftChange = (shift: ShiftType) => {
@@ -423,23 +409,35 @@ export default function App() {
     >
       {/* Dark & Clean Overlay if Background Applied */}
       <div className={`min-h-screen ${bgImage ? 'bg-black/40' : 'bg-[#0A0A0A]'}`}>
-        {/* Top Header */}
-        <Header
-          sidebarOpen={isSidebarOpen}
-          setSidebarOpen={setIsSidebarOpen}
-          currentShift={activeShift}
-          setCurrentShift={handleShiftChange}
-          user={currentUser}
-          onLogout={handleLogout}
-          onOpenBgModal={() => {
-            if (currentUser?.username?.toLowerCase() === 'donisko') {
-              setIsBgModalOpen(true);
-            }
-          }}
-          onOpenLoginModal={() => setIsLoginModalOpen(true)}
-          soundEnabled={soundEnabled}
-          setSoundEnabled={setSoundEnabled}
-        />
+        {/* Sticky Header & Top Navigation Bar (Berjejer di Atas Sesuai Contoh Referensi) */}
+        <div className="sticky top-0 z-40 w-full flex flex-col bg-[#0A0C10] shadow-[0_6px_25px_rgba(0,0,0,0.6)] overflow-visible relative">
+          {/* Top Header */}
+          <Header
+            sidebarOpen={isSidebarOpen}
+            setSidebarOpen={setIsSidebarOpen}
+            currentShift={activeShift}
+            setCurrentShift={handleShiftChange}
+            user={currentUser}
+            onLogout={handleLogout}
+            onOpenBgModal={() => {
+              if (currentUser?.username?.toLowerCase() === 'donisko') {
+                setIsBgModalOpen(true);
+              }
+            }}
+            onOpenLoginModal={() => setIsLoginModalOpen(true)}
+            soundEnabled={soundEnabled}
+            setSoundEnabled={setSoundEnabled}
+          />
+
+          {/* Horizontal Top Navigation Bar Berjejer di Atas */}
+          <TopNavbar
+            activeView={activeView}
+            onSelectView={handleSelectView}
+            currentUser={currentUser}
+            jobdeskCsCount={{ done: csDoneCount, total: csShiftTasks.length }}
+            jobdeskKasirCount={{ done: kasirDoneCount, total: kasirShiftTasks.length }}
+          />
+        </div>
 
         {/* Running Marquee Text Bar (Teks Berjalan Don Isko - Slogan Dinamis Sesuai User) */}
         <div className="w-full bg-[#121212]/70 backdrop-blur-md border-b border-white/10 py-2 px-4 overflow-hidden relative flex items-center shadow-inner z-20">
@@ -470,20 +468,20 @@ export default function App() {
           </div>
         </div>
 
-        {/* Main Body Layout (Sidebar + Content - Responsif Geser Otomatis) */}
-        <div className="flex min-h-[calc(100vh-65px)] relative overflow-x-hidden">
-          {/* Mobile Backdrop Overlay when Sidebar is open */}
+        {/* Main Body Layout (Tampilan Penuh Lebih Lebar & Responsif) */}
+        <div className="flex min-h-[calc(100vh-120px)] relative overflow-x-hidden w-full">
+          {/* Mobile Backdrop Overlay when Sidebar Drawer is open */}
           {isSidebarOpen && (
             <div
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 transition-opacity duration-300"
             />
           )}
 
-          {/* Left Sticky Sidebar Container */}
+          {/* Slide-over Drawer Sidebar (Overlay Tanpa Mengurangi Lebar Tampilan Dashboard) */}
           <div 
-            className={`transition-all duration-300 ease-in-out flex-shrink-0 z-50 lg:z-auto ${
-              isSidebarOpen ? 'w-0 lg:w-72' : 'w-0 lg:w-20'
+            className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] transform transition-transform duration-300 ease-in-out shadow-2xl ${
+              isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
             }`}
           >
             <Sidebar
@@ -501,8 +499,8 @@ export default function App() {
             />
           </div>
 
-          {/* Right Main Content Area - Otomatis Menyesuaikan Ukuran & Bergeser */}
-          <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-black/20 transition-all duration-300">
+          {/* Right Main Content Area - Full Width Lebar & Responsif */}
+          <main className="w-full flex-1 min-w-0 p-3 sm:p-5 lg:p-6 xl:p-8 overflow-y-auto bg-black/20 transition-all duration-300">
             {/* Breadcrumb Navigation Bar */}
             <div className="flex items-center justify-between gap-2 mb-6 p-3.5 rounded-2xl bg-[#121216]/70 backdrop-blur-md border border-white/10 text-xs shadow-lg">
               <div className="flex items-center gap-2 text-gray-300 flex-wrap">
