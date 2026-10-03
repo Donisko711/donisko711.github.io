@@ -310,7 +310,7 @@ export const JobdeskManager: React.FC<JobdeskManagerProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-in fade-in">
+    <div className="space-y-6 w-full pb-12 animate-in fade-in">
       {/* Toast Floating Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-zinc-900/95 border border-cyan-500 text-cyan-300 shadow-2xl backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 text-xs font-semibold">

@@ -779,7 +779,7 @@ export const BonusParlayCalculator: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in">
+    <div className="space-y-6 w-full pb-12 animate-in fade-in">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r from-[#0d161d] via-[#10222e] to-[#0d161d] border border-cyan-500/30 shadow-[0_4px_25px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-3.5">

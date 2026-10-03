@@ -175,7 +175,7 @@ export const JadwalPasaranTogel: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in">
+    <div className="space-y-6 w-full pb-12 animate-in fade-in">
       {/* Toast Notification */}
       {successToast && (
         <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-gradient-to-r from-[#00F3FF] to-[#00FF66] text-black font-bold font-mono text-xs flex items-center gap-2 shadow-[0_0_25px_rgba(0,243,255,0.6)] animate-in slide-in-from-top-2">

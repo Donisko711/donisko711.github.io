@@ -124,7 +124,7 @@ export const HadiahTogelOnline: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in">
+    <div className="space-y-6 w-full pb-12 animate-in fade-in">
       {/* Top Banner Neon Box Header */}
       <div className="text-center py-2.5 px-4 rounded-2xl bg-[#06080D] border-2 border-[#00F3FF]/60 shadow-[0_0_20px_rgba(0,243,255,0.25)] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-[#00F3FF]/10 via-[#00FF66]/10 to-[#00F3FF]/10 pointer-events-none" />

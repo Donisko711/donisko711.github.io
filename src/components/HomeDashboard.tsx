@@ -23,9 +23,9 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, shiftN
     <div className="space-y-6 w-full pb-12">
       {/* Top Main Banner Card (Workstation CS & Kasir Terpadu - Tampilan Penuh Lebih Lebar) */}
       <div className="relative w-full rounded-3xl bg-[#121212]/80 backdrop-blur-xl border border-white/10 p-5 sm:p-7 shadow-[0_8px_32px_rgba(0,0,0,0.6)] overflow-hidden">
-        {/* Ambient background glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#00F3FF]/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        {/* Lightweight GPU-accelerated ambient background glow */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[#00F3FF]/10 rounded-full blur-2xl pointer-events-none transform-gpu"></div>
+        <div className="absolute bottom-0 left-1/3 w-60 h-60 bg-amber-500/5 rounded-full blur-2xl pointer-events-none transform-gpu"></div>
 
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3 flex-1 min-w-0">

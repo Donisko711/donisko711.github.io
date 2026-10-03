@@ -41,7 +41,7 @@ export const ModulBelajar: React.FC<ModulBelajarProps> = ({ initialModuleId, ini
   );
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-in fade-in">
+    <div className="space-y-6 w-full pb-12 animate-in fade-in">
       {/* Header Banner */}
       <div className="p-6 rounded-3xl bg-[#121212] border border-[#1F1F1F] shadow-[0_4px_24px_rgba(0,0,0,0.8)] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

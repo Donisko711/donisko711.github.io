@@ -991,7 +991,7 @@ User ID :
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in">
+    <div className="space-y-6 w-full pb-12 animate-in fade-in">
       {/* Top Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-[#0a101d] via-[#101b30] to-[#0a101d] border border-cyan-500/30 shadow-[0_4px_30px_rgba(0,0,0,0.6)] flex flex-col lg:flex-row lg:items-center justify-between gap-5">
         <div className="space-y-1">

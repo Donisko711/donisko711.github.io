@@ -885,7 +885,7 @@ export const ValidatorRekening: React.FC = () => {
   };
 
   return (
-    <div id="pageAccountValidator" className="view-page p-3 sm:p-6 space-y-6 max-w-7xl mx-auto">
+    <div id="pageAccountValidator" className="view-page p-1 sm:p-2 space-y-6 w-full pb-12">
       
       {/* Navigation Tabs Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">

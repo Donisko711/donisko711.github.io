@@ -354,15 +354,25 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Jobdesk progress counts for the current shift
-  const csShiftTasks = tasks.filter(t => t.category === 'CS' && t.shift === activeShift);
-  const csDoneCount = csShiftTasks.filter(t => t.completed).length;
+  // Jobdesk progress counts for the current shift (memoized for high-performance zero-lag rendering)
+  const csShiftTasks = React.useMemo(() => {
+    return tasks.filter(t => t.category === 'CS' && t.shift === activeShift);
+  }, [tasks, activeShift]);
 
-  const kasirShiftTasks = tasks.filter(t => t.category === 'KASIR' && t.shift === activeShift);
-  const kasirDoneCount = kasirShiftTasks.filter(t => t.completed).length;
+  const csDoneCount = React.useMemo(() => {
+    return csShiftTasks.filter(t => t.completed).length;
+  }, [csShiftTasks]);
 
-  // View title helper for breadcrumb
-  const getViewBreadcrumb = () => {
+  const kasirShiftTasks = React.useMemo(() => {
+    return tasks.filter(t => t.category === 'KASIR' && t.shift === activeShift);
+  }, [tasks, activeShift]);
+
+  const kasirDoneCount = React.useMemo(() => {
+    return kasirShiftTasks.filter(t => t.completed).length;
+  }, [kasirShiftTasks]);
+
+  // View title helper for breadcrumb (memoized)
+  const breadcrumb = React.useMemo(() => {
     switch (activeView) {
       case 'home': return { category: 'BERANDA', title: 'Dashboard Ringkasan' };
       case 'livescore': return { category: 'MENU HIGHLIGHT', title: 'Live Score & Jadwal Pertandingan (WIB)' };
@@ -393,9 +403,7 @@ export default function App() {
       case 'validator-rekening': return { category: 'TOOLS KERJA CS & KASIR', title: 'Validator Rekening & E-Wallet' };
       default: return { category: 'TOOLS', title: 'Menu Utama' };
     }
-  };
-
-  const breadcrumb = getViewBreadcrumb();
+  }, [activeView, activeShift]);
 
   return (
     <div 

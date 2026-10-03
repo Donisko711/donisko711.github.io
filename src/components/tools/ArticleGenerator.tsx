@@ -744,7 +744,7 @@ Status Plagiat  : 100% Unique / 0% Plagiarisme (Lolos DupliChecker)`;
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in text-gray-200">
+    <div className="space-y-6 w-full pb-16 animate-in fade-in text-gray-200">
       
       {/* Header Utama Banner */}
       <div className="p-6 rounded-3xl bg-gradient-to-r from-[#0d1624] via-[#102235] to-[#0a111c] border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] flex flex-col md:flex-row md:items-center justify-between gap-4">

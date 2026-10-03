@@ -174,7 +174,7 @@ export const EditPembayaran: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-16 animate-in fade-in">
+    <div className="space-y-6 w-full pb-16 animate-in fade-in">
       {/* Header Banner Cyberpunk dengan Selector Sub-Menu di Kanan Atas */}
       <div className="p-6 rounded-3xl bg-gradient-to-r from-[#0d1624] via-[#102235] to-[#0a111c] border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] flex flex-col lg:flex-row lg:items-center justify-between gap-5">
         <div>

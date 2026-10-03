@@ -759,7 +759,7 @@ ${parsedData.phishingIndicators.map(p => `[${p.severity}] ${p.title} - ${p.desc}
   const hasPhishingAlert = parsedData && parsedData.detectedKeywords.length > 0;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-sans pb-10">
+    <div className="space-y-6 w-full font-sans pb-10 animate-in fade-in">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-[#121218]/95 via-[#181824]/95 to-[#121218]/95 border border-[#00F3FF]/30 backdrop-blur-xl shadow-[0_0_30px_rgba(0,243,255,0.15)]">
         <div className="flex items-center gap-3.5">
