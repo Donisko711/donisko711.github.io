@@ -15,8 +15,7 @@ import {
   CreditCard,
   DollarSign,
   Timer,
-  RefreshCw,
-  Zap
+  RefreshCw
 } from 'lucide-react';
 
 export interface ParsedWdRow {
@@ -27,6 +26,8 @@ export interface ParsedWdRow {
   emptyCol: string;
   amount: string;
   rawTime?: string;
+  rawDateTime?: string;
+  inputIndex?: number;
 }
 
 const EXAMPLE_FORMAT_1 = `1 188888
@@ -38,9 +39,14 @@ Withdraw 2026-07-30 11:02:59 455,000 159,208
 G1
 DANA, 0882005684416, Ahmad Bayu Prasetyo`;
 
-const EXAMPLE_FORMAT_2 = `96\t2026-09-09 00:19:24\t188888\tWithdraw\tSugiyanto, 1140033394092, MANDIRI\t-\t1,000,000\tACCEPT\tjvsaaautowd
-97\t2026-08-30 03:49:02\tframudya\tWithdraw\tRAFLY FRAMUDYA, 082216135887, DANA\t-\t250,000\tACCEPT\tjvsaaautowd
-98\t2026-08-30 03:43:46\tmontu78\tWithdraw\tKristian Adinegoro Simanjuntak, 1916107801, BNI\t-\t100,000\tACCEPT\tjvsaaautowd`;
+// Format 2: Tab-Separated Panel Report (Contoh Mutasi Bank Bawah ke Atas)
+const EXAMPLE_FORMAT_2 = `810\t2026-10-04 00:13:37\tdoper1995\tWithdraw\tNOVIANUS LUAN, 026701057821502, BRI\t-\t350,000\tACCEPT\twzgaaautowd
+811\t2026-10-04 00:13:55\tsanti\tWithdraw\tLisanti, 081364347738, DANA\t-\t120,000\tACCEPT\twzgaaautowd
+812\t2026-10-04 00:13:46\tbenny01\tWithdraw\tBenediktus bere, 1810000706367, MANDIRI\t-\t1,400,000\tACCEPT\twzgaaautowd
+855\t2026-10-04 00:00:10\tbenny01\tWithdraw\tBenediktus bere, 1810000706367, MANDIRI\t-\t500,000\tACCEPT\twzgaaautowd
+860\t2026-10-04 00:00:21\tanunya\tWithdraw\tRISKI SAHARA, 082277982283, DANA\t-\t35,000\tACCEPT\twzgaaautowd
+861\t2026-10-03 23:59:57\tuzir123\tWithdraw\tUzir, 082361090503, DANA\t-\t100,000\tACCEPT\twzgaaautowd
+865\t2026-10-03 23:57:27\taliyana23\tWithdraw\tMohamad mois, 082384818551, DANA\t-\t100,000\tACCEPT\twzgaaautowd`;
 
 const EXAMPLE_FORMAT_3 = `3\t\tzenroel
 Withdraw\t2026-07-30 11:06:02\t400,000 \t18,243.62
@@ -69,6 +75,8 @@ Withdraw\t2026-09-10 16:45:35\t800,000 \t71,478
 G4
 DANA, 08952879684, Didik hariyanto`;
 
+export type WdSortMode = 'mutasi' | 'reverse' | 'asli';
+
 export const WdAutoFlop: React.FC = () => {
   const [rawText, setRawText] = useState<string>('');
   const [parsedRows, setParsedRows] = useState<ParsedWdRow[]>([]);
@@ -83,29 +91,27 @@ export const WdAutoFlop: React.FC = () => {
   const [timeDisplayFormat, setTimeDisplayFormat] = useState<'standard' | 'compact'>(() => {
     try {
       const saved = localStorage.getItem('hs_wd_autoflop_time_format');
-      return (saved as 'standard' | 'compact') || 'standard';
+      return (saved as 'standard' | 'compact') || 'compact';
     } catch {
-      return 'standard';
+      return 'compact';
     }
   });
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
-  const [sortByTime, setSortByTime] = useState<boolean>(() => {
+  
+  // Sort mode: 'mutasi' (default: susunan mutasi bank bawah ke atas / kronologis penuh)
+  const [sortMode, setSortMode] = useState<WdSortMode>(() => {
     try {
-      const saved = localStorage.getItem('hs_wd_autoflop_sort_time');
-      return saved !== null ? JSON.parse(saved) : true;
+      const saved = localStorage.getItem('hs_wd_autoflop_sort_mode');
+      if (saved === 'mutasi' || saved === 'reverse' || saved === 'asli') {
+        return saved;
+      }
+      return 'mutasi';
     } catch {
-      return true;
+      return 'mutasi';
     }
   });
-  const [autoCopyOnPaste, setAutoCopyOnPaste] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('hs_wd_autoflop_autocopy_enabled');
-      return saved !== null ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
+
   const [showExampleMenu, setShowExampleMenu] = useState(false);
 
   // Auto-delete / Auto-Clear Cache timer states (Persisten via localStorage - selalu hidup jika dihidupkan sampai dimatikan)
@@ -149,14 +155,6 @@ export const WdAutoFlop: React.FC = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('hs_wd_autoflop_autocopy_enabled', JSON.stringify(autoCopyOnPaste));
-    } catch (e) {
-      console.warn('Gagal menyimpan autoCopyOnPaste:', e);
-    }
-  }, [autoCopyOnPaste]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem('hs_wd_autoflop_copy_format', copyFormat);
     } catch (e) {
       console.warn('Gagal menyimpan copyFormat:', e);
@@ -173,11 +171,11 @@ export const WdAutoFlop: React.FC = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('hs_wd_autoflop_sort_time', JSON.stringify(sortByTime));
+      localStorage.setItem('hs_wd_autoflop_sort_mode', sortMode);
     } catch (e) {
-      console.warn('Gagal menyimpan sortByTime:', e);
+      console.warn('Gagal menyimpan sortMode:', e);
     }
-  }, [sortByTime]);
+  }, [sortMode]);
 
   // Bank name helpers for formatting reversal
   const KNOWN_BANKS = [
@@ -211,11 +209,14 @@ export const WdAutoFlop: React.FC = () => {
     return parts.join(', ');
   };
 
-  // Helper to format hour: standard (HH:mm:ss) or compact (strip leading zero 03:49 -> 3:49)
+  // Helper to format hour: standard (HH:mm:ss) or compact (strip leading zero e.g. 00:13 -> 0:13, 08:15 -> 8:15)
   const formatTime = (timeVal: string): string => {
     if (!timeVal) return '-';
     if (timeDisplayFormat === 'compact') {
       return timeVal.replace(/^0(\d:)/, '$1');
+    }
+    if (/^\d:\d{2}:\d{2}$/.test(timeVal)) {
+      return '0' + timeVal;
     }
     return timeVal;
   };
@@ -237,7 +238,7 @@ export const WdAutoFlop: React.FC = () => {
       // Must actually contain a known bank name on this exact line
       const hasKnownBank = KNOWN_BANKS.some(b => upper.includes(b));
       if (!hasKnownBank) return false;
-      const hasStatusOrTabs = /ACCEPT|REJECT|PENDING|CANCEL|jvsaaautowd|approved|success|-/i.test(line) 
+      const hasStatusOrTabs = /ACCEPT|REJECT|PENDING|CANCEL|jvsaaautowd|wzgaaautowd|autowd|approved|success|-/i.test(line) 
         || line.split(/\t+/).length >= 5 
         || (line.includes(',') && (line.split(',').length >= 3));
       return hasStatusOrTabs;
@@ -251,6 +252,8 @@ export const WdAutoFlop: React.FC = () => {
           id: `block-${results.length}-${Date.now()}-${Math.random()}`,
           time: formatTime(currentBlock.time || ''),
           rawTime: currentBlock.time || '',
+          rawDateTime: currentBlock.rawDateTime || '',
+          inputIndex: results.length,
           username: currentBlock.username || '-',
           bankInfo: currentBlock.bankInfo || '-',
           emptyCol: '',
@@ -273,12 +276,19 @@ export const WdAutoFlop: React.FC = () => {
         flushBlock();
 
         let timeVal = '';
+        let rawDateTime = '';
         let userVal = '';
         let bankVal = '';
         let amountVal = '';
 
-        const dtMatch = line.match(/\d{4}-\d{2}-\d{2}\s+(\d{1,2}:\d{2}:\d{2})/);
-        if (dtMatch) timeVal = dtMatch[1];
+        const dtFullMatch = line.match(/(\d{4}-\d{2}-\d{2}\s+(\d{1,2}:\d{2}:\d{2}))/);
+        if (dtFullMatch) {
+          rawDateTime = dtFullMatch[1];
+          timeVal = dtFullMatch[2];
+        } else {
+          const dtMatch = line.match(/\d{4}-\d{2}-\d{2}\s+(\d{1,2}:\d{2}:\d{2})/);
+          if (dtMatch) timeVal = dtMatch[1];
+        }
 
         const tabs = line.split(/\t+/).map(p => p.trim()).filter(Boolean);
         if (tabs.length >= 5) {
@@ -343,6 +353,8 @@ export const WdAutoFlop: React.FC = () => {
           id: `single-${results.length}-${Date.now()}-${Math.random()}`,
           time: formatTime(timeVal),
           rawTime: timeVal,
+          rawDateTime,
+          inputIndex: results.length,
           username: userVal || '-',
           bankInfo: bankVal || '-',
           emptyCol: '',
@@ -366,9 +378,15 @@ export const WdAutoFlop: React.FC = () => {
 
       // Withdraw line: "Withdraw 2026-09-09 00:19:24 1,000,000 145"
       if (/withdraw/i.test(line) || /\d{4}-\d{2}-\d{2}/.test(line)) {
-        const timeMatch = line.match(/\d{4}-\d{2}-\d{2}\s+(\d{1,2}:\d{2}:\d{2})/);
-        if (timeMatch) {
-          currentBlock.time = timeMatch[1];
+        const dtFullMatch = line.match(/(\d{4}-\d{2}-\d{2}\s+(\d{1,2}:\d{2}:\d{2}))/);
+        if (dtFullMatch) {
+          currentBlock.rawDateTime = dtFullMatch[1];
+          currentBlock.time = dtFullMatch[2];
+        } else {
+          const timeMatch = line.match(/\b(\d{1,2}:\d{2}:\d{2})\b/);
+          if (timeMatch) {
+            currentBlock.time = timeMatch[1];
+          }
         }
         const amountMatch = line.match(/\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}:\d{2}\s+([0-9,]+(?:\.\d+)?)/);
         if (amountMatch) {
@@ -404,13 +422,33 @@ export const WdAutoFlop: React.FC = () => {
     // Flush final block
     flushBlock();
 
-    // Chronological ascending sorting if enabled
-    if (sortByTime && results.length > 0) {
-      results.sort((a, b) => (a.rawTime || a.time).padStart(8, '0').localeCompare((b.rawTime || b.time).padStart(8, '0')));
+    // Sorting Modes:
+    // 'mutasi' (Default / Sesuai Mutasi Bank Bawah ke Atas):
+    //           Jika terdapat tanggal & jam lengkap (misal 2026-10-03 23:57:27 & 2026-10-04 00:00:10),
+    //           maka baris 23:57 (yang berada di bagian bawah tabel input) otomatis diletakkan paling atas,
+    //           dan 00:00 sampai 00:13 di bawahnya secara urut!
+    //           Jika tidak terdapat tanggal lengkap, otomatis dibalik dari bawah ke atas (reverse).
+    // 'reverse': Bawah ke Atas Murni (membalik persis baris terakhir di paling atas).
+    // 'asli': Urutan Asli seperti saat ditempel (atas ke bawah).
+    if (sortMode === 'mutasi' && results.length > 0) {
+      const hasFullDate = results.some(r => r.rawDateTime && /\d{4}-\d{2}-\d{2}/.test(r.rawDateTime));
+      if (hasFullDate) {
+        results.sort((a, b) => {
+          const dtA = a.rawDateTime || (a.rawTime ? `9999-99-99 ${a.rawTime}` : '');
+          const dtB = b.rawDateTime || (b.rawTime ? `9999-99-99 ${b.rawTime}` : '');
+          const cmp = dtA.localeCompare(dtB);
+          if (cmp !== 0) return cmp;
+          return (a.inputIndex ?? 0) - (b.inputIndex ?? 0);
+        });
+      } else {
+        results.reverse();
+      }
+    } else if (sortMode === 'reverse' && results.length > 0) {
+      results.reverse();
     }
 
     return results;
-  }, [rawText, sortByTime, timeDisplayFormat]);
+  }, [rawText, sortMode, timeDisplayFormat]);
 
   // Robust clipboard copy function with fallback for iframes and insecure contexts
   const copyToClipboard = async (text: string): Promise<boolean> => {
@@ -444,18 +482,15 @@ export const WdAutoFlop: React.FC = () => {
     return copied;
   };
 
-  // Sync parsedRows when new parsedData is generated
+  // Sync parsedRows when new parsedData is generated.
+  // Note: TIDAK ada auto-copy saat paste data. Tombol salin tetap normal dan baru berubah warna saat DIKLIK.
   useEffect(() => {
     if (parsedData.length > 0) {
       setParsedRows(parsedData);
-      if (autoCopyOnPaste) {
-        const textToCopy = parsedData.map(r => formatSingleRow(r, copyFormat)).join('\n');
-        copyToClipboard(textToCopy);
-        setCopiedAll(true);
-        setTimeout(() => setCopiedAll(false), 2000);
-      }
     }
-  }, [parsedData, autoCopyOnPaste, copyFormat, timeDisplayFormat]);
+    setCopiedAll(false);
+    setCopiedRowId(null);
+  }, [parsedData]);
 
   // Use current parsed data or persisted rows if textarea was cleared by auto-clear
   const displayRows = parsedData.length > 0 ? parsedData : parsedRows;
@@ -521,7 +556,7 @@ export const WdAutoFlop: React.FC = () => {
     const ok = await copyToClipboard(allFormattedText);
     if (ok) {
       setCopiedAll(true);
-      setTimeout(() => setCopiedAll(false), 2000);
+      setTimeout(() => setCopiedAll(false), 2500);
     }
   };
 
@@ -531,7 +566,7 @@ export const WdAutoFlop: React.FC = () => {
     const ok = await copyToClipboard(formatted);
     if (ok) {
       setCopiedRowId(row.id);
-      setTimeout(() => setCopiedRowId(null), 2000);
+      setTimeout(() => setCopiedRowId(null), 2500);
     }
   };
 
@@ -631,7 +666,11 @@ export const WdAutoFlop: React.FC = () => {
           <textarea
             rows={5}
             value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
+            onChange={(e) => {
+              setRawText(e.target.value);
+              setCopiedAll(false);
+              setCopiedRowId(null);
+            }}
             placeholder="Tempel / Paste data mentah withdraw di sini... (Data otomatis diparsing ke 4 kolom: Waktu, User ID, Bank Asal, Amount)"
             className="w-full p-3.5 rounded-2xl bg-[#0D0D0D]/90 border border-white/15 focus:border-[#00F3FF] focus:shadow-[0_0_20px_rgba(0,243,255,0.25)] font-mono text-xs text-gray-100 placeholder-gray-600 outline-none leading-relaxed resize-y min-h-[120px] selection:bg-[#00F3FF] selection:text-black transition-all"
           />
@@ -688,46 +727,58 @@ export const WdAutoFlop: React.FC = () => {
               </button>
             </div>
 
-            {/* Auto Copy on Paste */}
-            <button
-              type="button"
-              onClick={() => setAutoCopyOnPaste(!autoCopyOnPaste)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-mono font-bold whitespace-nowrap transition-all cursor-pointer ${
-                autoCopyOnPaste 
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm' 
-                  : 'bg-black/60 border-white/10 text-gray-400 hover:text-gray-300'
-              }`}
-              title="Salin otomatis ke clipboard seketika saat data ditempel"
-            >
-              <Zap className={`w-3 h-3 ${autoCopyOnPaste ? 'text-amber-400 fill-amber-400' : 'text-gray-500'}`} />
-              <span>AUTO SALIN: {autoCopyOnPaste ? 'ON' : 'OFF'}</span>
-            </button>
-
             {/* Jam Display Format */}
             <button
               type="button"
               onClick={() => setTimeDisplayFormat(timeDisplayFormat === 'standard' ? 'compact' : 'standard')}
               className="px-2.5 py-1 rounded-xl bg-black/60 border border-white/10 text-gray-300 hover:text-white text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer"
-              title="Format Jam: HH:mm:ss atau H:mm:ss"
+              title="Format Jam: H:mm:ss (tanpa nol di jam 0:00:10) atau HH:mm:ss"
             >
               <Clock className="w-3 h-3 text-yellow-400" />
-              <span>{timeDisplayFormat === 'standard' ? 'HH:mm:ss' : 'H:mm:ss'}</span>
+              <span>{timeDisplayFormat === 'compact' ? 'JAM: H:mm:ss' : 'JAM: HH:mm:ss'}</span>
             </button>
 
-            {/* Urut Waktu */}
-            <button
-              type="button"
-              onClick={() => setSortByTime(!sortByTime)}
-              className={`px-2.5 py-1 rounded-xl border text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1 transition-all cursor-pointer ${
-                sortByTime 
-                  ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' 
-                  : 'bg-black/60 text-gray-400 border-white/10'
-              }`}
-              title="Urutkan baris: Urut Waktu Jam (ASC) atau Sesuai Urutan Asli Input"
-            >
-              <ArrowUpDown className="w-3 h-3 text-cyan-400" />
-              <span>{sortByTime ? 'JAM (ASC)' : 'ASLI'}</span>
-            </button>
+            {/* Urutan Susunan Baris */}
+            <div className="flex items-center gap-1 bg-black/60 p-1 rounded-xl border border-white/10 text-xs font-mono">
+              <span className="text-[10px] text-gray-400 px-1 font-bold">Susunan:</span>
+              <button
+                type="button"
+                onClick={() => setSortMode('mutasi')}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                  sortMode === 'mutasi'
+                    ? 'bg-emerald-400 text-black shadow-sm font-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="Bawah ke Atas (Sesuai Mutasi Bank / Kronologis): Baris terbawah 23:57 kemarin naik ke atas, 00:00 sampai 00:13 di bawahnya secara urut"
+              >
+                <ArrowUpDown className="w-2.5 h-2.5" />
+                <span>BAWAH KE ATAS (MUTASI)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortMode('reverse')}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold font-mono transition-all cursor-pointer ${
+                  sortMode === 'reverse'
+                    ? 'bg-emerald-400 text-black shadow-sm font-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="Membalik susunan baris persis dari baris terakhir ke baris pertama"
+              >
+                <span>REVERSE</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortMode('asli')}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold font-mono transition-all cursor-pointer ${
+                  sortMode === 'asli'
+                    ? 'bg-emerald-400 text-black shadow-sm font-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="Urutan asli sesuai saat ditempel (atas ke bawah)"
+              >
+                <span>ASLI</span>
+              </button>
+            </div>
 
             {/* Contoh Data Dropdown */}
             <div className="relative">
@@ -783,12 +834,16 @@ export const WdAutoFlop: React.FC = () => {
             <button
               onClick={handleCopyAll}
               disabled={displayRows.length === 0}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-extrabold text-xs font-mono flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(234,179,8,0.3)] transition-all cursor-pointer active:scale-[0.98]"
+              className={`px-4 py-1.5 rounded-xl font-extrabold text-xs font-mono flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+                copiedAll
+                  ? 'bg-gradient-to-r from-emerald-400 via-green-400 to-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.8)] border border-emerald-200 ring-2 ring-emerald-400/60 scale-[1.03]'
+                  : 'bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-black shadow-[0_0_12px_rgba(234,179,8,0.3)] disabled:opacity-40 disabled:cursor-not-allowed'
+              }`}
             >
               {copiedAll ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-black stroke-[3]" />
-                  <span>SEMUA TERSALIN!</span>
+                  <Check className="w-4 h-4 text-black stroke-[3]" />
+                  <span>BERHASIL DISALIN!</span>
                 </>
               ) : (
                 <>
@@ -825,10 +880,23 @@ export const WdAutoFlop: React.FC = () => {
               </div>
               <button
                 onClick={handleCopyAll}
-                className="px-3.5 py-1.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-mono font-extrabold flex items-center gap-1.5 shadow-[0_0_12px_rgba(234,179,8,0.3)] transition-all cursor-pointer"
+                className={`px-4 py-1.5 rounded-xl font-mono text-xs font-extrabold flex items-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+                  copiedAll
+                    ? 'bg-gradient-to-r from-emerald-400 via-green-400 to-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.8)] border border-emerald-200 ring-2 ring-emerald-400/60 scale-[1.03]'
+                    : 'bg-yellow-400 hover:bg-yellow-300 text-black shadow-[0_0_12px_rgba(234,179,8,0.3)]'
+                }`}
               >
-                {copiedAll ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Copy className="w-3.5 h-3.5 stroke-[2.5]" />}
-                <span>{copiedAll ? 'TERSALIN KE CLIPBOARD!' : 'SALIN TEKS INI'}</span>
+                {copiedAll ? (
+                  <>
+                    <Check className="w-4 h-4 text-black stroke-[3]" />
+                    <span>BERHASIL DISALIN!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-black stroke-[2.5]" />
+                    <span>SALIN TEKS INI</span>
+                  </>
+                )}
               </button>
             </div>
             <pre className="p-3 rounded-xl bg-black/80 border border-white/5 font-mono text-xs text-emerald-300 overflow-x-auto whitespace-pre leading-relaxed select-all">
@@ -859,10 +927,23 @@ export const WdAutoFlop: React.FC = () => {
             <button
               onClick={handleCopyAll}
               disabled={displayRows.length === 0}
-              className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-extrabold text-xs font-mono flex items-center gap-1.5 shadow-[0_0_12px_rgba(234,179,8,0.3)] transition-all cursor-pointer"
+              className={`px-4 py-1.5 rounded-xl font-extrabold text-xs font-mono flex items-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+                copiedAll
+                  ? 'bg-gradient-to-r from-emerald-400 via-green-400 to-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.8)] border border-emerald-200 ring-2 ring-emerald-400/60 scale-[1.03]'
+                  : 'bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-black shadow-[0_0_12px_rgba(234,179,8,0.3)] disabled:opacity-40 disabled:cursor-not-allowed'
+              }`}
             >
-              {copiedAll ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>SALIN SEMUA</span>
+              {copiedAll ? (
+                <>
+                  <Check className="w-4 h-4 text-black stroke-[3]" />
+                  <span>BERHASIL DISALIN!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-black stroke-[2.5]" />
+                  <span>SALIN SEMUA</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -933,7 +1014,7 @@ export const WdAutoFlop: React.FC = () => {
                       <td className="py-3 px-4">
                         <span className="text-xs font-bold text-yellow-400 font-mono flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-yellow-400/80" />
-                          {row.time}
+                          {formatTime(row.rawTime || row.time)}
                         </span>
                       </td>
 
@@ -965,11 +1046,15 @@ export const WdAutoFlop: React.FC = () => {
                       <td className="py-3 px-3 text-center">
                         <button
                           onClick={() => handleCopyRow(row)}
-                          title="Salin baris ini"
-                          className="p-1.5 rounded-lg bg-black/40 hover:bg-[#00F3FF]/20 text-gray-400 hover:text-[#00F3FF] border border-white/5 hover:border-[#00F3FF]/40 transition-all cursor-pointer"
+                          title={isCopied ? 'Berhasil disalin!' : 'Salin baris ini'}
+                          className={`p-1.5 rounded-lg border transition-all duration-200 cursor-pointer ${
+                            isCopied
+                              ? 'bg-emerald-400 text-black border-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.8)] scale-110'
+                              : 'bg-black/40 hover:bg-[#00F3FF]/20 text-gray-400 hover:text-[#00F3FF] border-white/5 hover:border-[#00F3FF]/40'
+                          }`}
                         >
                           {isCopied ? (
-                            <Check className="w-4 h-4 text-emerald-400" />
+                            <Check className="w-4 h-4 text-black stroke-[3]" />
                           ) : (
                             <Copy className="w-4 h-4" />
                           )}
