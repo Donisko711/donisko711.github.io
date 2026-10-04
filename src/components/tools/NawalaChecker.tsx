@@ -104,23 +104,19 @@ export const NawalaChecker: React.FC = () => {
     return clean.toLowerCase();
   };
 
-  // Comprehensive TrustPositif Komdigi & Nawala Blocklist Patterns
-  const TRUSTPOSITIF_BLOCK_PATTERNS = [
-    /togel/i, /slot/i, /casino/i, /kasino/i, /poker/i, /judi/i, /taruhan/i,
-    /toto/i, /gacor/i, /maxwin/i, /zeus/i, /pragmatic/i, /pgsoft/i, /sbobet/i,
-    /ibcbet/i, /bola88/i, /slot88/i, /rtp/i, /\b4d\b/i, /\b3d\b/i, /\b2d\b/i,
-    /4d(?=[0-9a-z]|\b)/i, /[0-9a-z]+4d\b/i,
-    /tafsir/i, /prediksi/i, /terjitu/i, /bocoran/i, /angka/i, /keluaran/i,
-    /macau/i, /ttm/i, /linkalternatif/i, /link-alternatif/i, /alternatif/i,
-    /hantogel/i, /ayutogel/i, /senna4d/i, /bigo4d/i, /blacktogel/i, /zeus711/i,
-    /surga711/i, /dewi138/i, /diana4d/i, /spinharta/i, /metro4d/i, /pay4d/i,
-    /mancingduit/i, /tohsgaming/i, /hoki/i, /cuan/i, /jackpot/i, /depo/i,
-    /bokep/i, /porn/i, /xxx/i, /phishing/i, /penipuan/i, /scam/i
+  // Known Nawala & Internet Positif redirect hosts
+  const KNOWN_NAWALA_REDIRECTS = [
+    'internetpositif.id',
+    'trustpositif.komdigi.go.id',
+    'trustpositif.kominfo.go.id',
+    'mercusuar.info',
+    'uzone.id',
+    'internetbaik'
   ];
 
   const isKomdigiBlocked = (domain: string): boolean => {
     const lower = domain.toLowerCase();
-    return TRUSTPOSITIF_BLOCK_PATTERNS.some(regex => regex.test(lower));
+    return KNOWN_NAWALA_REDIRECTS.some(h => lower.includes(h));
   };
 
   // Jalankan Pengecekan Domain
@@ -646,6 +642,17 @@ export const NawalaChecker: React.FC = () => {
               <Trash2 className="w-3.5 h-3.5" />
               <span>Reset</span>
             </button>
+
+            <a
+              href="https://trustpositif.komdigi.go.id/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 hover:text-blue-100 border border-blue-500/40 text-xs font-mono font-bold transition-all cursor-pointer shadow-sm"
+              title="Buka portal resmi Kementerian Komunikasi dan Digital (TrustPositif Komdigi)"
+            >
+              <Globe className="w-3.5 h-3.5 text-blue-400" />
+              <span>Cek TrustPositif Komdigi Resmi ↗</span>
+            </a>
           </div>
 
           {results.length > 0 && (
@@ -762,7 +769,16 @@ export const NawalaChecker: React.FC = () => {
                       <td className="py-3.5 px-3 font-extrabold text-white">
                         <div className="flex items-center gap-1.5">
                           <Globe className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-                          <span className="text-[#00F3FF] tracking-wide font-sans text-xs">{item.domain}</span>
+                          <a 
+                            href={`https://${item.domain}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[#00F3FF] hover:underline tracking-wide font-sans text-xs flex items-center gap-1"
+                            title={`Buka https://${item.domain} di tab baru`}
+                          >
+                            <span>{item.domain}</span>
+                            <span className="text-[10px] text-gray-400">↗</span>
+                          </a>
                         </div>
                         {item.rawInput !== item.domain && (
                           <span className="text-[10px] text-gray-500 block truncate max-w-48">

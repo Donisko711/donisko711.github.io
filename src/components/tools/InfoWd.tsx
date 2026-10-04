@@ -587,7 +587,18 @@ export const InfoWd: React.FC<InfoWdProps> = () => {
       });
     }
 
-    setParsedList(items);
+    // Deduplicate items to prevent double data
+    const seen = new Set<string>();
+    const dedupedItems: ParsedTransactionItem[] = [];
+    items.forEach(item => {
+      const key = `${item.dateTime}|${item.userId.toLowerCase()}|${item.bank.toLowerCase()}|${item.nominal}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        dedupedItems.push(item);
+      }
+    });
+    dedupedItems.forEach((item, i) => { item.no = i + 1; });
+    setParsedList(dedupedItems);
   }, [rawText]);
 
   // Sync globalKodeAlias with parsed list if item doesn't have custom alias

@@ -15,7 +15,8 @@ import {
   CreditCard,
   DollarSign,
   Timer,
-  RefreshCw
+  RefreshCw,
+  ShieldCheck
 } from 'lucide-react';
 
 export interface ParsedWdRow {
@@ -111,6 +112,24 @@ export const WdAutoFlop: React.FC = () => {
       return 'mutasi';
     }
   });
+
+  // Anti-Double state (Default aktif untuk mencegah double data pada hasil convert dan salin)
+  const [antiDoubleEnabled, setAntiDoubleEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('hs_wd_autoflop_anti_double');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hs_wd_autoflop_anti_double', JSON.stringify(antiDoubleEnabled));
+    } catch (e) {
+      console.warn('Gagal menyimpan antiDoubleEnabled:', e);
+    }
+  }, [antiDoubleEnabled]);
 
   const [showExampleMenu, setShowExampleMenu] = useState(false);
 
@@ -223,8 +242,8 @@ export const WdAutoFlop: React.FC = () => {
 
   // Main Parser Engine supporting both Format 1 (multi-line) and Format 2 (single-line tab/space)
   // Even when user ID contains purely digits (e.g. "188888")
-  const parsedData = useMemo<ParsedWdRow[]>(() => {
-    if (!rawText.trim()) return [];
+  const parsedPayload = useMemo<{ rows: ParsedWdRow[]; duplicatesPrevented: number }>(() => {
+    if (!rawText.trim()) return { rows: [], duplicatesPrevented: 0 };
 
     const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
     const results: ParsedWdRow[] = [];
@@ -411,10 +430,14 @@ export const WdAutoFlop: React.FC = () => {
         // First token is sequence number, second token is username (even if purely numeric like 188888)
         currentBlock.username = seqAndUser[2].trim();
       } else {
-        // Standalone user ID
+        // Standalone user ID: pastikan bukan kata status/sistem
         const singleUser = line.match(/^([a-zA-Z0-9_\-\.]+)/);
-        if (singleUser && !/^withdraw$/i.test(singleUser[1])) {
-          currentBlock.username = singleUser[1].trim();
+        if (singleUser) {
+          const val = singleUser[1].trim();
+          const isIgnored = /^(withdraw|accept|reject|pending|cancel|approved|success|wzgaaautowd|jvsaaautowd|autowd|-)$/i.test(val);
+          if (!isIgnored) {
+            currentBlock.username = val;
+          }
         }
       }
     }
@@ -422,7 +445,31 @@ export const WdAutoFlop: React.FC = () => {
     // Flush final block
     flushBlock();
 
-    // Sorting Modes:
+    // 3. Deduplication (Anti-Double Data):
+    // Memastikan tidak ada data ganda pada hasil convert ataupun hasil copy
+    let finalResults = results;
+    let dupesCount = 0;
+    if (antiDoubleEnabled && results.length > 1) {
+      const seen = new Set<string>();
+      finalResults = [];
+      for (const row of results) {
+        const cleanAmount = (row.amount || '').replace(/[^0-9]/g, '').trim();
+        const cleanUser = (row.username || '').toLowerCase().trim();
+        const cleanBank = (row.bankInfo || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        let cleanTime = (row.rawDateTime || row.rawTime || row.time || '').trim();
+        // Normalisasi waktu jam satu digit (H:mm:ss -> 0H:mm:ss) agar pencocokan konsisten
+        cleanTime = cleanTime.replace(/\b(\d):(\d{2}:\d{2})\b/, '0$1:$2');
+        const key = `${cleanTime}|${cleanUser}|${cleanBank}|${cleanAmount}`;
+        if (seen.has(key)) {
+          dupesCount++;
+        } else {
+          seen.add(key);
+          finalResults.push(row);
+        }
+      }
+    }
+
+    // 4. Sorting Modes:
     // 'mutasi' (Default / Sesuai Mutasi Bank Bawah ke Atas):
     //           Jika terdapat tanggal & jam lengkap (misal 2026-10-03 23:57:27 & 2026-10-04 00:00:10),
     //           maka baris 23:57 (yang berada di bagian bawah tabel input) otomatis diletakkan paling atas,
@@ -430,10 +477,10 @@ export const WdAutoFlop: React.FC = () => {
     //           Jika tidak terdapat tanggal lengkap, otomatis dibalik dari bawah ke atas (reverse).
     // 'reverse': Bawah ke Atas Murni (membalik persis baris terakhir di paling atas).
     // 'asli': Urutan Asli seperti saat ditempel (atas ke bawah).
-    if (sortMode === 'mutasi' && results.length > 0) {
-      const hasFullDate = results.some(r => r.rawDateTime && /\d{4}-\d{2}-\d{2}/.test(r.rawDateTime));
+    if (sortMode === 'mutasi' && finalResults.length > 0) {
+      const hasFullDate = finalResults.some(r => r.rawDateTime && /\d{4}-\d{2}-\d{2}/.test(r.rawDateTime));
       if (hasFullDate) {
-        results.sort((a, b) => {
+        finalResults.sort((a, b) => {
           const dtA = a.rawDateTime || (a.rawTime ? `9999-99-99 ${a.rawTime}` : '');
           const dtB = b.rawDateTime || (b.rawTime ? `9999-99-99 ${b.rawTime}` : '');
           const cmp = dtA.localeCompare(dtB);
@@ -441,14 +488,20 @@ export const WdAutoFlop: React.FC = () => {
           return (a.inputIndex ?? 0) - (b.inputIndex ?? 0);
         });
       } else {
-        results.reverse();
+        finalResults.reverse();
       }
-    } else if (sortMode === 'reverse' && results.length > 0) {
-      results.reverse();
+    } else if (sortMode === 'reverse' && finalResults.length > 0) {
+      finalResults.reverse();
     }
 
-    return results;
-  }, [rawText, sortMode, timeDisplayFormat]);
+    return {
+      rows: finalResults,
+      duplicatesPrevented: dupesCount
+    };
+  }, [rawText, sortMode, timeDisplayFormat, antiDoubleEnabled]);
+
+  const parsedData = parsedPayload.rows;
+  const duplicatesPrevented = parsedPayload.duplicatesPrevented;
 
   // Robust clipboard copy function with fallback for iframes and insecure contexts
   const copyToClipboard = async (text: string): Promise<boolean> => {
@@ -612,6 +665,12 @@ export const WdAutoFlop: React.FC = () => {
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
                   {displayRows.length} BARIS
                 </span>
+                {duplicatesPrevented > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold flex items-center gap-1 animate-in fade-in">
+                    <ShieldCheck className="w-3 h-3 text-amber-400" />
+                    <span>{duplicatesPrevented} DUPLIKAT DICEGAH</span>
+                  </span>
+                )}
                 {justCleared && (
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold animate-pulse flex items-center gap-1">
                     <Check className="w-3 h-3" /> CACHE BERSIH
@@ -780,6 +839,21 @@ export const WdAutoFlop: React.FC = () => {
               </button>
             </div>
 
+            {/* Anti-Double Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setAntiDoubleEnabled(!antiDoubleEnabled)}
+              className={`px-2.5 py-1 rounded-xl border text-[11px] font-mono font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+                antiDoubleEnabled
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
+                  : 'bg-black/60 text-gray-400 border-white/10 hover:text-white hover:border-white/20'
+              }`}
+              title="Cegah Data Ganda: Otomatis mendeteksi dan menghapus baris duplikat saat convert ataupun salin"
+            >
+              <ShieldCheck className={`w-3.5 h-3.5 ${antiDoubleEnabled ? 'text-emerald-400' : 'text-gray-500'}`} />
+              <span>ANTI-DOUBLE: {antiDoubleEnabled ? 'AKTIF' : 'OFF'}</span>
+            </button>
+
             {/* Contoh Data Dropdown */}
             <div className="relative">
               <button
@@ -874,6 +948,12 @@ export const WdAutoFlop: React.FC = () => {
                 <span className="text-xs font-mono font-bold text-gray-200 uppercase tracking-wider">
                   PREVIEW HASIL SALIN ({copyFormat.toUpperCase()}): {displayRows.length} BARIS
                 </span>
+                {duplicatesPrevented > 0 && (
+                  <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-amber-400" />
+                    <span>{duplicatesPrevented} DUPLIKAT DICEGAH</span>
+                  </span>
+                )}
                 <span className="text-[10px] text-gray-400 font-mono">
                   (Waktu \t User \t Nama, Rek, Bank \t\t Amount)
                 </span>

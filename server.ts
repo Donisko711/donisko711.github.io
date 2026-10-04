@@ -649,28 +649,20 @@ async function startServer() {
     });
   });
 
-  // Shared Comprehensive TrustPositif Komdigi & Nawala Blocklist Engine
-  const TRUSTPOSITIF_BLOCK_PATTERNS = [
-    /togel/i, /slot/i, /casino/i, /kasino/i, /poker/i, /judi/i, /taruhan/i,
-    /toto/i, /gacor/i, /maxwin/i, /zeus/i, /pragmatic/i, /pgsoft/i, /sbobet/i,
-    /ibcbet/i, /bola88/i, /slot88/i, /rtp/i, /\b4d\b/i, /\b3d\b/i, /\b2d\b/i,
-    /4d(?=[0-9a-z]|\b)/i, /[0-9a-z]+4d\b/i,
-    /tafsir/i, /prediksi/i, /terjitu/i, /bocoran/i, /angka/i, /keluaran/i,
-    /macau/i, /ttm/i, /linkalternatif/i, /link-alternatif/i, /alternatif/i,
-    /hantogel/i, /ayutogel/i, /senna4d/i, /bigo4d/i, /blacktogel/i, /zeus711/i,
-    /surga711/i, /dewi138/i, /diana4d/i, /spinharta/i, /metro4d/i, /pay4d/i,
-    /mancingduit/i, /tohsgaming/i, /hoki/i, /cuan/i, /jackpot/i, /depo/i,
-    /horas711/i, /horas138/i, /poker88/i, /domino/i, /gaple/i, /roulette/i,
-    /baccarat/i, /sicbo/i, /dragontiger/i, /parlay/i, /mixparlay/i, /agenjudi/i,
-    /bandar/i, /situsjudi/i, /judionline/i, /slotgacor/i, /daftar-slot/i,
-    /link-slot/i, /login-slot/i, /apk-slot/i, /rtpslot/i, /rtp-live/i,
-    /bokep/i, /porn/i, /xxx/i, /phishing/i, /penipuan/i, /scam/i
+  // Known Nawala and Internet Positif redirect hosts
+  const NAWALA_REDIRECT_HOSTS = [
+    'internetpositif.id',
+    'trustpositif.komdigi.go.id',
+    'trustpositif.kominfo.go.id',
+    'mercusuar.info',
+    'uzone.id',
+    'internetbaik'
   ];
 
   const isKomdigiBlocked = (domainStr: string): boolean => {
     if (!domainStr) return false;
     const lower = domainStr.toLowerCase();
-    return TRUSTPOSITIF_BLOCK_PATTERNS.some(regex => regex.test(lower));
+    return NAWALA_REDIRECT_HOSTS.some(h => lower.includes(h));
   };
 
   // Phising / Domain Script Inspector Endpoint (similar to Google Rich Results / Page Source Inspector)
@@ -1357,24 +1349,95 @@ async function startServer() {
       return `${ip} (Global CDN)`;
     };
 
+    const NAWALA_BLOCK_IPS = new Set([
+      '118.98.96.108',
+      '36.86.63.181',
+      '36.86.63.182',
+      '103.19.110.36',
+      '103.28.144.11',
+      '0.0.0.0',
+      '127.0.0.1'
+    ]);
+
     const checkSingleDomain = async (rawDomain: string) => {
       const cleaned = cleanDomain(rawDomain);
       if (!cleaned) return null;
 
       const startTime = Date.now();
       let ipAddress = '';
-      let dnsError = false;
+      let isBlocked = false;
 
+      // 1. DNS Resolution
       try {
         const dnsModule = await import('dns');
         const lookup = await dnsModule.promises.lookup(cleaned);
         ipAddress = lookup.address;
-      } catch {
-        dnsError = true;
+
+        if (NAWALA_BLOCK_IPS.has(ipAddress)) {
+          isBlocked = true;
+        }
+      } catch (err: any) {
+        if (err?.code === 'ENOTFOUND' || err?.code === 'ENODATA') {
+          isBlocked = true;
+        } else {
+          isBlocked = true;
+        }
       }
 
-      const pingMs = Math.max(12, Date.now() - startTime + Math.floor(Math.random() * 20));
-      const isBlocked = isKomdigiBlocked(cleaned) || dnsError;
+      // 2. Active HTTP/HTTPS Inspection (checks if domain redirects to Nawala / Internet Positif landing page)
+      if (!isBlocked && ipAddress) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+          const res = await fetch(`https://${cleaned}/`, {
+            method: 'GET',
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            },
+            redirect: 'follow'
+          });
+          clearTimeout(timeoutId);
+
+          const finalUrl = (res.url || '').toLowerCase();
+          if (NAWALA_REDIRECT_HOSTS.some(h => finalUrl.includes(h))) {
+            isBlocked = true;
+          } else {
+            const body = await res.text();
+            const lowerBody = body.toLowerCase();
+            if (
+              lowerBody.includes('situs diblokir berdasarkan peraturan') ||
+              lowerBody.includes('internet positif - telkom') ||
+              lowerBody.includes('trust positif kominfo') ||
+              lowerBody.includes('akses ke situs ini diblokir')
+            ) {
+              isBlocked = true;
+            }
+          }
+        } catch {
+          // If HTTPS probe fails, attempt plain HTTP probe
+          try {
+            const controller2 = new AbortController();
+            const timeoutId2 = setTimeout(() => controller2.abort(), 3000);
+            const res2 = await fetch(`http://${cleaned}/`, {
+              method: 'GET',
+              signal: controller2.signal,
+              headers: { 'User-Agent': 'Mozilla/5.0' },
+              redirect: 'follow'
+            });
+            clearTimeout(timeoutId2);
+            const finalUrl2 = (res2.url || '').toLowerCase();
+            if (NAWALA_REDIRECT_HOSTS.some(h => finalUrl2.includes(h))) {
+              isBlocked = true;
+            }
+          } catch {
+            // Keep status as active if DNS was valid
+          }
+        }
+      }
+
+      const pingMs = Math.max(14, Date.now() - startTime);
 
       // In Indonesia, ISPs enforce TrustPositif Komdigi
       const trustPositif = isBlocked ? 'NAWALA' : 'AMAN';
@@ -1393,7 +1456,7 @@ async function startServer() {
         xlBiznet,
         telkomsel,
         ipLokasi,
-        pingMs: Math.min(pingMs, 120),
+        pingMs: Math.min(pingMs, 180),
         status,
         isBlocked
       };

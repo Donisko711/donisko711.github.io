@@ -367,19 +367,26 @@ export const IsiRekapan: React.FC = () => {
       }
 
       if (isBonus) {
-        bonusLines.push(line);
-        bonusRecords.push({
-          id: `bonus-rec-${bonusRecords.length + 1}`,
-          userId: lineUserId || 'Unknown User',
-          bankName: bankName || 'SEABANK',
-          accountHolder,
-          accountNumber,
-          nominal: nominal || '0',
-          dateTime,
-          phone,
-          email,
-          rawText: line
-        });
+        const isDupe = bonusRecords.some(r => 
+          r.userId.toLowerCase() === (lineUserId || '').toLowerCase() && 
+          r.accountNumber === accountNumber && 
+          r.nominal === (nominal || '0')
+        );
+        if (!isDupe) {
+          bonusLines.push(line);
+          bonusRecords.push({
+            id: `bonus-rec-${bonusRecords.length + 1}`,
+            userId: lineUserId || 'Unknown User',
+            bankName: bankName || 'SEABANK',
+            accountHolder,
+            accountNumber,
+            nominal: nominal || '0',
+            dateTime,
+            phone,
+            email,
+            rawText: line
+          });
+        }
       }
 
       items.push({
